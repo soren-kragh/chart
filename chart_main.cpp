@@ -276,13 +276,11 @@ void Main::AutoRange( void )
   bool auto_y = false;
   if ( axis_x.min >= axis_x.max ) {
     auto_x = true;
-    axis_x.major = 0;
     axis_x.min = min_x;
     axis_x.max = max_x;
   }
   if ( axis_y.min >= axis_y.max ) {
     auto_y = true;
-    axis_y.major = 0;
     axis_y.min = min_y;
     axis_y.max = max_y;
     if ( min_y > 0 && min_y / (max_y - min_y) < 0.35 ) {
@@ -338,6 +336,7 @@ Canvas* Main::Build( void )
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
+  chart_g->Attr()->TextFont()->SetFamily( "DejaVu Sans Mono,Courier New" );
   chart_g->Attr()->FillColor()->Set( White );
   chart_g->Attr()->LineColor()->Clear();
 

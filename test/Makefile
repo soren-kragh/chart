@@ -12,7 +12,7 @@ CPPS := $(filter %.cpp,${DEPS})
 all: ${EXE}
 
 ${EXE}: ${DEPS}
-	@g++ -Wall -O3 -Wfatal-errors -Werror \
+	@g++ -std=c++11 -Wall -O3 -Wfatal-errors -Werror \
 	${CPPS} -o ${EXE} $(addprefix -I ,${DIRS})
 
 .PHONY: run
