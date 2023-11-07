@@ -149,8 +149,8 @@ void Series::Build(
 {
   Poly* p = new Poly();
   g->Add( p );
-  U ox;
-  U oy;
+  U ox = 0;
+  U oy = 0;
   bool first = true;
   for ( Datum& datum : datum_list ) {
     U x = (datum.x - x_axis.min) * x_axis.length / (x_axis.max - x_axis.min);
