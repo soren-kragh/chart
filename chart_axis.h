@@ -29,8 +29,16 @@ public:
 
   Axis( void );
 
+  void SetLogScale( bool log_scale = true );
+  void SetNumberFormat( NumberFormat number_format );
+  void ShowMinorNumbers( bool show_minor_mumbers = true );
+
   void SetRange( double min, double max, double orth_axis_cross );
+  void SetRange( double min, double max );
+
+  // For logarithmic scale, major refers to the power, usually 10.
   void SetTick( double major, int sub_divs = 0 );
+
   void SetGrid( bool major_enable = true, bool minor_enable = false );
   void SetNumberPos( Pos pos );
   void SetLabel( std::string label );
@@ -39,10 +47,43 @@ public:
 
 private:
 
+  const double num_lo = 1e-300;
+  const double num_hi = 1e+300;
+
+  // Correction for rounding errors in comparisons etc.
+  const double cre = 1e-6;
+
+  // Maximum number of decimals to show.
+  const int precision = 10;
+
+  int decimals;
+  void ComputeDecimals( double v );
+  std::string NumToStr( double v );
+
+  SVG::Object* BuildNum( SVG::Group* g, double v, bool bold = false );
+
   void AutoTick( void );
 
+  // Convert a value to an SVG coordinate.
+  SVG::U Coor( double v );
+
+  void BuildTicsNumsLinear(
+    int angle, Axis& orth_axis,
+    std::vector< SVG::Object* >& axes_objects,
+    SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
+    SVG::Group* line_g, SVG::Group* num_g,
+    SVG::U sx, SVG::U sy, SVG::U ex, SVG::U ey
+  );
+  void BuildTicsNumsLogarithmic(
+    int angle, Axis& orth_axis,
+    std::vector< SVG::Object* >& axes_objects,
+    SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
+    SVG::Group* line_g, SVG::Group* num_g,
+    SVG::U sx, SVG::U sy, SVG::U ex, SVG::U ey
+  );
+
   void Build(
-    int angle, const Axis& orth_axis,
+    int angle, Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
@@ -56,6 +97,12 @@ private:
   SVG::U overhang = 2*arrow_length;
   SVG::U tick_major_len = 8;
   SVG::U tick_minor_len = 4;
+
+  bool         log_scale;
+  NumberFormat number_format;
+  bool         number_format_auto;
+  bool         show_minor_mumbers;
+  bool         show_minor_mumbers_auto;
 
   double min;
   double max;

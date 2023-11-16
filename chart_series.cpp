@@ -214,8 +214,8 @@ int LineIntersectsBox(
 
 void Series::Build(
   SVG::Group* g,
-  const Axis& x_axis,
-  const Axis& y_axis,
+  Axis& x_axis,
+  Axis& y_axis,
   std::vector< LegendBox >& lb_list
 )
 {
@@ -232,8 +232,8 @@ void Series::Build(
   U oy = 0;
   bool first = true;
   for ( Datum& datum : datum_list ) {
-    U x = (datum.x - x_axis.min) * w / (x_axis.max - x_axis.min);
-    U y = (datum.y - y_axis.min) * h / (y_axis.max - y_axis.min);
+    U x = x_axis.Coor( datum.x );
+    U y = y_axis.Coor( datum.y );
     bool inside = (x >= 0 && x <= w && y >= 0 && y <= h);
     if ( first ) {
       if ( inside ) {

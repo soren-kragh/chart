@@ -39,8 +39,8 @@ Main::~Main( void )
 
 void Main::SetChartArea( SVG::U width, SVG::U height )
 {
-  chart_w = width;
-  chart_h = height;
+  chart_w = std::max( U( 100 ), width );
+  chart_h = std::max( U( 100 ), height );
 }
 
 void Main::SetMargin( SVG::U margin )
@@ -250,10 +250,11 @@ void Main::BuildLegend( Group* g, int nx )
 
 void Main::AutoRange( void )
 {
-  double min_x = 0;
-  double max_x = 0;
-  double min_y = 0;
-  double max_y = 0;
+  double cre = 1e-6;    // Correction for rounding errors.
+  double min_x = axis_x.log_scale ? 10 : 0;
+  double max_x = axis_x.log_scale ? 10 : 0;
+  double min_y = axis_y.log_scale ? 10 : 0;
+  double max_y = axis_y.log_scale ? 10 : 0;
   bool first = true;
   for ( Series* series : series_list ) {
     for ( auto& datum : series->datum_list ) {
@@ -264,52 +265,111 @@ void Main::AutoRange( void )
       first = false;
     }
   }
-  if ( first || min_x == max_x ) {
-    min_x -= 1;
-    max_x += 1;
+
+  if ( min_x == max_x ) {
+    if ( axis_x.log_scale ) {
+      min_x = min_x / 10;
+      max_x = max_x * 10;
+    } else {
+      min_x = min_x - 1;
+      max_x = max_x + 1;
+    }
   }
-  if ( first || min_y == max_y ) {
-    min_y -= 1;
-    max_y += 1;
+  if ( axis_x.log_scale && min_x <= 0 ) {
+    if ( max_x <= 0 ) max_x = 100;
+    min_x = max_x / 1000;
   }
+
+  if ( min_y == max_y ) {
+    if ( axis_y.log_scale ) {
+      min_y = min_y / 10;
+      max_y = max_y * 10;
+    } else {
+      min_y = min_y - 1;
+      max_y = max_y + 1;
+    }
+  }
+  if ( axis_y.log_scale && min_y <= 0 ) {
+    if ( max_y <= 0 ) max_y = 100;
+    min_y = max_y / 1000;
+  }
+
   bool auto_x = false;
   bool auto_y = false;
+
   if ( axis_x.min >= axis_x.max ) {
     auto_x = true;
     axis_x.min = min_x;
     axis_x.max = max_x;
   }
+  if ( axis_x.log_scale && axis_x.min <= 0 ) {
+    if ( axis_x.max <= 0 ) axis_x.max = 100;
+    axis_x.min = axis_x.max / 1000;
+  }
+
   if ( axis_y.min >= axis_y.max ) {
     auto_y = true;
     axis_y.min = min_y;
     axis_y.max = max_y;
-    if ( min_y > 0 && min_y / (max_y - min_y) < 0.35 ) {
+  }
+  if ( axis_y.log_scale && axis_y.min <= 0 ) {
+    if ( axis_y.max <= 0 ) axis_y.max = 100;
+    axis_y.min = axis_y.max / 1000;
+  }
+  if ( auto_y && !axis_y.log_scale ) {
+    if ( axis_y.min > 0 && axis_y.min / (axis_y.max - axis_y.min) < 0.35 ) {
       axis_y.min = 0;
     }
-    if ( max_y < 0 && max_y / (min_y - max_y) < 0.35 ) {
+    if ( axis_y.max < 0 && axis_y.max / (axis_y.min - axis_y.max) < 0.35 ) {
       axis_y.max = 0;
     }
   }
+
   axis_x.AutoTick();
   axis_y.AutoTick();
+
   if ( auto_x ) {
+    double p;
     if ( axis_x.major > 0 ) {
-      if ( axis_x.min != 0 ) {
-        axis_x.min = std::floor(axis_x.min / axis_x.major) * axis_x.major;
-      }
-      if ( axis_x.max != 0 ) {
-        axis_x.max = std::ceil(axis_x.max / axis_x.major) * axis_x.major;
+      if ( axis_x.log_scale ) {
+        int32_t u = std::lround( std::log10( axis_x.major ) );
+        p = std::log10( axis_x.min ) / u;
+        axis_x.min = std::pow( std::pow( double( 10 ), u ), std::floor( p + cre ) );
+        p = std::log10( axis_x.max ) / u;
+        axis_x.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p - cre ) );
+        if ( axis_x.max < 10 * axis_x.min ) axis_x.max = 10 * axis_x.min;
+      } else {
+        double e = (axis_x.max - axis_x.min) * cre;
+        if ( axis_x.min != 0 ) {
+          p = (axis_x.min + e) / axis_x.major;
+          axis_x.min = std::floor( p ) * axis_x.major;
+        }
+        if ( axis_x.max != 0 ) {
+          p = (axis_x.max - e) / axis_x.major;
+          axis_x.max = std::ceil( p ) * axis_x.major;
+        }
       }
     }
     axis_x.orth_axis_cross = axis_x.min;
   }
+
   if ( auto_y ) {
+    double p;
     if ( axis_y.major > 0 ) {
-      if ( axis_y.min != 0 ) {
-        axis_y.min = std::floor(axis_y.min / axis_y.major - 0.4) * axis_y.major;
-      }
-      if ( axis_y.max != 0 ) {
-        axis_y.max = std::ceil(axis_y.max / axis_y.major + 0.4) * axis_y.major;
+      if ( axis_y.log_scale ) {
+        int32_t u = std::lround( std::log10( axis_y.major ) );
+        p = std::log10( axis_y.min ) / u;
+        axis_y.min = std::pow( std::pow( double( 10 ), u ), std::floor( p + cre ) );
+        p = std::log10( axis_y.max ) / u;
+        axis_y.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p - cre ) );
+        if ( axis_y.max < 10 * axis_y.min ) axis_y.max = 10 * axis_y.min;
+      } else {
+        if ( axis_y.min != 0 ) {
+          axis_y.min = std::floor(axis_y.min / axis_y.major - 0.2) * axis_y.major;
+        }
+        if ( axis_y.max != 0 ) {
+          axis_y.max = std::ceil(axis_y.max / axis_y.major + 0.2) * axis_y.major;
+        }
       }
     }
     if ( axis_y.max < 0 ) {
@@ -317,10 +377,14 @@ void Main::AutoRange( void )
     } else {
       axis_y.orth_axis_cross = axis_y.min;
     }
-    if ( axis_y.min*axis_y.max < 0 ) {
+    if ( axis_y.min * axis_y.max < 0 ) {
       axis_y.orth_axis_cross = 0;
     }
+    if ( axis_y.log_scale ) {
+      axis_y.orth_axis_cross = axis_y.min;
+    }
   }
+
   if ( axis_x.orth_axis_cross < axis_x.min ) axis_x.orth_axis_cross = axis_x.min;
   if ( axis_x.orth_axis_cross > axis_x.max ) axis_x.orth_axis_cross = axis_x.max;
   if ( axis_y.orth_axis_cross < axis_y.min ) axis_y.orth_axis_cross = axis_y.min;
@@ -331,6 +395,9 @@ void Main::AutoRange( void )
 
 Canvas* Main::Build( void )
 {
+  axis_x.length = chart_w;
+  axis_y.length = chart_h;
+
   AutoRange();
 
   Canvas* canvas = new Canvas();
@@ -346,16 +413,16 @@ Canvas* Main::Build( void )
 
   grid_minor_g->Attr()
     ->SetLineWidth( 0.5 )
-    ->SetLineDash( 2, 3 )
-    ->LineColor()->Set( Black, 0.7 );
+    ->SetLineDash( 1, 3 )
+    ->LineColor()->Set( Black );
   grid_major_g->Attr()
     ->SetLineWidth( 1.0 )
-    ->SetLineDash( 4 )
-    ->LineColor()->Set( Black, 0.6 );
+    ->SetLineDash( 4, 3 )
+    ->LineColor()->Set( Black );
   grid_zero_g->Attr()
     ->SetLineWidth( 1.0 )
-    ->SetLineDash( 4 )
-    ->LineColor()->Set( Blue, 0.5 );
+    ->SetLineDash( 8, 6 )
+    ->LineColor()->Set( Black );
 
   Group* axes_line_g  = chart_g->AddNewGroup();
   Group* chartbox_g   = chart_g->AddNewGroup();
@@ -367,16 +434,12 @@ Canvas* Main::Build( void )
 
   chartbox_g->Attr()->FillColor()->Clear();
 
-  axes_num_g->Attr()->TextFont()->SetSize( 12 );
-  axes_num_g->Attr()->TextFont()->SetBold();
+  axes_num_g->Attr()->TextFont()->SetSize( 14 );
   axes_num_g->Attr()->LineColor()->Clear();
 
   legend_g->Attr()->TextFont()->SetSize( 14 );
 
   std::vector< SVG::Object* > axes_objects;
-
-  axis_x.length = chart_w;
-  axis_y.length = chart_h;
 
   axis_x.Build(
     0, axis_y, axes_objects,
@@ -552,7 +615,7 @@ Canvas* Main::Build( void )
   if ( footnote != "" ) {
     U x = 0;
     U y = chart_g->GetBB().min.y - 5;
-    Label( chart_g, footnote, 12 );
+    Label( chart_g, footnote, 14 );
     chart_g->Last()->MoveTo( MinX, MaxY, x, y );
   }
 

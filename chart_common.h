@@ -22,6 +22,8 @@ namespace Chart {
 
   typedef enum { Auto, Center, Left, Right, Top, Bottom, Above, Below } Pos;
 
+  typedef enum { Plain, Scientific, Magnitude } NumberFormat;
+
   SVG::Object* Label(
     SVG::Group* g, const std::string txt, SVG::U size = 0
   );

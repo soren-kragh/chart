@@ -51,8 +51,8 @@ private:
 
   void Build(
     SVG::Group* g,
-    const Axis& x_axis,
-    const Axis& y_axis,
+    Axis& x_axis,
+    Axis& y_axis,
     std::vector< LegendBox >& lb_list
   );
 
