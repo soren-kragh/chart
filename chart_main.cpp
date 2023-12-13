@@ -442,12 +442,12 @@ Canvas* Main::Build( void )
   std::vector< SVG::Object* > axes_objects;
 
   axis_x.Build(
-    0, axis_y, axes_objects,
+    axis_y, axes_objects,
     grid_minor_g, grid_major_g, grid_zero_g,
     axes_line_g, axes_num_g, axes_label_g
   );
   axis_y.Build(
-    90, axis_x, axes_objects,
+    axis_x, axes_objects,
     grid_minor_g, grid_major_g, grid_zero_g,
     axes_line_g, axes_num_g, axes_label_g
   );

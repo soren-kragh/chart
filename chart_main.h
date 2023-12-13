@@ -78,8 +78,8 @@ private:
 
   std::list< Series* > series_list;
 
-  Axis axis_x;
-  Axis axis_y;
+  Axis axis_x{  0 };
+  Axis axis_y{ 90 };
 
   SVG::U legend_bx = 8;         // X-border around text in series legends.
   SVG::U legend_by = 4;         // Y-border around text in series legends.

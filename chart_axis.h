@@ -27,7 +27,7 @@ class Axis
 
 public:
 
-  Axis( void );
+  Axis( int angle );
 
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
@@ -46,6 +46,8 @@ public:
   void SetUnitPos( Pos pos );
 
 private:
+
+  int angle;
 
   const double num_lo = 1e-300;
   const double num_hi = 1e+300;
@@ -68,14 +70,14 @@ private:
   SVG::U Coor( double v );
 
   void BuildTicsNumsLinear(
-    int angle, Axis& orth_axis,
+    Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g,
     SVG::U sx, SVG::U sy, SVG::U ex, SVG::U ey
   );
   void BuildTicsNumsLogarithmic(
-    int angle, Axis& orth_axis,
+    Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g,
@@ -83,7 +85,7 @@ private:
   );
 
   void Build(
-    int angle, Axis& orth_axis,
+    Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g

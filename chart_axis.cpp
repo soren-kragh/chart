@@ -22,8 +22,9 @@ using namespace Chart;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Axis::Axis( void )
+Axis::Axis( int angle )
 {
+  this->angle = angle;
   decimals = -1;
   log_scale = false;
   number_format = Plain;
@@ -366,7 +367,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 ///////////////////////////////////////////////////////////////////////////////
 
 void Axis::BuildTicsNumsLinear(
-  int angle, Axis& orth_axis,
+  Axis& orth_axis,
   std::vector< SVG::Object* >& axes_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g,
@@ -500,7 +501,7 @@ void Axis::BuildTicsNumsLinear(
 ///////////////////////////////////////////////////////////////////////////////
 
 void Axis::BuildTicsNumsLogarithmic(
-  int angle, Axis& orth_axis,
+  Axis& orth_axis,
   std::vector< SVG::Object* >& axes_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g,
@@ -654,7 +655,7 @@ void Axis::BuildTicsNumsLogarithmic(
 ///////////////////////////////////////////////////////////////////////////////
 
 void Axis::Build(
-  int angle, Axis& orth_axis,
+  Axis& orth_axis,
   std::vector< SVG::Object* >& axes_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
@@ -762,13 +763,13 @@ void Axis::Build(
 
   if ( log_scale ) {
     BuildTicsNumsLogarithmic(
-      angle, orth_axis, axes_objects,
+      orth_axis, axes_objects,
       minor_g, major_g, zero_g, line_g, num_g,
       sx, sy, ex, ey
     );
   } else {
     BuildTicsNumsLinear(
-      angle, orth_axis, axes_objects,
+      orth_axis, axes_objects,
       minor_g, major_g, zero_g, line_g, num_g,
       sx, sy, ex, ey
     );
