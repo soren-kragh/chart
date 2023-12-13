@@ -171,8 +171,8 @@ void Axis::AutoTick( void ) {
     if ( sub_divs > 100 ) sub_divs = 100;
     while ( 100 % sub_divs ) sub_divs--;
   } else {
-    if ( sub_divs < 1 ) sub_divs = 2;
     if ( major > 0 ) {
+      if ( sub_divs < 1 ) sub_divs = 1;
       if ( ((max - min) / major) * sub_divs > length ) {
         major = 0;
       }
@@ -325,6 +325,9 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 
   g = g->AddNewGroup();
   BoundaryBox bb;
+  if ( num == 0 ) {
+    obj = Label( g, "0" );
+  } else
   if ( num == 1 ) {
     obj = Label( g, "10" );
   } else {
@@ -344,7 +347,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     g->LastToBack();
   }
   bb = obj->GetBB();
-  {
+  if ( num != 0 ) {
     std::ostringstream oss;
     oss << exp;
     U h = bb.max.y - bb.min.y;
@@ -372,23 +375,63 @@ void Axis::BuildTicsNumsLinear(
 {
   if ( major <= 0 ) return;
 
-  int64_t mn = std::floor( (min - major) / major );
-  int sn = 0;
-  double e = major / sub_divs / 1000; // To account to rounding errors.
-  Object* prev_num = NULL;
-  Object* this_num = NULL;
-  while ( 1 ) {
-    double p = mn * major + sn * major / ((sub_divs > 0) ? sub_divs : 1);
-    if ( p >= max+e ) break;
-    bool near_crossing_axis =
-      p > orth_axis_cross-e &&
-      p < orth_axis_cross+e;
-    if ( p >= min-e ) {
+  std::vector< int32_t > mn_list;
+  {
+    std::set< int32_t > mn_set;
+    int32_t mn_min = std::floor( (min - major) / major );
+    int32_t mn_max = std::ceil( (max + major) / major );
+    auto add = [&]( int32_t mn )
+    {
+      if ( mn >= mn_min && mn <= mn_max && mn_set.find( mn ) == mn_set.end() ) {
+        mn_list.push_back( mn );
+        mn_set.insert( mn );
+      }
+    };
+    int32_t step = mn_max - mn_min;
+    while ( step & (step - 1) ) step++;
+    while ( step > 0 ) {
+      for ( int32_t mn = (mn_min / step) * step; mn <= mn_max; mn += step ) {
+        add( mn );
+      }
+      step = step / 2;
+    }
+  }
+
+  std::vector< int32_t > sn_list;
+  {
+    std::set< int32_t > sn_set;
+    auto add = [&]( int32_t sn )
+    {
+      if ( sn < sub_divs && sn_set.find( sn ) == sn_set.end() ) {
+        sn_list.push_back( sn );
+        sn_set.insert( sn );
+      }
+    };
+    int32_t step = sub_divs;
+    while ( step > 0 ) {
+      for ( int32_t sn = 0; sn < sub_divs; sn += step ) {
+        add( sn );
+      }
+      do step--; while ( step > 0 && sub_divs % step );
+    }
+  }
+
+  std::vector< SVG::Object* > num_objects;
+
+  const double e = (max - min) * cre; // To account to rounding errors.
+  for ( int32_t sn : sn_list ) {
+    for ( int32_t mn : mn_list ) {
+      double p = mn * major + sn * major / sub_divs;
+      if ( p < min-e ) continue;
+      if ( p > max+e ) continue;
+      bool near_crossing_axis =
+        p > orth_axis_cross-e &&
+        p < orth_axis_cross+e;
       U q = Coor( p );
       U x = (angle == 0) ? q : sx;
       U y = (angle == 0) ? sy : q;
-      U d = (sn == 0) ? tick_major_len : tick_minor_len;
       if ( !near_crossing_axis ) {
+        U d = (sn == 0) ? tick_major_len : tick_minor_len;
         U gx1 = 0;
         U gy1 = 0;
         U gx2 = orth_axis.length;
@@ -415,7 +458,7 @@ void Axis::BuildTicsNumsLinear(
         }
       }
       if (
-        sn == 0 &&
+        (sn == 0 || show_minor_mumbers) &&
         ( !near_crossing_axis ||
           ( orth_axis.orth_axis_cross == orth_axis.min &&
             ((angle == 0) ? (number_pos == Below) : (number_pos == Left))
@@ -423,37 +466,35 @@ void Axis::BuildTicsNumsLinear(
         )
       )
       {
-        this_num = BuildNum( num_g, p, sn == 0 );
+        U d = tick_major_len;
+        Object* obj = BuildNum( num_g, p, sn == 0 );
         if ( angle == 0 ) {
           if ( number_pos == Above ) {
-            this_num->MoveTo( MidX, MinY, x, y + d + 2 );
+            obj->MoveTo( MidX, MinY, x, y + d + 2 );
           } else {
-            this_num->MoveTo( MidX, MaxY, x, y - d - 2 );
+            obj->MoveTo( MidX, MaxY, x, y - d - 2 );
           }
         } else {
           if ( number_pos == Right ) {
-            this_num->MoveTo( MinX, MidY, x + d + 2, y );
+            obj->MoveTo( MinX, MidY, x + d + 2, y );
           } else {
-            this_num->MoveTo( MaxX, MidY, x - d - 2, y );
+            obj->MoveTo( MaxX, MidY, x - d - 2, y );
           }
         }
+        U mx = (angle == 0) ? 4 : 0;
         if (
-          Chart::Collides( this_num, axes_objects, 0, 0 ) ||
-          SVG::Collides( this_num, prev_num )
+          Chart::Collides( obj, axes_objects, mx, 0 ) ||
+          Chart::Collides( obj, num_objects, mx, 0 )
         ) {
           num_g->DeleteFront();
         } else {
-          prev_num = this_num;
+          num_objects.push_back( obj );
         }
       }
     }
-    if ( sub_divs > 0 ) {
-      sn = (sn + 1) % sub_divs;
-    }
-    if ( sn == 0 ) {
-      mn++;
-    }
   }
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -715,7 +756,9 @@ void Axis::Build(
     }
   }
 
-  if ( !log_scale && number_format == Plain ) ComputeDecimals( major );
+  if ( !log_scale && number_format == Plain ) {
+    ComputeDecimals( major / (show_minor_mumbers ? sub_divs : 1) );
+  }
 
   if ( log_scale ) {
     BuildTicsNumsLogarithmic(
