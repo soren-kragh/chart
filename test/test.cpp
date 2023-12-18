@@ -28,24 +28,25 @@ int main()
   }
 
 //  chart.AxisX()->SetLogScale();
-//  chart.AxisX()->SetNumberFormat( Chart::Plain );
+  chart.AxisX()->ShowMinorNumbers();
+//  chart.AxisX()->SetNumberFormat( Chart::Scientific );
 //  chart.AxisX()->SetLabel( "Awesomeness" );
 //  chart.AxisX()->SetUnit( "monsters\nper hour" );
   chart.AxisX()->SetRange( -2, 2 );
-  chart.AxisX()->SetTick( 0.1, 0 );
+  chart.AxisX()->SetTick( 1, 20 );
 //  chart.AxisX()->SetGrid( true, true );
-  chart.AxisX()->SetNumberPos( Chart::Above );
+//  chart.AxisX()->SetNumberPos( Chart::Above );
 //  chart.AxisX()->SetUnitPos( Chart::Above );
 
-//  chart.AxisY()->SetLogScale();
+  chart.AxisY()->SetLogScale();
   chart.AxisY()->ShowMinorNumbers();
 //  chart.AxisY()->SetNumberFormat( Chart::Scientific );
 //  chart.AxisY()->SetLabel( "Scariness" );
 //  chart.AxisY()->SetUnit( "Panic/s" );
-  chart.AxisY()->SetRange( -1, 7 );
-  chart.AxisY()->SetTick( 1.0, 9 );
+  chart.AxisY()->SetRange( 0.001, 10000000 );
+//  chart.AxisY()->SetTick( 1000000, 4 );
 //  chart.AxisY()->SetGrid( true, true );
-  chart.AxisY()->SetNumberPos( Chart::Right );
+//  chart.AxisY()->SetNumberPos( Chart::Right );
 //  chart.AxisY()->SetUnitPos( Chart::Above );
 
 //  for ( int i = 0; i < 12; i++ ) {

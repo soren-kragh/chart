@@ -58,11 +58,16 @@ private:
   // Maximum number of decimals to show.
   const int precision = 10;
 
-  int decimals;
+  int digits;   // Before decimal point (includes any sign).
+  int decimals; // After decimal point;
+  uint32_t num_max_len;
+  uint32_t exp_max_len;
   void ComputeDecimals( double v );
-  std::string NumToStr( double v );
+  int32_t NormalizeExponent( double& num );
+  void ComputeNumFormat( void );
 
-  SVG::Object* BuildNum( SVG::Group* g, double v, bool bold = false );
+  std::string NumToStr( double v );
+  SVG::Object* BuildNum( SVG::Group* g, double v, bool bold );
 
   void AutoTick( void );
 

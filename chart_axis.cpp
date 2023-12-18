@@ -27,7 +27,7 @@ Axis::Axis( int angle )
   this->angle = angle;
   decimals = -1;
   log_scale = false;
-  number_format = Plain;
+  number_format = Fixed;
   number_format_auto = true;
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
@@ -126,15 +126,15 @@ void Axis::AutoTick( void ) {
     if ( number_format_auto ) {
       number_format = (mag < 5e-29 || mag > 5e29) ? Scientific : Magnitude;
     }
-    if ( number_format == Plain ) {
+    if ( number_format == Fixed ) {
       if ( min < 1e-8 || max > 1e20 ) {
         number_format = Scientific;
       }
     }
   } else {
     if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
-    if ( number_format_auto ) number_format = Plain;
-    if ( number_format == Plain ) {
+    if ( number_format_auto ) number_format = Fixed;
+    if ( number_format == Fixed ) {
       if ( mag < 1e-8 || mag > (number_format_auto ? 1e10 : 1e20) ) {
         number_format = Scientific;
       }
@@ -174,9 +174,14 @@ void Axis::AutoTick( void ) {
   } else {
     if ( major > 0 ) {
       if ( sub_divs < 1 ) sub_divs = 1;
-      if ( ((max - min) / major) * sub_divs > length ) {
+      if ( length * major < 10 * (max - min) ) {
         major = 0;
+      } else
+      while ( length * major < 5 * (max - min) * sub_divs ) {
+        sub_divs = sub_divs / 2;
+        while ( sub_divs % 2 && sub_divs % 5 ) sub_divs--;
       }
+      if ( sub_divs < 1 ) sub_divs = 1;
     }
     if ( major <= 0 ) {
       double m = 1;
@@ -223,13 +228,130 @@ U Axis::Coor( double v )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Updates (increases) digits and decimals veriables based on v.
 void Axis::ComputeDecimals( double v )
 {
-  decimals = -1;
-  for ( char c : NumToStr( v ) ) {
-    if ( c == '.' || decimals >= 0 ) decimals++;
+  const double lim = std::pow( double( 10 ), -precision ) / 2;
+  if ( v > -lim && v < lim ) v = 0;
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision( precision ) << v;
+  int dp = -1;
+  int nz = -1;
+  int i = 0;
+  for ( const char c : oss.str() ) {
+    if ( c != '0' && dp >= 0 ) nz = i;
+    if ( c == '.' && dp <  0 ) dp = i;
+    i++;
   }
-  if ( decimals < 0 ) decimals = 0;
+  int dig = (dp < 0) ? 0 : dp;
+  int dec = (nz < 0) ? 0 : (nz - dp);
+  digits = std::max( dig, digits );
+  decimals = std::max( dec, decimals );
+}
+
+int32_t Axis::NormalizeExponent( double& num )
+{
+  int32_t exp = 0;
+  if ( num != 0 && number_format != Fixed ) {
+    double sign = (num < 0 ) ? -1 : 1;
+    num = num * sign;
+    while ( num >= 10 ) {
+      num = num / 10;
+      exp++;
+    }
+    while ( num < 1 ) {
+      num = num * 10;
+      exp--;
+    }
+    if ( num > 10 ) {
+      num = 1;
+      exp++;
+    }
+    if ( number_format == Magnitude ) {
+      while ( exp % 3 ) {
+        num = num * 10;
+        exp--;
+      }
+      if ( exp == -3 && num >= 100 ) {
+        num = num / 1000;
+        exp = 0;
+      }
+    }
+    num = num * sign;
+  }
+  return exp;
+}
+
+void Axis::ComputeNumFormat( void )
+{
+  digits = 0;
+  decimals = -1;
+  num_max_len = 0;
+  exp_max_len = 0;
+
+  if ( number_format == Magnitude ) return;
+
+  std::vector< double > v_list;
+  if ( log_scale ) {
+    int32_t pow_inc = std::round( std::log10( major ) );
+    int32_t pow_min = std::floor( std::log10( min ) ) - pow_inc;
+    int32_t pow_max = std::ceil( std::log10( max ) ) + pow_inc;
+    while ( pow_min % pow_inc ) pow_min--;
+    while ( pow_max % pow_inc ) pow_max++;
+    for ( int32_t pow_cur = pow_min; pow_cur <= pow_max; pow_cur += pow_inc ) {
+      for ( int32_t sn = 0; sn < sub_divs; sn++ ) {
+        if ( sn > 0 && !show_minor_mumbers ) break;
+        double m0 = std::pow( double( 10 ), pow_cur );
+        double m1 = std::pow( double( 10 ), pow_cur + pow_inc );
+        double v = m1 * sn / sub_divs;
+        if ( sn == 0 ) v = m0;
+        if ( v > max * (1 + cre) ) continue;
+        if ( v < min * (1 - cre) ) continue;
+        v_list.push_back( v );
+      }
+    }
+  } else {
+    const double e = (max - min) * cre; // To account to rounding errors.
+    int32_t mn_min = std::floor( (min - major) / major );
+    int32_t mn_max = std::ceil( (max + major) / major );
+    for ( int32_t mn = mn_min; mn <= mn_max; mn++ ) {
+      for ( int32_t sn = 0; sn < sub_divs; sn++ ) {
+        if ( sn > 0 && !show_minor_mumbers ) break;
+        double p = mn * major + sn * major / sub_divs;
+        if ( p < min-e ) continue;
+        if ( p > max+e ) continue;
+        v_list.push_back( p );
+      }
+    }
+  }
+
+  if ( number_format == Fixed ) {
+    for ( double v : v_list ) {
+      ComputeDecimals( v );
+    }
+  }
+
+  if ( number_format == Scientific ) {
+    for ( double v : v_list ) {
+      int32_t exp = NormalizeExponent( v );
+      ComputeDecimals( v );
+      std::ostringstream oss;
+      oss << exp;
+      if ( exp_max_len < oss.str().length() ) exp_max_len = oss.str().length();
+    }
+  }
+
+  num_max_len = digits + decimals;
+  if ( decimals > 0 ) num_max_len++;
+
+  if ( angle == 0 ) {
+    if ( number_format != Fixed ) decimals = -1;
+    num_max_len = 0;
+    exp_max_len = 0;
+  } else {
+    if ( number_pos == Left  ) num_max_len = 0;
+    if ( number_pos == Right ) exp_max_len = 0;
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -244,7 +366,7 @@ std::string Axis::NumToStr( double v )
   bool nz_seen = false;
   int i = 0;
   std::string s;
-  for ( char c : oss.str() ) {
+  for ( const char c : oss.str() ) {
     if ( c == '.' ) {
       dp_seen = true;
     } else {
@@ -267,69 +389,43 @@ std::string Axis::NumToStr( double v )
 SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 {
   if ( std::abs( v ) < num_lo ) v = 0;
-  NumberFormat number_format = this->number_format;
   double num = v;
-  int32_t exp = 0;
-  if ( num != 0 && number_format != Plain ) {
-    double sign = (num < 0 ) ? -1 : 1;
-    num = num * sign;
-    while ( num >= 10 ) {
-      num = num / 10;
-      exp++;
-    }
-    while ( num < 1 ) {
-      num = num * 10;
-      exp--;
-    }
-    if ( num > 10 * (1 - cre) ) {
-      num = 1;
-      exp++;
-    }
-    if ( num < 1 * (1 + cre) ) {
-      num = 1;
-    }
-    if ( number_format == Magnitude ) {
-      while ( exp % 3 ) {
-        num = num * 10;
-        exp--;
-      }
-      if ( exp == -3 && num >= 100 ) {
-        num = num / 1000;
-        exp = 0;
-      }
-    }
-    num = num * sign;
+  int32_t exp = NormalizeExponent( num );
+
+  NumberFormat number_format = this->number_format;
+  if ( number_format == Magnitude && (exp < -30 || exp > 30) ) {
+    number_format = Scientific;
   }
 
   Object* obj = NULL;
 
   std::string s = NumToStr( num );
 
-  if ( number_format == Plain ) {
+  if ( number_format == Magnitude ) {
+    const char sym[] = "qryzafpn\xE6m kMGTPEZYRQ";
+    exp = exp / 3;
+    if ( exp != 0 ) s += sym[ exp + 10 ];
     obj = Label( g, s );
     if ( bold ) obj->Attr()->TextFont()->SetBold();
     return obj;
   }
 
-  if ( number_format == Magnitude ) {
-    if ( exp >= -30 && exp <= 30 ) {
-      const char sym[] = "qryzafpn\xE6m kMGTPEZYRQ";
-      exp = exp / 3;
-      if ( exp != 0 ) s += sym[ exp + 10 ];
-      obj = Label( g, s );
-      if ( bold ) obj->Attr()->TextFont()->SetBold();
-      return obj;
-    } else {
-      number_format = Scientific;
-    }
+  if ( angle == 90 && num_max_len > s.length() ) {
+    s.insert( 0, num_max_len - s.length(), ' ' );
+  }
+
+  if ( number_format == Fixed ) {
+    obj = Label( g, s );
+    if ( bold ) obj->Attr()->TextFont()->SetBold();
+    return obj;
   }
 
   g = g->AddNewGroup();
   BoundaryBox bb;
-  if ( num == 0 ) {
-    obj = Label( g, "0" );
+  if ( angle == 0 && num == 0 ) {
+    obj = Label( g, s );
   } else
-  if ( num == 1 ) {
+  if ( angle == 0 && num == 1 ) {
     obj = Label( g, "10" );
   } else {
     obj = Label( g, s );
@@ -337,27 +433,42 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     U cr = (bb.max.y - bb.min.y) * 0.15;
     U cx = bb.max.x + cr;
     U cy = (bb.max.y - bb.min.y) * 0.45 + cr * 0.5;
-    obj = Label( g, "10" );
+    obj = Label( g, (num == 0) ? "  " : "10" );
     obj->MoveTo( MinX, MinY, cx + cr, bb.min.y );
-    g = g->AddNewGroup();
-    g->Attr()->SetLineWidth( cr * (bold ? 0.75 : 0.5))->LineColor()->Set( Black );
-    g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
-    g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
-    g = g->ParrentGroup();
-    g->Add( new Rect( cx - cr*2, bb.min.y, cx + cr*2, bb.max.y ) );
-    g->LastToBack();
+    if ( num == 0 ) {
+      obj->Attr()->FillColor()->Clear();
+    } else {
+      g = g->AddNewGroup();
+      g->Attr()->SetLineWidth( cr * (bold ? 0.75 : 0.5))->LineColor()->Set( Black );
+      g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
+      g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
+      g = g->ParrentGroup();
+      g->Add( new Rect( cx - cr*2, bb.min.y, cx + cr*2, bb.max.y ) );
+      g->LastToBack();
+    }
   }
   bb = obj->GetBB();
-  if ( num != 0 ) {
-    std::ostringstream oss;
-    oss << exp;
+  if ( angle != 0 || num != 0 ) {
+    if ( num == 0 ) {
+      s = "";
+    } else {
+      std::ostringstream oss;
+      oss << exp;
+      s = oss.str();
+    }
+    if ( angle == 90 && exp_max_len > s.length() ) {
+      s.insert( s.length(), exp_max_len - s.length(), ' ' );
+    }
     U h = bb.max.y - bb.min.y;
-    obj = g->Add( new Text( 0, 0, oss.str() ) );
+    obj = g->Add( new Text( 0, 0, s ) );
     obj->Attr()->TextFont()->SetSize( h * 0.9 );
     obj->MoveTo( MinX, MaxY, bb.max.x - h * 0.05, bb.max.y + h * 0.4 );
     bb = obj->GetBB();
     g->Add( new Rect( bb.min.x - h * 0.12, bb.min.y, bb.max.x + h * 0.12, bb.max.y ) );
     g->Last()->Attr()->LineColor()->Clear();
+    if ( num == 0 ) {
+      g->Last()->Attr()->FillColor()->Clear();
+    }
     g->LastToBack();
   }
   if ( bold ) g->Attr()->TextFont()->SetBold();
@@ -757,9 +868,7 @@ void Axis::Build(
     }
   }
 
-  if ( !log_scale && number_format == Plain ) {
-    ComputeDecimals( major / (show_minor_mumbers ? sub_divs : 1) );
-  }
+  ComputeNumFormat();
 
   if ( log_scale ) {
     BuildTicsNumsLogarithmic(
