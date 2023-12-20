@@ -218,7 +218,7 @@ U Axis::Coor( double v )
         (std::log10( v ) - std::log10( min )) * length /
         (std::log10( max ) - std::log10( min ));
     } else {
-      return 0;
+      return -1e20;
     }
   } else {
     return

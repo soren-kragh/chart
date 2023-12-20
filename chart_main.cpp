@@ -258,6 +258,8 @@ void Main::AutoRange( void )
   bool first = true;
   for ( Series* series : series_list ) {
     for ( auto& datum : series->datum_list ) {
+      if ( axis_x.log_scale && datum.x <= 0 ) continue;
+      if ( axis_y.log_scale && datum.y <= 0 ) continue;
       if ( first || min_x > datum.x ) min_x = datum.x;
       if ( first || max_x < datum.x ) max_x = datum.x;
       if ( first || min_y > datum.y ) min_y = datum.y;
@@ -275,10 +277,6 @@ void Main::AutoRange( void )
       max_x = max_x + 1;
     }
   }
-  if ( axis_x.log_scale && min_x <= 0 ) {
-    if ( max_x <= 0 ) max_x = 100;
-    min_x = max_x / 1000;
-  }
 
   if ( min_y == max_y ) {
     if ( axis_y.log_scale ) {
@@ -288,10 +286,6 @@ void Main::AutoRange( void )
       min_y = min_y - 1;
       max_y = max_y + 1;
     }
-  }
-  if ( axis_y.log_scale && min_y <= 0 ) {
-    if ( max_y <= 0 ) max_y = 100;
-    min_y = max_y / 1000;
   }
 
   bool auto_x = false;
@@ -303,8 +297,8 @@ void Main::AutoRange( void )
     axis_x.max = max_x;
   }
   if ( axis_x.log_scale && axis_x.min <= 0 ) {
-    if ( axis_x.max <= 0 ) axis_x.max = 100;
-    axis_x.min = axis_x.max / 1000;
+    axis_x.min = min_x;
+    if ( axis_x.max <= axis_x.min ) axis_x.max = 1000 * axis_x.min;
   }
 
   if ( axis_y.min >= axis_y.max ) {
@@ -313,8 +307,8 @@ void Main::AutoRange( void )
     axis_y.max = max_y;
   }
   if ( axis_y.log_scale && axis_y.min <= 0 ) {
-    if ( axis_y.max <= 0 ) axis_y.max = 100;
-    axis_y.min = axis_y.max / 1000;
+    axis_y.min = min_y;
+    if ( axis_y.max <= axis_y.min ) axis_y.max = 1000 * axis_y.min;
   }
   if ( auto_y && !axis_y.log_scale ) {
     if ( axis_y.min > 0 && axis_y.min / (axis_y.max - axis_y.min) < 0.35 ) {
