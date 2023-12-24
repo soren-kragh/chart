@@ -74,6 +74,14 @@ private:
   // Convert a value to an SVG coordinate.
   SVG::U Coor( double v );
 
+  // Determine if value is valid.
+  bool Valid( double v )
+  {
+    return
+      std::abs( v ) > num_lo && std::abs( v ) < num_hi &&
+      (!log_scale || v > num_lo);
+  }
+
   void BuildTicsNumsLinear(
     Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,

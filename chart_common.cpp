@@ -29,26 +29,51 @@ SVG::Object* Chart::Label(
     g->Attr()->TextFont()->SetSize( size );
   }
   U y = 0;
+  U r = 0;
   BoundaryBox bb;
   std::string s;
-  for ( char c : txt ) {
-    if ( c == '\n' ) {
+  uint32_t min_x0 = 0;  // Minimal leading spaces.
+  uint32_t max_x1 = 0;  // Maximum line length excluding trailing spaces.
+  uint32_t max_x2 = 0;  // Maximum line length including trailing spaces.
+  bool first_line = true;
+  for ( uint32_t n = 0; n < txt.length(); n++ ) {
+    char c = txt[ n ];
+    if ( c != '\n' ) s += c;
+    if ( c == '\n' || n == txt.length() - 1 ) {
+      uint32_t x0 = 0;
+      uint32_t x1 = 0;
+      uint32_t x2 = 0;
+      for ( const char c : s ) {
+        x2++;
+        if ( c == ' ' ) {
+          if ( x1 == 0 ) x0 = x2;
+        } else {
+          x1 = x2;
+        }
+      }
+      if ( first_line || x0 < min_x0 ) min_x0 = x0;
+      if ( first_line || x1 > max_x1 ) max_x1 = x1;
+      if ( first_line || x2 > max_x2 ) max_x2 = x2;
+      first_line = false;
       g->Add( new Text( 0, y, s ) );
       bb = g->Last()->GetBB();
       y -= bb.max.y - bb.min.y;
+      r = (bb.max.y - bb.min.y) / 3;
       s = "";
-    } else {
-      s += c;
     }
   }
-  if ( s != "" ) {
-    g->Add( new Text( 0, y, s ) );
-  }
-  bb = g->Last()->GetBB();
-  U r = (bb.max.y - bb.min.y) / 3;
   bb = g->GetBB();
   g->Add( new Rect( bb.min.x - r/2, bb.min.y, bb.max.x + r/2, bb.max.y, r ) );
   g->LastToBack();
+  if ( min_x0 > 0 || max_x1 < max_x2 ) {
+    g->Last()->Attr()->FillColor()->Clear();
+    if ( min_x0 < max_x1 ) {
+      U lx = bb.min.x + (bb.max.x - bb.min.x) * min_x0 / max_x2;
+      U rx = bb.min.x + (bb.max.x - bb.min.x) * max_x1 / max_x2;
+      g->Add( new Rect( lx - r/2, bb.min.y, rx + r/2, bb.max.y, r ) );
+      g->LastToBack();
+    }
+  }
 
   return g;
 }

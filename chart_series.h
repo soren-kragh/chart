@@ -41,6 +41,8 @@ public:
 
   void Add( double x, double y );
 
+  uint32_t Size( void ) { return datum_list.size(); }
+
 private:
 
   void UpdateLegendBoxes(

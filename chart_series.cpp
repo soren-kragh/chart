@@ -234,9 +234,7 @@ void Series::Build(
   for ( Datum& datum : datum_list ) {
     U x = x_axis.Coor( datum.x );
     U y = y_axis.Coor( datum.y );
-    bool valid =
-      (!x_axis.log_scale || datum.x > 0) &&
-      (!y_axis.log_scale || datum.y > 0);
+    bool valid = x_axis.Valid( datum.x ) && y_axis.Valid( datum.y );
     bool inside = (x >= 0 && x <= w && y >= 0 && y <= h);
     if ( !valid ) {
       first = true;
