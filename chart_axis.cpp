@@ -444,7 +444,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
       g = g->ParrentGroup();
       g->Add( new Rect( cx - cr*2, bb.min.y, cx + cr*2, bb.max.y ) );
-      g->LastToBack();
+      g->FrontToBack();
     }
   }
   bb = obj->GetBB();
@@ -469,7 +469,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     if ( num == 0 ) {
       g->Last()->Attr()->FillColor()->Clear();
     }
-    g->LastToBack();
+    g->FrontToBack();
   }
   if ( bold ) g->Attr()->TextFont()->SetBold();
   return g;

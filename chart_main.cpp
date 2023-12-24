@@ -621,7 +621,7 @@ Canvas* Main::Build( void )
     )
   );
   chart_g->Last()->Attr()->LineColor()->Clear();
-  chart_g->LastToBack();
+  chart_g->FrontToBack();
 
   return canvas;
 }

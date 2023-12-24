@@ -64,14 +64,14 @@ SVG::Object* Chart::Label(
   }
   bb = g->GetBB();
   g->Add( new Rect( bb.min.x - r/2, bb.min.y, bb.max.x + r/2, bb.max.y, r ) );
-  g->LastToBack();
+  g->FrontToBack();
   if ( min_x0 > 0 || max_x1 < max_x2 ) {
     g->Last()->Attr()->FillColor()->Clear();
     if ( min_x0 < max_x1 ) {
       U lx = bb.min.x + (bb.max.x - bb.min.x) * min_x0 / max_x2;
       U rx = bb.min.x + (bb.max.x - bb.min.x) * max_x1 / max_x2;
       g->Add( new Rect( lx - r/2, bb.min.y, rx + r/2, bb.max.y, r ) );
-      g->LastToBack();
+      g->FrontToBack();
     }
   }
 
