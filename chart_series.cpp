@@ -27,6 +27,7 @@ Series::Series( std::string name )
   this->name = name;
   SetWidth( 1 );
   SetDash( 0 );
+  SetPointSize( 0 );
 
   color_list.emplace_back(); color_list.back().Set( Blue, 0.1 );
   color_list.emplace_back(); color_list.back().Set( Red );
@@ -98,6 +99,11 @@ void Series::SetDash( SVG::U dash, SVG::U hole )
 {
   this->dash = dash;
   this->hole = hole;
+}
+
+void Series::SetPointSize( SVG::U point_size )
+{
+  this->point_size = point_size;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -219,56 +225,90 @@ void Series::Build(
   std::vector< LegendBox >& lb_list
 )
 {
+  bool poly_line = true;
   ApplyStyle( g );
+  Group* lg = NULL;
+  Group* pg = NULL;
+  if ( point_size > 0 ) {
+    lg = g->AddNewGroup();
+    pg = g->AddNewGroup();
+    pg->Attr()->SetLineDash( 0 );
+    pg->Attr()->LineColor()->Clear();
+    pg->Attr()->FillColor()->Set( &color );
+    poly_line = false;
+  } else {
+    lg = g;
+  }
+
   U w = x_axis.length;
   U h = y_axis.length;
   e = std::max( w, h ) / 1.0e5;
-  U ix1 = 0;
-  U iy1 = 0;
-  U ix2 = 0;
-  U iy2 = 0;
+
   Poly* p = NULL;
+  bool adding_segments = false;
+
+  U px = 0;
+  U py = 0;
+  auto add_point = [&]( U x, U y, bool clipped = false )
+  {
+    if ( poly_line ) {
+      if ( !adding_segments ) lg->Add( p = new Poly() );
+      p->Add( x, y );
+    } else {
+      if ( adding_segments ) lg->Add( new Line( px, py, x, y ) );
+    }
+    if ( adding_segments ) {
+      UpdateLegendBoxes( lb_list, px, py, x, y );
+    }
+    if ( !clipped && point_size > 0 ) {
+      U r = width / 2 + point_size;
+      pg->Add( new Circle( x, y, r ) );
+      UpdateLegendBoxes( lb_list, x, y, x, y );
+    }
+    px = x;
+    py = y;
+    adding_segments = true;
+  };
+  auto end_point = [&]( void )
+  {
+    p = NULL;
+    adding_segments = false;
+  };
+
+  bool first = true;
   U ox = 0;
   U oy = 0;
-  bool first = true;
   for ( Datum& datum : datum_list ) {
     U x = x_axis.Coor( datum.x );
     U y = y_axis.Coor( datum.y );
     bool valid = x_axis.Valid( datum.x ) && y_axis.Valid( datum.y );
     bool inside = (x >= 0 && x <= w && y >= 0 && y <= h);
     if ( !valid ) {
+      end_point();
       first = true;
-      p = NULL;
-      continue;
-    }
+    } else
     if ( first ) {
       if ( inside ) {
-        g->Add( p = new Poly() );
-        p->Add( x, y );
-        if ( datum_list.size() == 1 ) {
-          UpdateLegendBoxes( lb_list, x, y, x, y );
-          p->Add( x, y );
-        }
+        add_point( x, y );
       }
       first = false;
     } else {
-      UpdateLegendBoxes( lb_list, ox, oy, x, y );
-      if ( p != NULL && inside ) {
+      if ( adding_segments && inside ) {
         // Common case when we stay inside the chart area.
-        p->Add( x, y );
+        add_point( x, y );
       } else {
         // Handle clipping in and out of the chart area.
+        U ix1, iy1, ix2, iy2;
         int n =
           LineIntersectsBox(
             ix1, iy1, ix2, iy2,
             ox, oy, x, y,
             0, 0, w, h
           );
-        if ( p == NULL ) {
+        if ( !adding_segments ) {
           // We were outside.
           if ( inside ) {
             // We went from outside to now inside.
-            g->Add( p = new Poly() );
             if ( n == 2 ) {
               // When going from being outside to now being inside the area we
               // should only get one intersection, remove the one closest to
@@ -283,17 +323,16 @@ void Series::Build(
               }
             }
             if ( n > 0 ) {
-              p->Add( ix1, iy1 );
+              add_point( ix1, iy1, true );
             }
-            p->Add( x, y );
+            add_point( x, y );
           } else
           if ( n == 2 ) {
             // We are still outside, but the line segment passes through the
             // chart area.
-            g->Add( p = new Poly() );
-            p->Add( ix1, iy1 );
-            p->Add( ix2, iy2 );
-            p = NULL;
+            add_point( ix1, iy1, true );
+            add_point( ix2, iy2, true );
+            end_point();
           }
         } else {
           // We went from inside to now outside.
@@ -318,14 +357,15 @@ void Series::Build(
             ix1 = (x > w/2) ? w : U( 0 );
             iy1 = (y > h/2) ? h : U( 0 );
           }
-          p->Add( ix1, iy1 );
-          p = NULL;
+          add_point( ix1, iy1, true );
+          end_point();
         }
       }
     }
     ox = x;
     oy = y;
   }
+  end_point();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

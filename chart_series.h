@@ -38,6 +38,7 @@ public:
   void SetWidth( SVG::U width );
   void SetDash( SVG::U dash );
   void SetDash( SVG::U dash, SVG::U hole );
+  void SetPointSize( SVG::U point_size );
 
   void Add( double x, double y );
 
@@ -69,6 +70,7 @@ private:
   SVG::U width;
   SVG::U dash;
   SVG::U hole;
+  SVG::U point_size;
 
 };
 
