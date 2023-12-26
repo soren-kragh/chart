@@ -250,7 +250,6 @@ void Main::BuildLegend( Group* g, int nx )
 
 void Main::AutoRange( void )
 {
-  double cre = 1e-6;    // Correction for rounding errors.
   double min_x = axis_x.log_scale ? 10 : 0;
   double max_x = axis_x.log_scale ? 10 : 0;
   double min_y = axis_y.log_scale ? 10 : 0;
@@ -328,12 +327,12 @@ void Main::AutoRange( void )
       if ( axis_x.log_scale ) {
         int32_t u = std::lround( std::log10( axis_x.major ) );
         p = std::log10( axis_x.min ) / u;
-        axis_x.min = std::pow( std::pow( double( 10 ), u ), std::floor( p + cre ) );
+        axis_x.min = std::pow( std::pow( double( 10 ), u ), std::floor( p + axis_x.cre ) );
         p = std::log10( axis_x.max ) / u;
-        axis_x.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p - cre ) );
+        axis_x.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p - axis_x.cre ) );
         if ( axis_x.max < 10 * axis_x.min ) axis_x.max = 10 * axis_x.min;
       } else {
-        double e = (axis_x.max - axis_x.min) * cre;
+        double e = (axis_x.max - axis_x.min) * axis_x.cre;
         if ( axis_x.min != 0 ) {
           p = (axis_x.min + e) / axis_x.major;
           axis_x.min = std::floor( p ) * axis_x.major;
@@ -353,9 +352,9 @@ void Main::AutoRange( void )
       if ( axis_y.log_scale ) {
         int32_t u = std::lround( std::log10( axis_y.major ) );
         p = std::log10( axis_y.min ) / u;
-        axis_y.min = std::pow( std::pow( double( 10 ), u ), std::floor( p + cre ) );
+        axis_y.min = std::pow( std::pow( double( 10 ), u ), std::floor( p + axis_y.cre ) );
         p = std::log10( axis_y.max ) / u;
-        axis_y.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p - cre ) );
+        axis_y.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p - axis_y.cre ) );
         if ( axis_y.max < 10 * axis_y.min ) axis_y.max = 10 * axis_y.min;
       } else {
         if ( axis_y.min != 0 ) {

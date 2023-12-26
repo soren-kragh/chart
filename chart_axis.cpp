@@ -231,8 +231,7 @@ U Axis::Coor( double v )
 // Updates (increases) digits and decimals veriables based on v.
 void Axis::ComputeDecimals( double v )
 {
-  const double lim = std::pow( double( 10 ), -precision ) / 2;
-  if ( v > -lim && v < lim ) v = 0;
+  if ( v > -cre && v < cre ) v = 0;
   std::ostringstream oss;
   oss << std::fixed << std::setprecision( precision ) << v;
   int dp = -1;
@@ -255,17 +254,16 @@ int32_t Axis::NormalizeExponent( double& num )
   if ( num != 0 && number_format != Fixed ) {
     double sign = (num < 0 ) ? -1 : 1;
     num = num * sign;
-    while ( num >= 10 ) {
-      num = num / 10;
-      exp++;
-    }
     while ( num < 1 ) {
       num = num * 10;
       exp--;
     }
-    if ( num > 10 ) {
-      num = 1;
+    while ( num > 10*(1 - cre) ) {
+      num = num / 10;
       exp++;
+    }
+    if ( num > (1 - cre) && num < (1 + cre) ) {
+      num = 1;
     }
     if ( number_format == Magnitude ) {
       while ( exp % 3 ) {
@@ -358,8 +356,7 @@ void Axis::ComputeNumFormat( void )
 
 std::string Axis::NumToStr( double v )
 {
-  const double lim = std::pow( double( 10 ), -precision ) / 2;
-  if ( v > -lim && v < lim ) v = 0;
+  if ( v > -cre && v < cre ) v = 0;
   std::ostringstream oss;
   oss << std::fixed << std::setprecision( precision ) << v;
   bool dp_seen = false;
@@ -422,10 +419,10 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 
   g = g->AddNewGroup();
   BoundaryBox bb;
-  if ( angle == 0 && num == 0 ) {
+  if ( num == 0 && angle == 0 ) {
     obj = Label( g, s );
   } else
-  if ( angle == 0 && num == 1 ) {
+  if ( num == 1 && (angle == 0 || number_pos == Left) ) {
     obj = Label( g, "10" );
   } else {
     obj = Label( g, s );
@@ -435,9 +432,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     U cy = (bb.max.y - bb.min.y) * 0.45 + cr * 0.5;
     obj = Label( g, (num == 0) ? "  " : "10" );
     obj->MoveTo( MinX, MinY, cx + cr, bb.min.y );
-    if ( num == 0 ) {
-      obj->Attr()->FillColor()->Clear();
-    } else {
+    if ( num != 0 ) {
       g = g->AddNewGroup();
       g->Attr()->SetLineWidth( cr * (bold ? 0.75 : 0.5))->LineColor()->Set( Black );
       g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
@@ -460,16 +455,8 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       s.insert( s.length(), exp_max_len - s.length(), ' ' );
     }
     U h = bb.max.y - bb.min.y;
-    obj = g->Add( new Text( 0, 0, s ) );
-    obj->Attr()->TextFont()->SetSize( h * 0.9 );
-    obj->MoveTo( MinX, MaxY, bb.max.x - h * 0.05, bb.max.y + h * 0.4 );
-    bb = obj->GetBB();
-    g->Add( new Rect( bb.min.x - h * 0.12, bb.min.y, bb.max.x + h * 0.12, bb.max.y ) );
-    g->Last()->Attr()->LineColor()->Clear();
-    if ( num == 0 ) {
-      g->Last()->Attr()->FillColor()->Clear();
-    }
-    g->FrontToBack();
+    obj = Label( g, s, h * 0.9 );
+    obj->MoveTo( MinX, MaxY, bb.max.x - h * 0.15, bb.max.y + h * 0.4 );
   }
   if ( bold ) g->Attr()->TextFont()->SetBold();
   return g;

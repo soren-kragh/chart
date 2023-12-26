@@ -52,11 +52,11 @@ private:
   const double num_lo = 1e-300;
   const double num_hi = 1e+300;
 
-  // Correction for rounding errors in comparisons etc.
-  const double cre = 1e-6;
-
   // Maximum number of decimals to show.
   const int precision = 10;
+
+  // Correction for rounding errors in comparisons etc.
+  const double cre = std::pow( double( 10 ), -precision ) / 2;
 
   int digits;   // Before decimal point (includes any sign).
   int decimals; // After decimal point;
