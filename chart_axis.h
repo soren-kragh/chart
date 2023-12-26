@@ -77,9 +77,7 @@ private:
   // Determine if value is valid.
   bool Valid( double v )
   {
-    return
-      std::abs( v ) > num_lo && std::abs( v ) < num_hi &&
-      (!log_scale || v > num_lo);
+    return (std::abs( v ) < num_hi && (!log_scale || v > num_lo));
   }
 
   void BuildTicsNumsLinear(

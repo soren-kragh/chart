@@ -287,6 +287,8 @@ void Axis::ComputeNumFormat( void )
   num_max_len = 0;
   exp_max_len = 0;
 
+  if ( major <= 0 ) return;
+
   if ( number_format == Magnitude ) return;
 
   std::vector< double > v_list;
