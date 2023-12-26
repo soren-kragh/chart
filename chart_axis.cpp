@@ -189,16 +189,16 @@ void Axis::AutoTick( void ) {
       bool f = false;
       while ( 1 ) {
         double q = (max - min) / (m / d);
-        if ( !f && q <= 10 ) d = d * 2; else
-        if (  f && q <=  4 ) d = d * 5; else
+        if ( !f && q < length / 200 ) d = d * 2.0; else
+        if (  f && q < length / 200 ) d = d * 2.5; else
         break;
         f = !f;
       }
       f = false;
       while ( d == 1 ) {
         double q = (max - min) / (m / d);
-        if ( !f && q > 20 ) m = m * 2; else
-        if (  f && q > 20 ) m = m * 5; else
+        if ( !f && q > length / 100 ) m = m * 2.0; else
+        if (  f && q > length / 100 ) m = m * 2.5; else
         break;
         f = !f;
       }
