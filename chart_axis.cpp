@@ -445,7 +445,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   bb = obj->GetBB();
   if ( angle != 0 || num != 0 ) {
     if ( num == 0 ) {
-      s = "";
+      s = " ";
     } else {
       std::ostringstream oss;
       oss << exp;
