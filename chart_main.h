@@ -72,7 +72,7 @@ private:
 
   Pos legend_pos;
 
-  SVG::U margin  = 2;
+  SVG::U margin  = 5;
   SVG::U chart_w = 1200;
   SVG::U chart_h = 800;
 
