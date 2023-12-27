@@ -46,6 +46,8 @@ public:
 
 private:
 
+  void ApplyStyle( SVG::Object* obj );
+
   void UpdateLegendBoxes(
     std::vector< LegendBox >& lb_list,
     SVG::U x1, SVG::U y1,
@@ -59,7 +61,9 @@ private:
     std::vector< LegendBox >& lb_list
   );
 
-  void ApplyStyle( SVG::Object* obj );
+  int ClipLine(
+    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2
+  );
 
   std::string name;
 
@@ -71,6 +75,14 @@ private:
   SVG::U dash;
   SVG::U hole;
   SVG::U point_size;
+
+  // Box within which to display graph.
+  SVG::BoundaryBox box;
+
+  // Correction for rounding errors.
+  double cre = 1e-6;
+  double e1 = 0;
+  double e2 = 0;
 
 };
 
