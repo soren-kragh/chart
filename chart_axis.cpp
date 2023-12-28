@@ -117,6 +117,11 @@ void Axis::AutoTick( void ) {
     major = 0;
     return;
   }
+  if ( mag > (max - min) * 1e15 ) {
+    major = 0;
+    return;
+  }
+
   if ( log_scale ) {
     if ( min < num_lo || max > num_hi ) {
       major = 0;
@@ -184,25 +189,31 @@ void Axis::AutoTick( void ) {
       if ( sub_divs < 1 ) sub_divs = 1;
     }
     if ( major <= 0 ) {
-      double m = 1;
-      double d = 1;
-      bool f = false;
+      int32_t p = 0;
+      int32_t m = 1;
+      int32_t d = 1;
+      int32_t c = 0;
       while ( 1 ) {
-        double q = (max - min) / (m / d);
-        if ( !f && q < length / 200 ) d = d * 2.0; else
-        if (  f && q < length / 200 ) d = d * 2.5; else
-        break;
-        f = !f;
+        major = std::pow( double( 10.0 ), p ) * m / d;
+        if ( (max - min) * 200 >= length * major ) break;
+        switch ( c ) {
+          case 2  : d = 5; break;
+          case 3  : d = 1; p--; break;
+          default : d = d * 2;
+        }
+        c = (c + 1) % 4;
       }
-      f = false;
-      while ( d == 1 ) {
-        double q = (max - min) / (m / d);
-        if ( !f && q > length / 100 ) m = m * 2.0; else
-        if (  f && q > length / 100 ) m = m * 2.5; else
-        break;
-        f = !f;
+      c = 0;
+      while ( p >= 0 && d == 1 ) {
+        major = std::pow( double( 10.0 ), p ) * m / d;
+        if ( (max - min) * 200 <= length * major ) break;
+        switch ( c ) {
+          case 2  : m = 5; break;
+          case 3  : m = 1; p++; break;
+          default : m = m * 2;
+        }
+        c = (c + 1) % 4;
       }
-      major = m / d;
       sub_divs = 2;
     }
   }
@@ -312,9 +323,9 @@ void Axis::ComputeNumFormat( void )
     }
   } else {
     const double e = (max - min) * cre; // To account to rounding errors.
-    int32_t mn_min = std::floor( (min - major) / major );
-    int32_t mn_max = std::ceil( (max + major) / major );
-    for ( int32_t mn = mn_min; mn <= mn_max; mn++ ) {
+    int64_t mn_min = std::floor( (min - major) / major );
+    int64_t mn_max = std::ceil( (max + major) / major );
+    for ( int64_t mn = mn_min; mn <= mn_max; mn++ ) {
       for ( int32_t sn = 0; sn < sub_divs; sn++ ) {
         if ( sn > 0 && !show_minor_mumbers ) break;
         double p = mn * major + sn * major / sub_divs;
@@ -477,22 +488,22 @@ void Axis::BuildTicsNumsLinear(
 {
   if ( major <= 0 ) return;
 
-  std::vector< int32_t > mn_list;
+  std::vector< int64_t > mn_list;
   {
-    std::set< int32_t > mn_set;
-    int32_t mn_min = std::floor( (min - major) / major );
-    int32_t mn_max = std::ceil( (max + major) / major );
-    auto add = [&]( int32_t mn )
+    std::set< int64_t > mn_set;
+    int64_t mn_min = std::floor( (min - major) / major );
+    int64_t mn_max = std::ceil( (max + major) / major );
+    auto add = [&]( int64_t mn )
     {
       if ( mn >= mn_min && mn <= mn_max && mn_set.find( mn ) == mn_set.end() ) {
         mn_list.push_back( mn );
         mn_set.insert( mn );
       }
     };
-    int32_t step = mn_max - mn_min;
+    int64_t step = mn_max - mn_min;
     while ( step & (step - 1) ) step++;
     while ( step > 0 ) {
-      for ( int32_t mn = (mn_min / step) * step; mn <= mn_max; mn += step ) {
+      for ( int64_t mn = (mn_min / step) * step; mn <= mn_max; mn += step ) {
         add( mn );
       }
       step = step / 2;
@@ -522,7 +533,7 @@ void Axis::BuildTicsNumsLinear(
 
   const double e = (max - min) * cre; // To account to rounding errors.
   for ( int32_t sn : sn_list ) {
-    for ( int32_t mn : mn_list ) {
+    for ( int64_t mn : mn_list ) {
       double p = mn * major + sn * major / sub_divs;
       if ( p < min-e ) continue;
       if ( p > max+e ) continue;
