@@ -247,7 +247,7 @@ void Series::Build(
     pg->Attr()->SetLineDash( 0 );
     pg->Attr()->LineColor()->Clear();
     pg->Attr()->FillColor()->Set( &color );
-    if ( 2*point_size >= 3*width ) {
+    if ( point_size >= 3*width ) {
       fg = g->AddNewGroup();
       fg->Attr()->SetLineDash( 0 );
       fg->Attr()->LineColor()->Clear();
@@ -296,7 +296,7 @@ void Series::Build(
       UpdateLegendBoxes( lb_list, prv.x, prv.y, p.x, p.y );
     }
     if ( !clipped && point_size > 0 ) {
-      U r = width / 2 + point_size;
+      U r = (width + point_size) / 2;
       pg->Add( new Circle( p, r ) );
       if ( fg != NULL ) {
         fg->Add( new Circle( p, r - width ) );
