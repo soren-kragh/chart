@@ -240,12 +240,21 @@ void Series::Build(
   ApplyStyle( g );
   Group* lg = NULL;
   Group* pg = NULL;
+  Group* fg = NULL;
   if ( point_size > 0 ) {
     lg = g->AddNewGroup();
     pg = g->AddNewGroup();
     pg->Attr()->SetLineDash( 0 );
     pg->Attr()->LineColor()->Clear();
     pg->Attr()->FillColor()->Set( &color );
+    if ( 2*point_size >= 3*width ) {
+      fg = g->AddNewGroup();
+      fg->Attr()->SetLineDash( 0 );
+      fg->Attr()->LineColor()->Clear();
+      SVG::Color color_light{ color };
+      color_light.Lighten( 0.5 );
+      fg->Attr()->FillColor()->Set( &color_light );
+    }
     poly_line = false;
   } else {
     lg = g;
@@ -289,6 +298,9 @@ void Series::Build(
     if ( !clipped && point_size > 0 ) {
       U r = width / 2 + point_size;
       pg->Add( new Circle( p, r ) );
+      if ( fg != NULL ) {
+        fg->Add( new Circle( p, r - width ) );
+      }
       UpdateLegendBoxes( lb_list, p.x, p.y, p.x, p.y );
     }
     prv = p;
