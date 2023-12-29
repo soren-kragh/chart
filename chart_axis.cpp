@@ -418,7 +418,8 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   g = g->AddNewGroup();
   BoundaryBox bb;
   if ( num == 0 ) {
-    s.erase( s.find( '.' ) );
+    size_t pos = s.find( '.' );
+    if ( pos != std::string::npos ) s.erase( pos );
     obj = Label( g, s );
   } else
   if ( num == 1 && (angle == 0 || number_pos == Left) ) {
