@@ -31,9 +31,9 @@ Series::Series( std::string name )
 
   color_list.emplace_back(); color_list.back().Set( Blue, 0.1 );
   color_list.emplace_back(); color_list.back().Set( Red );
-  color_list.emplace_back(); color_list.back().Set( Green, 0.5 );
+  color_list.emplace_back(); color_list.back().Set( Green, 0.3 );
   color_list.emplace_back(); color_list.back().Set( Cyan, 0, 0.2 );
-  color_list.emplace_back(); color_list.back().Set( Purple );
+  color_list.emplace_back(); color_list.back().Set( Purple, 0.1 );
   color_list.emplace_back(); color_list.back().Set( Blue, 0.6 );
   color_list.emplace_back(); color_list.back().Set( Orange );
   color_list.emplace_back(); color_list.back().Set( Brown, 0, 0.3 );
