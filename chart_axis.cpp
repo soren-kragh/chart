@@ -25,7 +25,10 @@ using namespace Chart;
 Axis::Axis( int angle )
 {
   this->angle = angle;
-  decimals = -1;
+  digits = 0;
+  decimals = 0;
+  num_max_len = 0;
+  exp_max_len = 0;
   log_scale = false;
   number_format = Fixed;
   number_format_auto = true;
@@ -239,8 +242,9 @@ U Axis::Coor( double v )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Updates (increases) digits and decimals veriables based on v.
-void Axis::ComputeDecimals( double v )
+// Compute number of required decimals. If update=true then the digits and
+// decimals member class variables are updated to reflect the new max.
+int32_t Axis::ComputeDecimals( double v, bool update )
 {
   if ( v > -cre && v < cre ) v = 0;
   std::ostringstream oss;
@@ -255,8 +259,11 @@ void Axis::ComputeDecimals( double v )
   }
   int dig = (dp < 0) ? 0 : dp;
   int dec = (nz < 0) ? 0 : (nz - dp);
-  digits = std::max( dig, digits );
-  decimals = std::max( dec, decimals );
+  if ( update ) {
+    digits = std::max( dig, digits );
+    decimals = std::max( dec, decimals );
+  }
+  return dec;
 }
 
 int32_t Axis::NormalizeExponent( double& num )
@@ -294,13 +301,11 @@ int32_t Axis::NormalizeExponent( double& num )
 void Axis::ComputeNumFormat( void )
 {
   digits = 0;
-  decimals = -1;
+  decimals = 0;
   num_max_len = 0;
   exp_max_len = 0;
 
-  if ( major <= 0 ) return;
-
-  if ( number_format == Magnitude ) return;
+  if ( major <= 0 || number_format == Magnitude ) return;
 
   std::vector< double > v_list;
   if ( log_scale ) {
@@ -338,17 +343,17 @@ void Axis::ComputeNumFormat( void )
 
   if ( number_format == Fixed ) {
     for ( double v : v_list ) {
-      ComputeDecimals( v );
+      ComputeDecimals( v, true );
     }
   }
 
   if ( number_format == Scientific ) {
     for ( double v : v_list ) {
       int32_t exp = NormalizeExponent( v );
-      ComputeDecimals( v );
+      ComputeDecimals( v, true );
       std::ostringstream oss;
       oss << exp;
-      if ( exp_max_len < oss.str().length() ) exp_max_len = oss.str().length();
+      exp_max_len = std::max( exp_max_len, int32_t( oss.str().length() ) );
     }
   }
 
@@ -356,42 +361,25 @@ void Axis::ComputeNumFormat( void )
   if ( decimals > 0 ) num_max_len++;
 
   if ( angle == 0 ) {
-    if ( number_format != Fixed ) decimals = -1;
+    if ( number_format != Fixed ) decimals = 0;
     num_max_len = 0;
     exp_max_len = 0;
   } else {
     if ( number_pos == Left  ) num_max_len = 0;
     if ( number_pos == Right ) exp_max_len = 0;
   }
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string Axis::NumToStr( double v )
 {
-  if ( v > -cre && v < cre ) v = 0;
+  int32_t dec = std::max( ComputeDecimals( v ), decimals );
   std::ostringstream oss;
-  oss << std::fixed << std::setprecision( precision ) << v;
-  bool dp_seen = false;
-  bool nz_seen = false;
-  int i = 0;
-  std::string s;
-  for ( const char c : oss.str() ) {
-    if ( c == '.' ) {
-      dp_seen = true;
-    } else {
-      if ( dp_seen ) {
-        if ( (v == 0 || nz_seen) && c == '0' && i >= decimals ) break;
-        if ( i == 0 ) s += '.';
-        s += c;
-        i++;
-      } else {
-        s += c;
-      }
-      nz_seen = nz_seen || c != '0';
-    }
-  }
-  return s;
+  oss << std::fixed << std::setprecision( dec ) << v;
+  return oss.str();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -420,7 +408,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     return obj;
   }
 
-  if ( angle == 90 && num_max_len > s.length() ) {
+  if ( angle == 90 && num_max_len > int32_t( s.length() ) ) {
     s.insert( 0, num_max_len - s.length(), ' ' );
   }
 
@@ -465,7 +453,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       oss << exp;
       s = oss.str();
     }
-    if ( angle == 90 && exp_max_len > s.length() ) {
+    if ( angle == 90 && exp_max_len > int32_t( s.length() ) ) {
       s.insert( s.length(), exp_max_len - s.length(), ' ' );
     }
     U h = bb.max.y - bb.min.y;

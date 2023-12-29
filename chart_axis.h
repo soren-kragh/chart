@@ -58,11 +58,11 @@ private:
   // Correction for rounding errors in comparisons etc.
   const double cre = std::pow( double( 10 ), -precision ) / 2;
 
-  int digits;   // Before decimal point (includes any sign).
-  int decimals; // After decimal point;
-  uint32_t num_max_len;
-  uint32_t exp_max_len;
-  void ComputeDecimals( double v );
+  int32_t digits;   // Before decimal point (includes any sign).
+  int32_t decimals; // After decimal point;
+  int32_t num_max_len;
+  int32_t exp_max_len;
+  int32_t ComputeDecimals( double v, bool update = false );
   int32_t NormalizeExponent( double& num );
   void ComputeNumFormat( void );
 
