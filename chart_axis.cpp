@@ -195,27 +195,24 @@ void Axis::AutoTick( void ) {
       int32_t p = 0;
       int32_t m = 1;
       int32_t d = 1;
-      int32_t c = 0;
       while ( 1 ) {
         major = std::pow( double( 10.0 ), p ) * m / d;
-        if ( (max - min) * 200 >= length * major ) break;
-        switch ( c ) {
-          case 2  : d = 5; break;
-          case 3  : d = 1; p--; break;
-          default : d = d * 2;
+        if ( (max - min) * 200 > length * major ) break;
+        switch ( d ) {
+          case 1  : d = 2; break;
+          case 2  : d = 4; break;
+          case 4  : d = 5; break;
+          default : d = 1; p--;
         }
-        c = (c + 1) % 4;
       }
-      c = 0;
       while ( p >= 0 && d == 1 ) {
         major = std::pow( double( 10.0 ), p ) * m / d;
-        if ( (max - min) * 200 <= length * major ) break;
-        switch ( c ) {
+        if ( (max - min) * 100 < length * major ) break;
+        switch ( m ) {
+          case 1  : m = 2; break;
           case 2  : m = 5; break;
-          case 3  : m = 1; p++; break;
-          default : m = m * 2;
+          default : m = 1; p++;
         }
-        c = (c + 1) % 4;
       }
       sub_divs = 2;
     }
