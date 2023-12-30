@@ -330,10 +330,10 @@ void Axis::ComputeNumFormat( void )
     for ( int64_t mn = mn_min; mn <= mn_max; mn++ ) {
       for ( int32_t sn = 0; sn < sub_divs; sn++ ) {
         if ( sn > 0 && !show_minor_mumbers ) break;
-        double p = mn * major + sn * major / sub_divs;
-        if ( p < min-e ) continue;
-        if ( p > max+e ) continue;
-        v_list.push_back( p );
+        double v = mn * major + sn * major / sub_divs;
+        if ( v < min-e ) continue;
+        if ( v > max+e ) continue;
+        v_list.push_back( v );
       }
     }
   }
@@ -517,18 +517,27 @@ void Axis::BuildTicsNumsLinear(
 
   std::vector< SVG::Object* > num_objects;
 
-  const double e = (max - min) * cre; // To account to rounding errors.
+  U oca_coor = Coor( orth_axis_cross );
+  U min_coor = 0;
+  U max_coor = length;
+  U eps_coor = (max_coor - min_coor) * cre; // Epsilon for precision issues.
+  U zro_coor = 1e9;
+  if ( min < cre && max > -cre ) zro_coor = Coor( 0 );
+
   for ( int32_t sn : sn_list ) {
     for ( int64_t mn : mn_list ) {
-      double p = mn * major + sn * major / sub_divs;
-      if ( p < min-e ) continue;
-      if ( p > max+e ) continue;
+      double v = mn * major + sn * major / sub_divs;
+      U v_coor = Coor( v );
+      if ( v_coor < min_coor - eps_coor ) continue;
+      if ( v_coor > max_coor + eps_coor ) continue;
       bool near_crossing_axis =
-        p > orth_axis_cross-e &&
-        p < orth_axis_cross+e;
-      U q = Coor( p );
-      U x = (angle == 0) ? q : sx;
-      U y = (angle == 0) ? sy : q;
+        v_coor >= oca_coor - eps_coor &&
+        v_coor <= oca_coor + eps_coor;
+      bool at_zero =
+        v_coor >= zro_coor - eps_coor &&
+        v_coor <= zro_coor + eps_coor;
+      U x = (angle == 0) ? v_coor : sx;
+      U y = (angle == 0) ? sy : v_coor;
       if ( !near_crossing_axis ) {
         U d = (sn == 0) ? tick_major_len : tick_minor_len;
         U gx1 = 0;
@@ -545,7 +554,7 @@ void Axis::BuildTicsNumsLinear(
         bool mg = sn == 0 && major_grid_enable;
         if ( mg || minor_grid_enable ) {
           if ( mg ) {
-            if ( p > -e && p < +e ) {
+            if ( at_zero ) {
               zero_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
             } else {
               major_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
@@ -566,7 +575,7 @@ void Axis::BuildTicsNumsLinear(
       )
       {
         U d = tick_major_len;
-        Object* obj = BuildNum( num_g, p, sn == 0 );
+        Object* obj = BuildNum( num_g, v, sn == 0 );
         if ( angle == 0 ) {
           if ( number_pos == Above ) {
             obj->MoveTo( MidX, MinY, x, y + d + 2 );
@@ -667,6 +676,13 @@ void Axis::BuildTicsNumsLogarithmic(
 
   std::vector< SVG::Object* > num_objects;
 
+  U oca_coor = Coor( orth_axis_cross );
+  U min_coor = 0;
+  U max_coor = length;
+  U eps_coor = (max_coor - min_coor) * cre; // Epsilon for precision issues.
+  U one_coor = 1e9;
+  if ( min < (1 + cre) && max > (1 - cre) ) one_coor = Coor( 1 );
+
   for ( int32_t sn : sn_list ) {
     if ( sn >= sub_divs ) continue;
     for ( int32_t pow_cur : pow_list ) {
@@ -674,15 +690,19 @@ void Axis::BuildTicsNumsLogarithmic(
       double m1 = std::pow( double( 10 ), pow_cur + pow_inc );
       double v = m1 * sn / sub_divs;
       if ( sn == 0 ) v = m0;
-      if ( v > max * (1 + cre) ) continue;
-      if ( v < min * (1 - cre) ) continue;
-      if ( sn > 0 && v < m0 * (1 + cre) ) continue;
+      U v_coor = Coor( v );
+      U m0_coor = Coor( m0 );
+      if ( sn > 0 && v_coor <= m0_coor ) continue;
+      if ( v_coor < min_coor - eps_coor ) continue;
+      if ( v_coor > max_coor + eps_coor ) continue;
       bool near_crossing_axis =
-        v > orth_axis_cross * (1 - cre) &&
-        v < orth_axis_cross * (1 + cre);
-      U q = Coor( v );
-      U x = (angle == 0) ? q : sx;
-      U y = (angle == 0) ? sy : q;
+        v_coor >= oca_coor - eps_coor &&
+        v_coor <= oca_coor + eps_coor;
+      bool at_one =
+        v_coor >= one_coor - eps_coor &&
+        v_coor <= one_coor + eps_coor;
+      U x = (angle == 0) ? v_coor : sx;
+      U y = (angle == 0) ? sy : v_coor;
       if ( !near_crossing_axis ) {
         U d = (sn == 0) ? tick_major_len : tick_minor_len;
         U gx1 = 0;
@@ -699,7 +719,7 @@ void Axis::BuildTicsNumsLogarithmic(
         bool mg = sn == 0 && major_grid_enable;
         if ( mg || minor_grid_enable ) {
           if ( mg ) {
-            if ( v > (1 - cre) && v < (1 + cre) ) {
+            if ( at_one ) {
               zero_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
             } else {
               major_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
