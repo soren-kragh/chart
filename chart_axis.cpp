@@ -223,7 +223,7 @@ void Axis::LegalizeMajor( void ) {
       int32_t m = 1;
       int32_t d = 1;
       while ( 1 ) {
-        major = std::pow( double( 10.0 ), p ) * m / d;
+        major = std::pow( double( 10 ), p ) * m / d;
         if ( (max - min) * 2 * min_space > length * major ) break;
         switch ( d ) {
           case 1  : d = 2; break;
@@ -233,7 +233,7 @@ void Axis::LegalizeMajor( void ) {
         }
       }
       while ( p >= 0 && d == 1 ) {
-        major = std::pow( double( 10.0 ), p ) * m / d;
+        major = std::pow( double( 10 ), p ) * m / d;
         if ( (max - min) * min_space < length * major ) break;
         switch ( m ) {
           case 1  : m = 2; break;
@@ -271,7 +271,7 @@ U Axis::Coor( double v )
 // decimals member class variables are updated to reflect the new max.
 int32_t Axis::ComputeDecimals( double v, bool update )
 {
-  if ( v > -cre && v < cre ) v = 0;
+  if ( v > -lim && v < lim ) v = 0;
   std::ostringstream oss;
   oss << std::fixed << std::setprecision( precision ) << v;
   int dp = -1;
@@ -301,11 +301,11 @@ int32_t Axis::NormalizeExponent( double& num )
       num = num * 10;
       exp--;
     }
-    while ( num > 10*(1 - cre) ) {
+    while ( num > 10 ) {
       num = num / 10;
       exp++;
     }
-    if ( num > (1 - cre) && num < (1 + cre) ) {
+    if ( num > (1 - lim) && num < (1 + lim) ) {
       num = 1;
     }
     if ( number_format == Magnitude ) {
@@ -332,6 +332,10 @@ void Axis::ComputeNumFormat( void )
 
   if ( major <= 0 || number_format == Magnitude ) return;
 
+  U min_coor = 0;
+  U max_coor = length;
+  U eps_coor = (max_coor - min_coor) * epsilon;
+
   std::vector< double > v_list;
   if ( log_scale ) {
     int32_t pow_inc = std::round( std::log10( major ) );
@@ -346,21 +350,22 @@ void Axis::ComputeNumFormat( void )
         double m1 = std::pow( double( 10 ), pow_cur + pow_inc );
         double v = m1 * sn / sub_divs;
         if ( sn == 0 ) v = m0;
-        if ( v > max * (1 + cre) ) continue;
-        if ( v < min * (1 - cre) ) continue;
+        U v_coor = Coor( v );
+        if ( v_coor < min_coor - eps_coor ) continue;
+        if ( v_coor > max_coor + eps_coor ) continue;
         v_list.push_back( v );
       }
     }
   } else {
-    const double e = (max - min) * cre; // To account to rounding errors.
     int64_t mn_min = std::floor( (min - major) / major );
     int64_t mn_max = std::ceil( (max + major) / major );
     for ( int64_t mn = mn_min; mn <= mn_max; mn++ ) {
       for ( int32_t sn = 0; sn < sub_divs; sn++ ) {
         if ( sn > 0 && !show_minor_mumbers ) break;
         double v = mn * major + sn * major / sub_divs;
-        if ( v < min-e ) continue;
-        if ( v > max+e ) continue;
+        U v_coor = Coor( v );
+        if ( v_coor < min_coor - eps_coor ) continue;
+        if ( v_coor > max_coor + eps_coor ) continue;
         v_list.push_back( v );
       }
     }
@@ -548,9 +553,9 @@ void Axis::BuildTicsNumsLinear(
   U oca_coor = Coor( orth_axis_cross );
   U min_coor = 0;
   U max_coor = length;
-  U eps_coor = (max_coor - min_coor) * cre; // Epsilon for precision issues.
+  U eps_coor = (max_coor - min_coor) * epsilon;
   U zro_coor = 1e9;
-  if ( min < cre && max > -cre ) zro_coor = Coor( 0 );
+  if ( min < epsilon && max > -epsilon ) zro_coor = Coor( 0 );
 
   for ( int32_t sn : sn_list ) {
     for ( int64_t mn : mn_list ) {
@@ -707,9 +712,9 @@ void Axis::BuildTicsNumsLogarithmic(
   U oca_coor = Coor( orth_axis_cross );
   U min_coor = 0;
   U max_coor = length;
-  U eps_coor = (max_coor - min_coor) * cre; // Epsilon for precision issues.
+  U eps_coor = (max_coor - min_coor) * epsilon;
   U one_coor = 1e9;
-  if ( min < (1 + cre) && max > (1 - cre) ) one_coor = Coor( 1 );
+  if ( min < (1 + epsilon) && max > (1 - epsilon) ) one_coor = Coor( 1 );
 
   for ( int32_t sn : sn_list ) {
     if ( sn >= sub_divs ) continue;

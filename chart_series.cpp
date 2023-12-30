@@ -270,7 +270,7 @@ void Series::Build(
   // by near(). Use different epsilons for near-detection and clip-detection in
   // order to ensure that any spurious clip-detection will be caught by the
   // more inclusive near-detection.
-  e1 = std::max( box.max.x - box.min.x, box.max.y - box.min.y ) * cre;
+  e1 = std::max( box.max.x - box.min.x, box.max.y - box.min.y ) * epsilon;
   e2 = e1 * 0.1;
 
   // Enlarge the clip-box a little bit to ensure that points lying exactly at

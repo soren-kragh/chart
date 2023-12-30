@@ -79,8 +79,7 @@ private:
   // Box within which to display graph.
   SVG::BoundaryBox box;
 
-  // Correction for rounding errors.
-  double cre = 1e-6;
+  // Used for floating point precision issues.
   double e1 = 0;
   double e2 = 0;
 

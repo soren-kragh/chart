@@ -20,6 +20,9 @@
 
 namespace Chart {
 
+  // Correction factor for floating point precision issues in comparisons etc.
+  const double epsilon = 1e-6;
+
   typedef enum { Auto, Center, Left, Right, Top, Bottom, Above, Below } Pos;
 
   typedef enum { Fixed, Scientific, Magnitude } NumberFormat;

@@ -55,8 +55,8 @@ private:
   // Maximum number of decimals to show.
   const int precision = 10;
 
-  // Correction for rounding errors in comparisons etc.
-  const double cre = std::pow( double( 10 ), -precision ) / 2;
+  // Fixed number lower limit.
+  const double lim = std::pow( double( 10 ), -precision ) / 2;
 
   int32_t digits;   // Before decimal point (includes any sign).
   int32_t decimals; // After decimal point;
