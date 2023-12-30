@@ -42,7 +42,6 @@ Axis::Axis( int angle )
   number_pos = Auto;
   major_grid_enable = true;
   minor_grid_enable = true;
-
   unit_pos = Auto;
 }
 
@@ -145,7 +144,8 @@ void Axis::AutoTick( void ) {
     if ( number_format == Fixed ) {
       if (
         mag < (number_format_auto ? 1e-5 : 1e-9) ||
-        mag > (number_format_auto ? 1e10 : 1e15)
+        mag > (number_format_auto ? 1e10 : 1e15) ||
+        (number_format_auto && mag < 0.1)
       ) {
         number_format = Scientific;
       }

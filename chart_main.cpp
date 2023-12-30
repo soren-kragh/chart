@@ -316,10 +316,10 @@ void Main::AutoRange( void )
     }
   }
   if ( auto_y && !axis_y.log_scale ) {
-    if ( axis_y.min > 0 && axis_y.min / (axis_y.max - axis_y.min) < 0.35 ) {
+    if ( axis_y.min > 0 && axis_y.min / (axis_y.max - axis_y.min) < 0.6 ) {
       axis_y.min = 0;
     }
-    if ( axis_y.max < 0 && axis_y.max / (axis_y.min - axis_y.max) < 0.35 ) {
+    if ( axis_y.max < 0 && axis_y.max / (axis_y.min - axis_y.max) < 0.6 ) {
       axis_y.max = 0;
     }
   }
@@ -376,7 +376,7 @@ void Main::AutoRange( void )
     } else {
       axis_y.orth_axis_cross = axis_y.min;
     }
-    if ( axis_y.min * axis_y.max < 0 ) {
+    if ( axis_y.min < 0 &&  axis_y.max > 0 ) {
       axis_y.orth_axis_cross = 0;
     }
     if ( axis_y.log_scale ) {
