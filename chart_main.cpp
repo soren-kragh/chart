@@ -324,8 +324,8 @@ void Main::AutoRange( void )
     }
   }
 
-  axis_x.AutoTick();
-  axis_y.AutoTick();
+  axis_x.LegalizeMajor();
+  axis_y.LegalizeMajor();
 
   if ( auto_x ) {
     double p;
@@ -383,6 +383,9 @@ void Main::AutoRange( void )
       axis_y.orth_axis_cross = axis_y.min;
     }
   }
+
+  axis_x.LegalizeMinor();
+  axis_y.LegalizeMinor();
 
   if ( axis_x.orth_axis_cross < axis_x.min ) axis_x.orth_axis_cross = axis_x.min;
   if ( axis_x.orth_axis_cross > axis_x.max ) axis_x.orth_axis_cross = axis_x.max;

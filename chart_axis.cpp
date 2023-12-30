@@ -112,7 +112,50 @@ void Axis::SetUnitPos( Pos pos )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Axis::AutoTick( void ) {
+void Axis::LegalizeMinor( void ) {
+  if ( major <= 0 ) {
+    sub_divs = 0;
+    return;
+  }
+
+  U max_coor = Coor( max );
+
+  if ( log_scale ) {
+    if ( major > 10 ) sub_divs = 1;
+    if ( sub_divs < 1 ) {
+      sub_divs = 10;
+      while ( true ) {
+        U coor = Coor( max - max / sub_divs );
+        if ( max_coor - coor <= 32 ) break;
+        if ( sub_divs == 100 ) break;
+        do sub_divs++; while ( 100 % sub_divs );
+      }
+      while ( true ) {
+        U coor = Coor( max - max / sub_divs );
+        if ( max_coor - coor >= 8 ) break;
+        if ( sub_divs == 1 ) break;
+        do sub_divs--; while ( 100 % sub_divs );
+      }
+    }
+    if ( sub_divs > 100 ) sub_divs = 100;
+    while ( sub_divs > 1 ) {
+      U coor = Coor( max - max / sub_divs );
+      if ( max_coor - coor >= 4 ) break;
+      do sub_divs--; while ( 100 % sub_divs );
+    }
+  } else {
+    if ( sub_divs < 1 ) sub_divs = 1;
+    while ( sub_divs > 1 ) {
+      U coor = Coor( max - major / sub_divs );
+      if ( max_coor - coor >= 10 ) break;
+      do sub_divs--; while ( 1000 % sub_divs );
+    }
+  }
+
+  return;
+}
+
+void Axis::LegalizeMajor( void ) {
   double mag = std::max( std::abs( min ), std::abs( max ) );
 
   if ( mag < num_lo || mag > num_hi || (max - min) < num_lo ) {
@@ -133,74 +176,55 @@ void Axis::AutoTick( void ) {
     if ( number_format_auto ) {
       number_format = (mag < 5e-29 || mag > 5e29) ? Scientific : Magnitude;
     }
-    if ( number_format == Fixed ) {
-      if ( min < 1e-8 || max > 1e20 ) {
-        number_format = Scientific;
-      }
-    }
   } else {
     if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
     if ( number_format_auto ) number_format = Fixed;
-    if ( number_format == Fixed ) {
-      if (
-        mag < (number_format_auto ? 1e-5 : 1e-9) ||
-        mag > (number_format_auto ? 1e10 : 1e15) ||
-        (number_format_auto && mag < 0.1)
-      ) {
-        number_format = Scientific;
-      }
+  }
+  if ( number_format == Fixed ) {
+    if (
+      mag < (number_format_auto ? 1e-5 : 1e-9) ||
+      mag > (number_format_auto ? 1e10 : 1e15) ||
+      (number_format_auto && mag < 0.1)
+    ) {
+      number_format = Scientific;
     }
   }
 
+  U max_coor = Coor( max );
+
   if ( log_scale ) {
-    bool auto_major = major < 9.5;
+    bool auto_major = major < 10;
     if ( auto_major ) major = 10;
-    major = std::pow( double( 10 ), std::round( std::log10( major ) ) );
-    int32_t e1 = std::floor( std::log10( min ) * (1 + cre) );
-    int32_t e2 = std::ceil( std::log10( max ) * (1 - cre) );
-    if ( e2 <= e1 ) e2 = e1 + 1;
-    if ( auto_major ) {
-      while ( (e2 - e1) / std::round( std::log10( major ) ) > length / 35 ) {
-        if ( number_format == Magnitude ) {
-          major = major * ((major > 10) ? 1000 : 100);
-        } else {
-          major = major * 10;
-        }
+    major =
+      std::round(
+        std::pow( double( 10 ), std::round( std::log10( major ) ) )
+      );
+    while ( true ) {
+      U coor = Coor( max / major );
+      if ( max_coor - coor >= (auto_major ? 40 : 20) ) break;
+      if ( number_format == Magnitude ) {
+        major = major * ((major > 10) ? 1000 : 100);
+      } else {
+        major = major * 10;
       }
     }
-    if ( sub_divs < 1 ) {
-      int32_t mc = (e2 - e1) / std::round( std::log10( major ) );
-      if ( mc < 1 ) mc = 1;
-      sub_divs = 10;
-      if ( length / (mc * sub_divs) < 15 ) {
-        sub_divs = std::lround( length / (15.0 * mc) );
-      }
-      if ( length / (mc * sub_divs) > 50 ) {
-        sub_divs = std::lround( length / (50.0 * mc) );
-      }
-    }
-    if ( sub_divs < 1 || major > 10 ) sub_divs = 1;
-    if ( sub_divs > 100 ) sub_divs = 100;
-    while ( 100 % sub_divs ) sub_divs--;
   } else {
     if ( major > 0 ) {
-      if ( sub_divs < 1 ) sub_divs = 1;
-      if ( length * major < 10 * (max - min) ) {
+      // Minimum allowed major spacing.
+      U min_space = 12;
+      if ( length * major < min_space * (max - min) ) {
         major = 0;
-      } else
-      while ( length * major < 5 * (max - min) * sub_divs ) {
-        sub_divs = sub_divs / 2;
-        while ( sub_divs % 2 && sub_divs % 5 ) sub_divs--;
       }
-      if ( sub_divs < 1 ) sub_divs = 1;
     }
     if ( major <= 0 ) {
+      // Minimum major spacing to aim for.
+      U min_space = 100;
       int32_t p = 0;
       int32_t m = 1;
       int32_t d = 1;
       while ( 1 ) {
         major = std::pow( double( 10.0 ), p ) * m / d;
-        if ( (max - min) * 200 > length * major ) break;
+        if ( (max - min) * 2 * min_space > length * major ) break;
         switch ( d ) {
           case 1  : d = 2; break;
           case 2  : d = 4; break;
@@ -210,7 +234,7 @@ void Axis::AutoTick( void ) {
       }
       while ( p >= 0 && d == 1 ) {
         major = std::pow( double( 10.0 ), p ) * m / d;
-        if ( (max - min) * 100 < length * major ) break;
+        if ( (max - min) * min_space < length * major ) break;
         switch ( m ) {
           case 1  : m = 2; break;
           case 2  : m = 5; break;
@@ -220,6 +244,8 @@ void Axis::AutoTick( void ) {
       sub_divs = 2;
     }
   }
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -228,15 +254,14 @@ U Axis::Coor( double v )
 {
   if ( log_scale ) {
     if ( v > 0 ) {
-      return
-        (std::log10( v ) - std::log10( min )) * length /
-        (std::log10( max ) - std::log10( min ));
+      double a = std::log10( min );
+      double b = std::log10( max );
+      return (std::log10( v ) - a) * length / (b - a);
     } else {
       return -1e20;
     }
   } else {
-    return
-      (v - min) * length / (max - min);
+    return (v - min) * length / (max - min);
   }
 }
 

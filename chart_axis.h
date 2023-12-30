@@ -69,7 +69,8 @@ private:
   std::string NumToStr( double v );
   SVG::Object* BuildNum( SVG::Group* g, double v, bool bold );
 
-  void AutoTick( void );
+  void LegalizeMinor( void );
+  void LegalizeMajor( void );
 
   // Convert a value to an SVG coordinate.
   SVG::U Coor( double v );
