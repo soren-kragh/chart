@@ -143,7 +143,10 @@ void Axis::AutoTick( void ) {
     if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
     if ( number_format_auto ) number_format = Fixed;
     if ( number_format == Fixed ) {
-      if ( mag < 1e-8 || mag > (number_format_auto ? 1e10 : 1e20) ) {
+      if (
+        mag < (number_format_auto ? 1e-5 : 1e-9) ||
+        mag > (number_format_auto ? 1e10 : 1e15)
+      ) {
         number_format = Scientific;
       }
     }
