@@ -295,13 +295,13 @@ int32_t Axis::NormalizeExponent( double& num )
 {
   int32_t exp = 0;
   if ( num != 0 && number_format != Fixed ) {
-    double sign = (num < 0 ) ? -1 : 1;
+    double sign = (num < 0) ? -1 : 1;
     num = num * sign;
     while ( num < 1 ) {
       num = num * 10;
       exp--;
     }
-    while ( num > 10 ) {
+    while ( num > (10 - lim) ) {
       num = num / 10;
       exp++;
     }
@@ -457,6 +457,9 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   } else
   if ( num == 1 && (angle == 0 || number_pos == Left) ) {
     obj = Label( g, "10" );
+  } else
+  if ( num == -1 && (angle == 0 || number_pos == Left) ) {
+    obj = Label( g, "-10" );
   } else {
     obj = Label( g, s );
     bb = obj->GetBB();
@@ -519,6 +522,7 @@ void Axis::BuildTicsNumsLinear(
         mn_set.insert( mn );
       }
     };
+    add( 0 );
     int64_t step = mn_max - mn_min;
     while ( step & (step - 1) ) step++;
     while ( step > 0 ) {
@@ -692,7 +696,7 @@ void Axis::BuildTicsNumsLogarithmic(
       }
     };
     add( 0 );
-    add( 1 );
+    add( (sub_divs % 10 == 0) ? (sub_divs / 10) : 1 );
     if ( sub_divs % 10 == 0 ) {
       add( 2 * sub_divs / 10 );
       add( 5 * sub_divs / 10 );

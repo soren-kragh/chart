@@ -56,7 +56,7 @@ private:
   const int precision = 10;
 
   // Fixed number lower limit.
-  const double lim = std::pow( double( 10 ), -precision ) / 2;
+  const double lim = std::pow( double( 10 ), -precision ) * 0.65;
 
   int32_t digits;   // Before decimal point (includes any sign).
   int32_t decimals; // After decimal point;
