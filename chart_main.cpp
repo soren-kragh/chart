@@ -460,9 +460,9 @@ Canvas* Main::Build( void )
     U space_y = 5;
     U by = chart_h + space_y;
     BoundaryBox bb;
-    Object* main = NULL;
-    Object* sub1 = NULL;
-    Object* sub2 = NULL;
+    Object* main = nullptr;
+    Object* sub1 = nullptr;
+    Object* sub2 = nullptr;
     if ( sub_sub_title != "" ) {
       sub2 = Label( chart_g, sub_sub_title, 14 );
     }
@@ -475,15 +475,15 @@ Canvas* Main::Build( void )
     bool done = false;
     while ( true ) {
       U y = by;
-      if ( sub2 != NULL ) {
+      if ( sub2 != nullptr ) {
         sub2->MoveTo( MidX, MinY, chart_w/2, y );
         y = sub2->GetBB().max.y;
       }
-      if ( sub1 != NULL ) {
+      if ( sub1 != nullptr ) {
         sub1->MoveTo( MidX, MinY, chart_w/2, y );
         y = sub1->GetBB().max.y;
       }
-      if ( main != NULL ) {
+      if ( main != nullptr ) {
         main->MoveTo( MidX, MinY, chart_w/2, y );
         y = main->GetBB().max.y;
       }

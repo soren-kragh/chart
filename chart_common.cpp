@@ -86,7 +86,7 @@ bool Chart::Collides(
   SVG::BoundaryBox& bb
 )
 {
-  if ( obj == NULL || obj->Empty() ) return false;
+  if ( obj == nullptr || obj->Empty() ) return false;
   bb = BoundaryBox();
   bool collision = false;
   for ( Object* object : objects ) {

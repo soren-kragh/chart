@@ -238,9 +238,9 @@ void Series::Build(
 {
   bool poly_line = true;
   ApplyStyle( g );
-  Group* lg = NULL;
-  Group* pg = NULL;
-  Group* fg = NULL;
+  Group* lg = nullptr;
+  Group* pg = nullptr;
+  Group* fg = nullptr;
   if ( point_size > 0 ) {
     lg = g->AddNewGroup();
     pg = g->AddNewGroup();
@@ -280,7 +280,7 @@ void Series::Build(
   box.max.x += e1;
   box.max.y += e1;
 
-  Poly* poly = NULL;
+  Poly* poly = nullptr;
   bool adding_segments = false;
 
   Point prv;
@@ -298,7 +298,7 @@ void Series::Build(
     if ( !clipped && point_size > 0 ) {
       U r = (width + point_size) / 2;
       pg->Add( new Circle( p, r ) );
-      if ( fg != NULL ) {
+      if ( fg != nullptr ) {
         fg->Add( new Circle( p, r - width ) );
       }
       UpdateLegendBoxes( lb_list, p.x, p.y, p.x, p.y );
@@ -308,7 +308,7 @@ void Series::Build(
   };
   auto end_point = [&]( void )
   {
-    poly = NULL;
+    poly = nullptr;
     adding_segments = false;
   };
 

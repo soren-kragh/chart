@@ -424,7 +424,7 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     number_format = Scientific;
   }
 
-  Object* obj = NULL;
+  Object* obj = nullptr;
 
   std::string s = NumToStr( num );
 
