@@ -174,7 +174,7 @@ void Axis::LegalizeMajor( void ) {
     }
     if ( show_minor_mumbers_auto ) show_minor_mumbers = true;
     if ( number_format_auto ) {
-      number_format = (mag < 5e-29 || mag > 5e29) ? Scientific : Magnitude;
+      number_format = (min < 10e-30 || max > 0.1e30) ? Scientific : Magnitude;
     }
   } else {
     if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
@@ -182,9 +182,8 @@ void Axis::LegalizeMajor( void ) {
   }
   if ( number_format == Fixed ) {
     if (
-      mag < (number_format_auto ? 1e-5 : 1e-9) ||
-      mag > (number_format_auto ? 1e10 : 1e15) ||
-      (number_format_auto && mag < 0.1)
+      mag < (number_format_auto ? 0.1 : lim) ||
+      mag > (number_format_auto ? 1e6 : 1e15)
     ) {
       number_format = Scientific;
     }
