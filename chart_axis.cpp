@@ -182,7 +182,7 @@ void Axis::LegalizeMajor( void ) {
   }
   if ( number_format == Fixed ) {
     if (
-      mag < (number_format_auto ? 0.1 : lim) ||
+      mag < (number_format_auto ? 0.01 : lim) ||
       mag > (number_format_auto ? 1e6 : 1e15)
     ) {
       number_format = Scientific;
