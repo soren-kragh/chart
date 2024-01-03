@@ -158,90 +158,99 @@ void Axis::LegalizeMinor( void ) {
 void Axis::LegalizeMajor( void ) {
   double mag = std::max( std::abs( min ), std::abs( max ) );
 
-  if ( mag < num_lo || mag > num_hi || (max - min) < num_lo ) {
-    major = 0;
-    return;
-  }
-  if ( mag > (max - min) * 1e15 ) {
-    major = 0;
-    return;
-  }
+  while ( true ) {
 
-  if ( log_scale ) {
-    if ( min < num_lo || max > num_hi ) {
-      major = 0;
-      return;
-    }
-    if ( show_minor_mumbers_auto ) show_minor_mumbers = true;
-    if ( number_format_auto ) {
-      number_format = (min < 10e-30 || max > 0.1e30) ? Scientific : Magnitude;
-    }
-  } else {
-    if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
-    if ( number_format_auto ) number_format = Fixed;
-  }
-  if ( number_format == Fixed ) {
     if (
-      mag < (number_format_auto ? 0.01 : lim) ||
-      mag > (number_format_auto ? 1e6 : 1e15)
+      mag < num_lo || mag > num_hi || (max - min) < num_lo ||
+      mag > (max - min) * 1e9
     ) {
-      number_format = Scientific;
+      major = 0;
+      break;
     }
+
+    if ( log_scale ) {
+      if ( min < num_lo || max > num_hi ) {
+        major = 0;
+        break;
+      }
+      if ( show_minor_mumbers_auto ) show_minor_mumbers = true;
+      if ( number_format_auto ) {
+        number_format = (min < 10e-30 || max > 0.1e30) ? Scientific : Magnitude;
+      }
+    } else {
+      if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
+      if ( number_format_auto ) number_format = Fixed;
+    }
+    if ( number_format == Fixed ) {
+      if (
+        mag < (number_format_auto ? 0.01 : lim) ||
+        mag > (number_format_auto ? 1e6 : 1e15)
+      ) {
+        number_format = Scientific;
+      }
+    }
+
+    U max_coor = Coor( max );
+
+    if ( log_scale ) {
+      bool auto_major = major < 10;
+      if ( auto_major ) major = 10;
+      major =
+        std::round(
+          std::pow( double( 10 ), std::round( std::log10( major ) ) )
+        );
+      while ( true ) {
+        U coor = Coor( max / major );
+        if ( max_coor - coor >= (auto_major ? 40 : 20) ) break;
+        if ( number_format == Magnitude ) {
+          major = major * ((major > 10) ? 1000 : 100);
+        } else {
+          major = major * 10;
+        }
+      }
+    } else {
+      if ( major > 0 ) {
+        // Minimum allowed major spacing.
+        U min_space = 12;
+        if ( length * major < min_space * (max - min) ) {
+          major = 0;
+        }
+      }
+      if ( major <= 0 ) {
+        // Minimum major spacing to aim for.
+        U min_space = 100;
+        int32_t p = 0;
+        int32_t m = 1;
+        int32_t d = 1;
+        while ( 1 ) {
+          major = std::pow( double( 10 ), p ) * m / d;
+          if ( (max - min) * 2 * min_space > length * major ) break;
+          switch ( d ) {
+            case 1  : d = 2; break;
+            case 2  : d = 4; break;
+            case 4  : d = 5; break;
+            default : d = 1; p--;
+          }
+        }
+        while ( p >= 0 && d == 1 ) {
+          major = std::pow( double( 10 ), p ) * m / d;
+          if ( (max - min) * min_space < length * major ) break;
+          switch ( m ) {
+            case 1  : m = 2; break;
+            case 2  : m = 5; break;
+            default : m = 1; p++;
+          }
+        }
+        sub_divs = 2;
+      }
+    }
+
+    break;
   }
 
-  U max_coor = Coor( max );
-
-  if ( log_scale ) {
-    bool auto_major = major < 10;
-    if ( auto_major ) major = 10;
-    major =
-      std::round(
-        std::pow( double( 10 ), std::round( std::log10( major ) ) )
-      );
-    while ( true ) {
-      U coor = Coor( max / major );
-      if ( max_coor - coor >= (auto_major ? 40 : 20) ) break;
-      if ( number_format == Magnitude ) {
-        major = major * ((major > 10) ? 1000 : 100);
-      } else {
-        major = major * 10;
-      }
-    }
-  } else {
-    if ( major > 0 ) {
-      // Minimum allowed major spacing.
-      U min_space = 12;
-      if ( length * major < min_space * (max - min) ) {
-        major = 0;
-      }
-    }
-    if ( major <= 0 ) {
-      // Minimum major spacing to aim for.
-      U min_space = 100;
-      int32_t p = 0;
-      int32_t m = 1;
-      int32_t d = 1;
-      while ( 1 ) {
-        major = std::pow( double( 10 ), p ) * m / d;
-        if ( (max - min) * 2 * min_space > length * major ) break;
-        switch ( d ) {
-          case 1  : d = 2; break;
-          case 2  : d = 4; break;
-          case 4  : d = 5; break;
-          default : d = 1; p--;
-        }
-      }
-      while ( p >= 0 && d == 1 ) {
-        major = std::pow( double( 10 ), p ) * m / d;
-        if ( (max - min) * min_space < length * major ) break;
-        switch ( m ) {
-          case 1  : m = 2; break;
-          case 2  : m = 5; break;
-          default : m = 1; p++;
-        }
-      }
-      sub_divs = 2;
-    }
+  if ( major == 0 ) {
+    log_scale = false;
+    number_format = Scientific;
   }
 
   return;
@@ -507,10 +516,11 @@ void Axis::BuildTicsNumsLinear(
   SVG::U sx, SVG::U sy, SVG::U ex, SVG::U ey
 )
 {
-  if ( major <= 0 ) return;
-
   std::vector< int64_t > mn_list;
-  {
+  if ( major == 0 ) {
+    mn_list.push_back( 0 );
+    mn_list.push_back( 1 );
+  } else {
     std::set< int64_t > mn_set;
     int64_t mn_min = std::floor( (min - major) / major );
     int64_t mn_max = std::ceil( (max + major) / major );
@@ -533,7 +543,9 @@ void Axis::BuildTicsNumsLinear(
   }
 
   std::vector< int32_t > sn_list;
-  {
+  if ( major == 0 ) {
+    sn_list.push_back( 0 );
+  } else {
     std::set< int32_t > sn_set;
     auto add = [&]( int32_t sn )
     {
@@ -562,7 +574,10 @@ void Axis::BuildTicsNumsLinear(
 
   for ( int32_t sn : sn_list ) {
     for ( int64_t mn : mn_list ) {
-      double v = mn * major + sn * major / sub_divs;
+      double v = (mn == 0) ? min : max;
+      if ( major > 0 ) {
+        v = mn * major + sn * major / sub_divs;
+      }
       U v_coor = Coor( v );
       if ( v_coor < min_coor - eps_coor ) continue;
       if ( v_coor > max_coor + eps_coor ) continue;
@@ -855,6 +870,9 @@ void Axis::Build(
   if ( angle == 0 ) {
     if ( unit_pos != Below && unit_pos != Above && unit_pos != Right ) {
       unit_pos = number_pos;
+      if ( major == 0 ) {
+        unit_pos = (number_pos == Below) ? Above : Below;
+      }
     }
   } else {
     if ( unit_pos != Left && unit_pos != Right && unit_pos != Above ) {
