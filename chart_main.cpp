@@ -615,8 +615,9 @@ Canvas* Main::Build( void )
   }
 
   if ( footnote != "" ) {
-    U x = 0;
-    U y = chart_g->GetBB().min.y - 5;
+    BoundaryBox bb = chart_g->GetBB();
+    U x = bb.min.x + 15;
+    U y = bb.min.y - 15;
     Label( chart_g, footnote, 14 );
     chart_g->Last()->MoveTo( MinX, MaxY, x, y );
   }
