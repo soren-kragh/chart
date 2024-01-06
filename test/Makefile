@@ -1,6 +1,6 @@
 EXE := test
 
-DIRS := . .. ../../SVG
+DIRS := . .. ../../svg
 
 DEPS := \
 	$(wildcard $(addsuffix /*.h,${DIRS}) $(addsuffix /*.cpp,${DIRS})) \

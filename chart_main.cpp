@@ -316,10 +316,10 @@ void Main::AutoRange( void )
     }
   }
   if ( auto_y && !axis_y.log_scale ) {
-    if ( axis_y.min > 0 && axis_y.min / (axis_y.max - axis_y.min) < 0.6 ) {
+    if ( axis_y.min > 0 && (axis_y.max - axis_y.min) / axis_y.max > 0.5 ) {
       axis_y.min = 0;
     }
-    if ( axis_y.max < 0 && axis_y.max / (axis_y.min - axis_y.max) < 0.6 ) {
+    if ( axis_y.max < 0 && (axis_y.min - axis_y.max) / axis_y.min > 0.5 ) {
       axis_y.max = 0;
     }
   }
@@ -339,14 +339,10 @@ void Main::AutoRange( void )
         if ( axis_x.max < 10 * axis_x.min ) axis_x.max = 10 * axis_x.min;
       } else {
         double e = (axis_x.max - axis_x.min) * epsilon;
-        if ( axis_x.min != 0 ) {
-          p = (axis_x.min + e) / axis_x.major;
-          axis_x.min = std::floor( p ) * axis_x.major;
-        }
-        if ( axis_x.max != 0 ) {
-          p = (axis_x.max - e) / axis_x.major;
-          axis_x.max = std::ceil( p ) * axis_x.major;
-        }
+        p = (axis_x.min + e) / axis_x.major;
+        axis_x.min = std::floor( p ) * axis_x.major;
+        p = (axis_x.max - e) / axis_x.major;
+        axis_x.max = std::ceil( p ) * axis_x.major;
       }
     }
     axis_x.orth_axis_cross = axis_x.min;
@@ -363,12 +359,11 @@ void Main::AutoRange( void )
         axis_y.max = std::pow( std::pow( double( 10 ), u ), std::ceil( p ) );
         if ( axis_y.max < 10 * axis_y.min ) axis_y.max = 10 * axis_y.min;
       } else {
-        if ( axis_y.min != 0 ) {
-          axis_y.min = std::floor(axis_y.min / axis_y.major - 0.2) * axis_y.major;
-        }
-        if ( axis_y.max != 0 ) {
-          axis_y.max = std::ceil(axis_y.max / axis_y.major + 0.2) * axis_y.major;
-        }
+        double e = (axis_y.max - axis_y.min) * epsilon;
+        p = (axis_y.min + e) / axis_y.major;
+        axis_y.min = std::floor( p ) * axis_y.major;
+        p = (axis_y.max - e) / axis_y.major;
+        axis_y.max = std::ceil( p ) * axis_y.major;
       }
     }
     if ( axis_y.max < 0 ) {
