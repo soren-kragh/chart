@@ -400,7 +400,7 @@ Canvas* Main::Build( void )
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
-  chart_g->Attr()->TextFont()->SetFamily( "DejaVu Sans Mono,Courier New" );
+  chart_g->Attr()->TextFont()->SetFamily( "DejaVu Sans Mono,Consolas,Menlo,Courier New" );
   chart_g->Attr()->FillColor()->Set( White );
   chart_g->Attr()->LineColor()->Clear();
 
