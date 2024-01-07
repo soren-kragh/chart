@@ -256,6 +256,75 @@ void Axis::LegalizeMajor( void ) {
   return;
 }
 
+void Axis::LegalizeMinMax(
+  double series_min,
+  double series_max
+)
+{
+  if ( series_min == series_max ) {
+    if ( log_scale ) {
+      series_min = series_min / 10;
+      series_max = series_max * 10;
+    } else {
+      series_min = series_min - 1;
+      series_max = series_max + 1;
+    }
+  }
+
+  bool automatic = false;
+
+  if ( min >= max ) {
+    automatic = true;
+    min = series_min;
+    max = series_max;
+  }
+  if ( log_scale && min <= 0 ) {
+    min = series_min;
+    if ( max <= min ) max = 1000 * min;
+  }
+
+  if ( angle == 90 && automatic && !log_scale ) {
+    if ( min > 0 && (max - min) / max > 0.5 ) min = 0;
+    if ( max < 0 && (min - max) / min > 0.5 ) max = 0;
+  }
+
+  LegalizeMajor();
+
+  if ( automatic ) {
+    double p;
+    if ( major > 0 ) {
+      if ( log_scale ) {
+        int32_t u = std::lround( std::log10( major ) );
+        p = std::log10( min ) / u + epsilon;
+        min = std::pow( std::pow( double( 10 ), u ), std::floor( p ) );
+        p = std::log10( max ) / u - epsilon;
+        max = std::pow( std::pow( double( 10 ), u ), std::ceil( p ) );
+        if ( max < 10 * min ) max = 10 * min;
+      } else {
+        double e = (max - min) * epsilon;
+        p = (min + e) / major;
+        min = std::floor( p ) * major;
+        p = (max - e) / major;
+        max = std::ceil( p ) * major;
+      }
+    }
+    if ( angle == 0 ) {
+      orth_axis_cross = min;
+    } else {
+      orth_axis_cross = (max <= 0) ? max : min;
+      if ( min < 0 && max > 0 ) orth_axis_cross = 0;
+      if ( log_scale ) orth_axis_cross = min;
+    }
+  }
+
+  LegalizeMinor();
+
+  if ( orth_axis_cross < min ) orth_axis_cross = min;
+  if ( orth_axis_cross > max ) orth_axis_cross = max;
+
+  return;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 U Axis::Coor( double v )

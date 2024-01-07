@@ -71,6 +71,10 @@ private:
 
   void LegalizeMinor( void );
   void LegalizeMajor( void );
+  void LegalizeMinMax(
+    double series_min,
+    double series_max
+  );
 
   // Convert a value to an SVG coordinate.
   SVG::U Coor( double v );
