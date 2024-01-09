@@ -320,16 +320,20 @@ Canvas* Main::Build( void )
 
   std::vector< SVG::Object* > axes_objects;
 
-  axis_x.Build(
-    axis_y, axes_objects,
-    grid_minor_g, grid_major_g, grid_zero_g,
-    axes_line_g, axes_num_g, axes_label_g
-  );
-  axis_y.Build(
-    axis_x, axes_objects,
-    grid_minor_g, grid_major_g, grid_zero_g,
-    axes_line_g, axes_num_g, axes_label_g
-  );
+  for ( uint32_t phase : {0, 1} ) {
+    axis_x.Build(
+      phase,
+      axis_y, axes_objects,
+      grid_minor_g, grid_major_g, grid_zero_g,
+      axes_line_g, axes_num_g, axes_label_g
+    );
+    axis_y.Build(
+      phase,
+      axis_x, axes_objects,
+      grid_minor_g, grid_major_g, grid_zero_g,
+      axes_line_g, axes_num_g, axes_label_g
+    );
+  }
 
   // Do title.
   {

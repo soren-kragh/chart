@@ -98,6 +98,7 @@ private:
   );
 
   void Build(
+    uint32_t phase,
     Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,

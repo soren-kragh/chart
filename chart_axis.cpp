@@ -890,34 +890,19 @@ void Axis::BuildTicsNumsLogarithmic(
 ///////////////////////////////////////////////////////////////////////////////
 
 void Axis::Build(
+  uint32_t phase,
   Axis& orth_axis,
   std::vector< SVG::Object* >& axes_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
 )
 {
-  line_g = line_g->AddNewGroup();
-  num_g  = num_g->AddNewGroup();
-
   U start = (orth_axis_cross == min) ? -tick_major_len : 0;
   U ap = orth_axis.Coor( orth_axis.orth_axis_cross );
   U sx = (angle == 0) ? start : ap;
   U sy = (angle == 0) ? ap : start;
   U ex = (angle == 0) ? (length + overhang) : +sx;
   U ey = (angle == 0) ? +sy : (length + overhang);
-
-  line_g->Add( new Line( sx, sy, ex, ey ) );
-  Poly* poly =
-    new Poly(
-      { ex, ey,
-        ex - arrow_length, ey + arrow_width/2,
-        ex - arrow_length, ey - arrow_width/2
-      }
-    );
-  line_g->Add( poly );
-  poly->Close();
-  poly->Attr()->FillColor()->Set( Black );
-  poly->Rotate( angle, ex, ey );
 
   // Limit for when axes are near min or max.
   double near = 0.3;
@@ -932,31 +917,18 @@ void Axis::Build(
     }
   }
 
-  Pos unit_pos = this->unit_pos;
-  if ( angle == 0 ) {
-    if ( unit_pos != Below && unit_pos != Above && unit_pos != Right ) {
-      unit_pos = number_pos;
-      if ( major == 0 ) {
-        unit_pos = (number_pos == Below) ? Above : Below;
-      }
-    }
-  } else {
-    if ( unit_pos != Left && unit_pos != Right && unit_pos != Above ) {
-      unit_pos = Above;
-    }
-  }
-
-  if ( unit != "" ) {
+  if ( phase == 0 && unit != "" ) {
     Object* obj = Label( label_g, unit, 16 );
     obj->Attr()->TextFont()->SetBold();
     if ( angle == 0 ) {
-      if ( unit_pos == Above ) {
-        obj->MoveTo( MaxX, MinY, ex, ey + tick_major_len + 2 );
-      } else
-      if ( unit_pos == Right ) {
-        obj->MoveTo( MinX, MidY, ex + 2, ey );
-      } else {
-        obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - 2 );
+      Pos unit_pos = this->unit_pos;
+      if ( unit_pos != Below && unit_pos != Above && unit_pos != Right ) {
+        unit_pos = (number_pos == Below) ? Above : Below;
+      }
+      switch ( unit_pos ) {
+        case Above : obj->MoveTo( MaxX, MinY, ex, ey + tick_major_len + 2 ); break;
+        case Below : obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - 2 ); break;
+        default    : obj->MoveTo( MinX, MidY, ex + 4, ey );
       }
       if (
         (obj->GetBB().min.x - 50) < Coor( orth_axis_cross )
@@ -964,20 +936,36 @@ void Axis::Build(
         && this->unit_pos == Auto
       ) {
         // Move to right if too close to Y-axis.
-        obj->MoveTo( MinX, MidY, ex + 2, ey );
+        obj->MoveTo( MinX, MidY, ex + 4, ey );
       }
     } else {
-      if ( unit_pos == Right ) {
-        obj->MoveTo( MinX, MaxY, ex + tick_major_len + 2, ey );
-      } else
-      if ( unit_pos == Above ) {
-        obj->MoveTo( MidX, MinY, ex, ey + 2 );
-      } else {
-        obj->MoveTo( MaxX, MaxY, ex - tick_major_len - 2, ey );
+      switch ( unit_pos ) {
+        case Right : obj->MoveTo( MinX, MaxY, ex + tick_major_len + 2, ey ); break;
+        case Left  : obj->MoveTo( MaxX, MaxY, ex - tick_major_len - 2, ey ); break;
+        case Below : obj->MoveTo( MidX, MaxY, ex, 0 - tick_major_len - 2 ); break;
+        default    : obj->MoveTo( MidX, MinY, ex, ey + 4 );
       }
     }
     axes_objects.push_back( obj );
   }
+
+  if ( phase == 0 ) return;
+
+  line_g = line_g->AddNewGroup();
+  num_g  = num_g->AddNewGroup();
+
+  line_g->Add( new Line( sx, sy, ex, ey ) );
+  Poly* poly =
+    new Poly(
+      { ex, ey,
+        ex - arrow_length, ey + arrow_width/2,
+        ex - arrow_length, ey - arrow_width/2
+      }
+    );
+  line_g->Add( poly );
+  poly->Close();
+  poly->Attr()->FillColor()->Set( Black );
+  poly->Rotate( angle, ex, ey );
 
   // Add DMZ rectangle for orthogonal axis to trigger collision for numbers
   // that are too close.
@@ -1023,6 +1011,7 @@ void Axis::Build(
     } else {
       b2 = b1;
     }
+    U gap = 10;
     Object* obj = Label( label_g, label, 24 );
     obj->Rotate( angle );
     if ( angle == 0 ) {
@@ -1030,7 +1019,7 @@ void Axis::Build(
       U y = 0;
       if ( y > b1.min.y ) y = b1.min.y;
       if ( y > b2.min.y ) y = b2.min.y;
-      obj->MoveTo( MidX, MaxY, x, y - 4 );
+      obj->MoveTo( MidX, MaxY, x, y - gap );
     } else {
       U y = length / 2;
       if (
@@ -1040,12 +1029,12 @@ void Axis::Build(
         U x = orth_axis.length;
         if ( x < b1.max.x ) x = b1.max.x;
         if ( x < b2.max.x ) x = b2.max.x;
-        obj->MoveTo( MinX, MidY, x + 4, y );
+        obj->MoveTo( MinX, MidY, x + gap, y );
       } else {
         U x = 0;
         if ( x > b1.min.x ) x = b1.min.x;
         if ( x > b2.min.x ) x = b2.min.x;
-        obj->MoveTo( MaxX, MidY, x - 4, y );
+        obj->MoveTo( MaxX, MidY, x - gap, y );
       }
     }
     axes_objects.push_back( obj );
@@ -1053,6 +1042,8 @@ void Axis::Build(
 
   axes_objects.push_back( line_g );
   axes_objects.push_back( num_g );
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
