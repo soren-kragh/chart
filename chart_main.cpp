@@ -338,7 +338,7 @@ Canvas* Main::Build( void )
   // Do title.
   {
     U space_x = 50;
-    U space_y = 5;
+    U space_y = 10;
     U by = chart_h + space_y;
     BoundaryBox bb;
     Object* main = nullptr;
@@ -358,7 +358,7 @@ Canvas* Main::Build( void )
       U y = by;
       if ( sub2 != nullptr ) {
         sub2->MoveTo( MidX, MinY, chart_w/2, y );
-        y = sub2->GetBB().max.y;
+        y = sub2->GetBB().max.y + 3;
       }
       if ( sub1 != nullptr ) {
         sub1->MoveTo( MidX, MinY, chart_w/2, y );
