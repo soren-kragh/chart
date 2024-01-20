@@ -362,7 +362,7 @@ Canvas* Main::Build( void )
       }
       if ( sub1 != nullptr ) {
         sub1->MoveTo( MidX, MinY, chart_w/2, y );
-        y = sub1->GetBB().max.y;
+        y = sub1->GetBB().max.y + 3;
       }
       if ( main != nullptr ) {
         main->MoveTo( MidX, MinY, chart_w/2, y );
