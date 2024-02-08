@@ -55,6 +55,11 @@ void Axis::SetNumberFormat( NumberFormat number_format )
   this->number_format_auto = false;
 }
 
+void Axis::SetNumberUnit( std::string unit )
+{
+  this->number_unit = unit;
+}
+
 void Axis::ShowMinorNumbers( bool show_minor_mumbers )
 {
   this->show_minor_mumbers = show_minor_mumbers;
@@ -488,7 +493,7 @@ std::string Axis::NumToStr( double v )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
+SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 {
   if ( std::abs( v ) < num_lo ) v = 0;
   double num = v;
@@ -499,75 +504,132 @@ SVG::Object* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     number_format = Scientific;
   }
 
-  Object* obj = nullptr;
-
   std::string s = NumToStr( num );
 
   if ( number_format == Magnitude ) {
     const char sym[] = "qryzafpn\xE6m kMGTPEZYRQ";
     exp = exp / 3;
     if ( exp != 0 ) s += sym[ exp + 10 ];
-    obj = Label( g, s );
-    if ( bold ) obj->Attr()->TextFont()->SetBold();
-    return obj;
+    s += number_unit;
+    g = Label( g, s );
+    if ( bold ) g->Attr()->TextFont()->SetBold();
+    return g;
   }
 
-  if ( angle == 90 && num_max_len > int32_t( s.length() ) ) {
-    s.insert( 0, num_max_len - s.length(), ' ' );
+  int32_t leading_ws = num_max_len - s.length();
+  if ( angle == 90 && leading_ws > 0 ) {
+    s.insert( 0, leading_ws, ' ' );
+  } else {
+    leading_ws = 0;
   }
 
   if ( number_format == Fixed ) {
-    obj = Label( g, s );
-    if ( bold ) obj->Attr()->TextFont()->SetBold();
-    return obj;
+    s += number_unit;
+    g = Label( g, s );
+    if ( bold ) g->Attr()->TextFont()->SetBold();
+    return g;
   }
 
-  g = g->AddNewGroup();
+  // number_format is Scientific.
   BoundaryBox bb;
-  if ( num == 0 ) {
-    size_t pos = s.find( '.' );
-    if ( pos != std::string::npos ) s.erase( pos );
-    obj = Label( g, s );
-  } else
-  if ( num == 1 && (angle == 0 || number_pos == Left) ) {
-    obj = Label( g, "10" );
-  } else
-  if ( num == -1 && (angle == 0 || number_pos == Left) ) {
-    obj = Label( g, "-10" );
-  } else {
-    obj = Label( g, s );
-    bb = obj->GetBB();
-    U cr = (bb.max.y - bb.min.y) * 0.15;
-    U cx = bb.max.x + cr;
-    U cy = (bb.max.y - bb.min.y) * 0.45 + cr * 0.5;
-    obj = Label( g, (num == 0) ? "  " : "10" );
-    obj->MoveTo( MinX, MinY, cx + cr, bb.min.y );
-    if ( num != 0 ) {
-      g = g->AddNewGroup();
-      g->Attr()->SetLineWidth( cr * (bold ? 0.75 : 0.5))->LineColor()->Set( Black );
-      g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
-      g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
-      g = g->ParrentGroup();
-      g->Add( new Rect( cx - cr*2, bb.min.y, cx + cr*2, bb.max.y ) );
-      g->FrontToBack();
-    }
-  }
-  bb = obj->GetBB();
-  if ( angle != 0 || num != 0 ) {
+
+  g = g->AddNewGroup();
+  SVG::Group* num_g = g->AddNewGroup();
+  SVG::Group* exp_g = g->AddNewGroup();
+
+  // Build non-exponent part,
+  do {
     if ( num == 0 ) {
-      s = " ";
+      size_t pos = s.find( '.' );
+      if ( pos != std::string::npos ) s.erase( pos );
+      num_g->Add( new Text( 0, 0, s ) );
+      break;
+    }
+    if ( std::abs( num ) == 1 && (angle == 0 || number_pos == Left) ) {
+      num_g->Add( new Text( 0, 0, (num < 0) ? "-10" : "10" ) );
+      leading_ws = 0;
+      break;
+    }
+    num_g->Add( new Text( 0, 0, s ) );
+    bb = num_g->GetBB();
+    U cr = (bb.max.y - bb.min.y) * 0.15;
+    U dx = cr * 0.75;
+    U cx = bb.max.x + dx + cr;
+    U cy = (bb.max.y - bb.min.y) * 0.45 + cr * 0.5;
+    SVG::Group* x_g = num_g->AddNewGroup();
+    x_g->Attr()->SetLineWidth(
+      cr * (bold ? 0.75 : 0.5)
+    )->LineColor()->Set( Black );
+    x_g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
+    x_g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
+    bb = num_g->GetBB();
+    num_g->Add( new Text( 0, 0, "10" ) );
+    num_g->Last()->MoveTo( MinX, MinY, bb.max.x + dx, bb.min.y );
+  } while ( false );
+
+  int32_t trailing_ws = 0;
+
+  // Build exponent part,
+  do {
+    if ( num == 0 ) {
+      s = "";
     } else {
       std::ostringstream oss;
       oss << exp;
       s = oss.str();
     }
-    if ( angle == 90 && exp_max_len > int32_t( s.length() ) ) {
-      s.insert( s.length(), exp_max_len - s.length(), ' ' );
+    if ( angle != 0 || num != 0 ) {
+      trailing_ws = exp_max_len - s.length();
+      if ( trailing_ws > 0 ) {
+        s.insert( s.length(), trailing_ws, ' ' );
+      } else {
+        trailing_ws = 0;
+      }
     }
+    bb = num_g->GetBB();
     U h = bb.max.y - bb.min.y;
-    obj = Label( g, s, h * 0.9 );
-    obj->MoveTo( MinX, MaxY, bb.max.x - h * 0.15, bb.max.y + h * 0.4 );
+    exp_g->Attr()->TextFont()->SetSize( h * 0.9 );
+    exp_g->Add( new Text( 0, 0, s ) );
+    bool center = num == 0 && angle == 0;
+    exp_g->MoveTo(
+      center ? MidX : MinX, MaxY,
+      center ? (bb.max.x - bb.min.x)/2 : bb.max.x/1, bb.max.y + h * 0.3
+    );
+  } while ( false );
+
+  if ( number_unit != "" ) {
+    bb = num_g->GetBB();
+    U y = bb.min.y;
+    bb = exp_g->GetBB();
+    U x = bb.max.x;
+    num_g->Add( new Text( 0, 0, number_unit ) );
+    num_g->Last()->MoveTo( MinX, MinY, x, y );
   }
+
+  Attributes attr;
+
+  // Add number background.
+  num_g->Attr()->Collect( attr );
+  bb = num_g->GetBB();
+  TextBG( g, bb, bb.max.y - bb.min.y );
+  if ( leading_ws > 0 ) {
+    g->Last()->Attr()->FillColor()->Clear();
+    bb.min.x += attr.TextFont()->GetWidth( leading_ws );
+    TextBG( g, bb, bb.max.y - bb.min.y );
+  }
+
+  // Add exponent background.
+  exp_g->Attr()->Collect( attr );
+  bb = exp_g->GetBB();
+  TextBG( g, bb, bb.max.y - bb.min.y );
+  if ( trailing_ws > 0 || num == 0 ) {
+    g->Last()->Attr()->FillColor()->Clear();
+    if ( num != 0 ) {
+      bb.max.x -= attr.TextFont()->GetWidth( trailing_ws );
+      TextBG( g, bb, bb.max.y - bb.min.y );
+    }
+  }
+
   if ( bold ) g->Attr()->TextFont()->SetBold();
   return g;
 }
@@ -695,15 +757,15 @@ void Axis::BuildTicsNumsLinear(
         Object* obj = BuildNum( num_g, v, sn == 0 );
         if ( angle == 0 ) {
           if ( number_pos == Above ) {
-            obj->MoveTo( MidX, MinY, x, y + d + 2 );
+            obj->MoveTo( MidX, MinY, x, y + d + num_space_y );
           } else {
-            obj->MoveTo( MidX, MaxY, x, y - d - 2 );
+            obj->MoveTo( MidX, MaxY, x, y - d - num_space_y );
           }
         } else {
           if ( number_pos == Right ) {
-            obj->MoveTo( MinX, MidY, x + d + 2, y );
+            obj->MoveTo( MinX, MidY, x + d + num_space_x, y );
           } else {
-            obj->MoveTo( MaxX, MidY, x - d - 2, y );
+            obj->MoveTo( MaxX, MidY, x - d - num_space_x, y );
           }
         }
         U mx = (angle == 0) ? 4 : 0;
@@ -860,15 +922,15 @@ void Axis::BuildTicsNumsLogarithmic(
         Object* obj = BuildNum( num_g, v, sn == 0 );
         if ( angle == 0 ) {
           if ( number_pos == Above ) {
-            obj->MoveTo( MidX, MinY, x, y + d + 2 );
+            obj->MoveTo( MidX, MinY, x, y + d + num_space_y );
           } else {
-            obj->MoveTo( MidX, MaxY, x, y - d - 2 );
+            obj->MoveTo( MidX, MaxY, x, y - d - num_space_y );
           }
         } else {
           if ( number_pos == Right ) {
-            obj->MoveTo( MinX, MidY, x + d + 2, y );
+            obj->MoveTo( MinX, MidY, x + d + num_space_x, y );
           } else {
-            obj->MoveTo( MaxX, MidY, x - d - 2, y );
+            obj->MoveTo( MaxX, MidY, x - d - num_space_x, y );
           }
         }
         U mx = (angle == 0) ? 4 : 0;
@@ -926,23 +988,26 @@ void Axis::Build(
         unit_pos = (number_pos == Below) ? Above : Below;
       }
       switch ( unit_pos ) {
-        case Above : obj->MoveTo( MaxX, MinY, ex, ey + tick_major_len + 2 ); break;
-        case Below : obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - 2 ); break;
+        case Above : obj->MoveTo( MaxX, MinY, ex, ey + tick_major_len + num_space_y ); break;
+        case Below : obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - num_space_y ); break;
         default    : obj->MoveTo( MinX, MidY, ex + 4, ey );
       }
       if (
+        this->unit_pos == Auto &&
         (obj->GetBB().min.x - 50) < Coor( orth_axis_cross )
-        && orth_axis.orth_axis_cross > orth_axis.min
-        && this->unit_pos == Auto
       ) {
-        // Move to right if too close to Y-axis.
-        obj->MoveTo( MinX, MidY, ex + 4, ey );
+        // Move if too close to Y-axis.
+        if ( orth_axis.orth_axis_cross == orth_axis.min ) {
+          obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - num_space_y );
+        } else {
+          obj->MoveTo( MinX, MidY, ex + 4, ey );
+        }
       }
     } else {
       switch ( unit_pos ) {
-        case Right : obj->MoveTo( MinX, MaxY, ex + tick_major_len + 2, ey ); break;
-        case Left  : obj->MoveTo( MaxX, MaxY, ex - tick_major_len - 2, ey ); break;
-        case Below : obj->MoveTo( MidX, MaxY, ex, 0 - tick_major_len - 2 ); break;
+        case Right : obj->MoveTo( MinX, MaxY, ex + tick_major_len + num_space_x, ey ); break;
+        case Left  : obj->MoveTo( MaxX, MaxY, ex - tick_major_len - num_space_x, ey ); break;
+        case Below : obj->MoveTo( MidX, MaxY, ex, 0 - tick_major_len - num_space_y ); break;
         default    : obj->MoveTo( MidX, MinY, ex, ey + 4 );
       }
     }
@@ -1012,7 +1077,7 @@ void Axis::Build(
       b2 = b1;
     }
     U gap = 10;
-    Object* obj = Label( label_g, label, 24 );
+    Object* obj = MultiLineText( label_g, label, 24 );
     obj->Rotate( angle );
     if ( angle == 0 ) {
       U x = length / 2;

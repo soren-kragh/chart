@@ -345,13 +345,13 @@ Canvas* Main::Build( void )
     Object* sub1 = nullptr;
     Object* sub2 = nullptr;
     if ( sub_sub_title != "" ) {
-      sub2 = Label( chart_g, sub_sub_title, 14 );
+      sub2 = MultiLineText( chart_g, sub_sub_title, 14 );
     }
     if ( sub_title != "" ) {
-      sub1 = Label( chart_g, sub_title, 20 );
+      sub1 = MultiLineText( chart_g, sub_title, 20 );
     }
     if ( title != "" ) {
-      main = Label( chart_g, title, 36 );
+      main = MultiLineText( chart_g, title, 36 );
     }
     bool done = false;
     while ( true ) {
@@ -499,7 +499,7 @@ Canvas* Main::Build( void )
     BoundaryBox bb = chart_g->GetBB();
     U x = bb.min.x + 15;
     U y = bb.min.y - 15;
-    Label( chart_g, footnote, 14 );
+    MultiLineText( chart_g, footnote, 14 );
     chart_g->Last()->MoveTo( MinX, MaxY, x, y );
   }
 

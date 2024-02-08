@@ -28,6 +28,7 @@ public:
 
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
+  void SetNumberUnit( std::string unit );
   void ShowMinorNumbers( bool show_minor_mumbers = true );
 
   void SetRange( double min, double max, double orth_axis_cross );
@@ -64,7 +65,7 @@ private:
   void ComputeNumFormat( void );
 
   std::string NumToStr( double v );
-  SVG::Object* BuildNum( SVG::Group* g, double v, bool bold );
+  SVG::Group* BuildNum( SVG::Group* g, double v, bool bold );
 
   void LegalizeMinor( void );
   void LegalizeMajor( void );
@@ -114,8 +115,13 @@ private:
   SVG::U tick_major_len = 8;
   SVG::U tick_minor_len = 4;
 
+  // Axis number spacing from major tick.
+  SVG::U num_space_x = 2;
+  SVG::U num_space_y = 3;
+
   bool         log_scale;
   NumberFormat number_format;
+  std::string  number_unit;
   bool         number_format_auto;
   bool         show_minor_mumbers;
   bool         show_minor_mumbers_auto;
