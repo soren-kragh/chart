@@ -53,7 +53,7 @@ private:
   // Maximum number of decimals to show.
   const int precision = 10;
 
-  // Fixed number lower limit.
+  // NumberFormat::Fixed number lower limit.
   const double lim = std::pow( double( 10 ), -precision ) * 0.65;
 
   int32_t digits;   // Before decimal point (includes any sign).

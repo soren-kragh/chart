@@ -27,7 +27,7 @@ Axis::Axis( int angle )
   num_max_len = 0;
   exp_max_len = 0;
   log_scale = false;
-  number_format = Fixed;
+  number_format = NumberFormat::Fixed;
   number_format_auto = true;
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
@@ -36,10 +36,10 @@ Axis::Axis( int angle )
   orth_axis_cross = 0;
   major = 0;
   sub_divs = 0;
-  number_pos = Auto;
+  number_pos = Pos::Auto;
   major_grid_enable = true;
   minor_grid_enable = true;
-  unit_pos = Auto;
+  unit_pos = Pos::Auto;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -177,18 +177,18 @@ void Axis::LegalizeMajor( void ) {
       }
       if ( show_minor_mumbers_auto ) show_minor_mumbers = true;
       if ( number_format_auto ) {
-        number_format = (min < 10e-30 || max > 0.1e30) ? Scientific : Magnitude;
+        number_format = (min < 10e-30 || max > 0.1e30) ? NumberFormat::Scientific : NumberFormat::Magnitude;
       }
     } else {
       if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
-      if ( number_format_auto ) number_format = Fixed;
+      if ( number_format_auto ) number_format = NumberFormat::Fixed;
     }
-    if ( number_format == Fixed ) {
+    if ( number_format == NumberFormat::Fixed ) {
       if (
         mag < (number_format_auto ? 0.01 : lim) ||
         mag > (number_format_auto ? 1e6 : 1e15)
       ) {
-        number_format = Scientific;
+        number_format = NumberFormat::Scientific;
       }
     }
 
@@ -204,7 +204,7 @@ void Axis::LegalizeMajor( void ) {
       while ( true ) {
         U coor = Coor( max / major );
         if ( max_coor - coor >= (auto_major ? 40 : 20) ) break;
-        if ( number_format == Magnitude ) {
+        if ( number_format == NumberFormat::Magnitude ) {
           major = major * ((major > 10) ? 1000 : 100);
         } else {
           major = major * 10;
@@ -252,7 +252,7 @@ void Axis::LegalizeMajor( void ) {
 
   if ( major == 0 ) {
     log_scale = false;
-    number_format = Scientific;
+    number_format = NumberFormat::Scientific;
   }
 
   return;
@@ -373,7 +373,7 @@ int32_t Axis::ComputeDecimals( double v, bool update )
 int32_t Axis::NormalizeExponent( double& num )
 {
   int32_t exp = 0;
-  if ( num != 0 && number_format != Fixed ) {
+  if ( num != 0 && number_format != NumberFormat::Fixed ) {
     double sign = (num < 0) ? -1 : 1;
     num = num * sign;
     while ( num < 1 ) {
@@ -387,7 +387,7 @@ int32_t Axis::NormalizeExponent( double& num )
     if ( num > (1 - lim) && num < (1 + lim) ) {
       num = 1;
     }
-    if ( number_format == Magnitude ) {
+    if ( number_format == NumberFormat::Magnitude ) {
       while ( exp % 3 ) {
         num = num * 10;
         exp--;
@@ -409,7 +409,7 @@ void Axis::ComputeNumFormat( void )
   num_max_len = 0;
   exp_max_len = 0;
 
-  if ( major <= 0 || number_format == Magnitude ) return;
+  if ( major <= 0 || number_format == NumberFormat::Magnitude ) return;
 
   U min_coor = 0;
   U max_coor = length;
@@ -450,13 +450,13 @@ void Axis::ComputeNumFormat( void )
     }
   }
 
-  if ( number_format == Fixed ) {
+  if ( number_format == NumberFormat::Fixed ) {
     for ( double v : v_list ) {
       ComputeDecimals( v, true );
     }
   }
 
-  if ( number_format == Scientific ) {
+  if ( number_format == NumberFormat::Scientific ) {
     for ( double v : v_list ) {
       int32_t exp = NormalizeExponent( v );
       ComputeDecimals( v, true );
@@ -470,12 +470,12 @@ void Axis::ComputeNumFormat( void )
   if ( decimals > 0 ) num_max_len++;
 
   if ( angle == 0 ) {
-    if ( number_format != Fixed ) decimals = 0;
+    if ( number_format != NumberFormat::Fixed ) decimals = 0;
     num_max_len = 0;
     exp_max_len = 0;
   } else {
-    if ( number_pos == Left  ) num_max_len = 0;
-    if ( number_pos == Right ) exp_max_len = 0;
+    if ( number_pos == Pos::Left  ) num_max_len = 0;
+    if ( number_pos == Pos::Right ) exp_max_len = 0;
   }
 
   return;
@@ -500,13 +500,13 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   int32_t exp = NormalizeExponent( num );
 
   NumberFormat number_format = this->number_format;
-  if ( number_format == Magnitude && (exp < -30 || exp > 30) ) {
-    number_format = Scientific;
+  if ( number_format == NumberFormat::Magnitude && (exp < -30 || exp > 30) ) {
+    number_format = NumberFormat::Scientific;
   }
 
   std::string s = NumToStr( num );
 
-  if ( number_format == Magnitude ) {
+  if ( number_format == NumberFormat::Magnitude ) {
     const char sym[] = "qryzafpn\xE6m kMGTPEZYRQ";
     exp = exp / 3;
     if ( exp != 0 ) s += sym[ exp + 10 ];
@@ -523,14 +523,14 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     leading_ws = 0;
   }
 
-  if ( number_format == Fixed ) {
+  if ( number_format == NumberFormat::Fixed ) {
     s += number_unit;
     g = Label( g, s );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
 
-  // number_format is Scientific.
+  // number_format is NumberFormat::Scientific.
   BoundaryBox bb;
 
   g = g->AddNewGroup();
@@ -545,7 +545,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       num_g->Add( new Text( s ) );
       break;
     }
-    if ( std::abs( num ) == 1 && (angle == 0 || number_pos == Left) ) {
+    if ( std::abs( num ) == 1 && (angle == 0 || number_pos == Pos::Left) ) {
       num_g->Add( new Text( (num < 0) ? "-10" : "10" ) );
       leading_ws = 0;
       break;
@@ -559,12 +559,12 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     SVG::Group* x_g = num_g->AddNewGroup();
     x_g->Attr()->SetLineWidth(
       cr * (bold ? 0.75 : 0.5)
-    )->LineColor()->Set( Black );
+    )->LineColor()->Set( ColorName::Black );
     x_g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
     x_g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
     bb = num_g->GetBB();
     num_g->Add( new Text( "10" ) );
-    num_g->Last()->MoveTo( MinX, MinY, bb.max.x + dx, bb.min.y );
+    num_g->Last()->MoveTo( AnchorX::Min, AnchorY::Min, bb.max.x + dx, bb.min.y );
   } while ( false );
 
   int32_t trailing_ws = 0;
@@ -592,7 +592,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     exp_g->Add( new Text( s ) );
     bool center = num == 0 && angle == 0;
     exp_g->MoveTo(
-      center ? MidX : MinX, MaxY,
+      center ? AnchorX::Mid : AnchorX::Min, AnchorY::Max,
       center ? (bb.max.x - bb.min.x)/2 : bb.max.x/1, bb.max.y + h * 0.3
     );
   } while ( false );
@@ -603,7 +603,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     bb = exp_g->GetBB();
     U x = bb.max.x;
     num_g->Add( new Text( number_unit ) );
-    num_g->Last()->MoveTo( MinX, MinY, x, y );
+    num_g->Last()->MoveTo( AnchorX::Min, AnchorY::Min, x, y );
   }
 
   Attributes attr;
@@ -748,7 +748,7 @@ void Axis::BuildTicsNumsLinear(
         (sn == 0 || show_minor_mumbers) &&
         ( !near_crossing_axis ||
           ( orth_axis.orth_axis_cross == orth_axis.min &&
-            ((angle == 0) ? (number_pos == Below) : (number_pos == Left))
+            ((angle == 0) ? (number_pos == Pos::Below) : (number_pos == Pos::Left))
           )
         )
       )
@@ -756,16 +756,16 @@ void Axis::BuildTicsNumsLinear(
         U d = tick_major_len;
         Object* obj = BuildNum( num_g, v, sn == 0 );
         if ( angle == 0 ) {
-          if ( number_pos == Above ) {
-            obj->MoveTo( MidX, MinY, x, y + d + num_space_y );
+          if ( number_pos == Pos::Above ) {
+            obj->MoveTo( AnchorX::Mid, AnchorY::Min, x, y + d + num_space_y );
           } else {
-            obj->MoveTo( MidX, MaxY, x, y - d - num_space_y );
+            obj->MoveTo( AnchorX::Mid, AnchorY::Max, x, y - d - num_space_y );
           }
         } else {
-          if ( number_pos == Right ) {
-            obj->MoveTo( MinX, MidY, x + d + num_space_x, y );
+          if ( number_pos == Pos::Right ) {
+            obj->MoveTo( AnchorX::Min, AnchorY::Mid, x + d + num_space_x, y );
           } else {
-            obj->MoveTo( MaxX, MidY, x - d - num_space_x, y );
+            obj->MoveTo( AnchorX::Max, AnchorY::Mid, x - d - num_space_x, y );
           }
         }
         U mx = (angle == 0) ? 4 : 0;
@@ -913,7 +913,7 @@ void Axis::BuildTicsNumsLogarithmic(
         (sn == 0 || show_minor_mumbers) &&
         ( !near_crossing_axis ||
           ( orth_axis.orth_axis_cross == orth_axis.min &&
-            ((angle == 0) ? (number_pos == Below) : (number_pos == Left))
+            ((angle == 0) ? (number_pos == Pos::Below) : (number_pos == Pos::Left))
           )
         )
       )
@@ -921,16 +921,16 @@ void Axis::BuildTicsNumsLogarithmic(
         U d = tick_major_len;
         Object* obj = BuildNum( num_g, v, sn == 0 );
         if ( angle == 0 ) {
-          if ( number_pos == Above ) {
-            obj->MoveTo( MidX, MinY, x, y + d + num_space_y );
+          if ( number_pos == Pos::Above ) {
+            obj->MoveTo( AnchorX::Mid, AnchorY::Min, x, y + d + num_space_y );
           } else {
-            obj->MoveTo( MidX, MaxY, x, y - d - num_space_y );
+            obj->MoveTo( AnchorX::Mid, AnchorY::Max, x, y - d - num_space_y );
           }
         } else {
-          if ( number_pos == Right ) {
-            obj->MoveTo( MinX, MidY, x + d + num_space_x, y );
+          if ( number_pos == Pos::Right ) {
+            obj->MoveTo( AnchorX::Min, AnchorY::Mid, x + d + num_space_x, y );
           } else {
-            obj->MoveTo( MaxX, MidY, x - d - num_space_x, y );
+            obj->MoveTo( AnchorX::Max, AnchorY::Mid, x - d - num_space_x, y );
           }
         }
         U mx = (angle == 0) ? 4 : 0;
@@ -970,12 +970,12 @@ void Axis::Build(
   double near = 0.3;
 
   if ( angle == 0 ) {
-    if ( number_pos != Below && number_pos != Above ) {
-      number_pos = (ap > (orth_axis.length * (1 - near))) ? Above : Below;
+    if ( number_pos != Pos::Below && number_pos != Pos::Above ) {
+      number_pos = (ap > (orth_axis.length * (1 - near))) ? Pos::Above : Pos::Below;
     }
   } else {
-    if ( number_pos != Left && number_pos != Right ) {
-      number_pos = (ap > (orth_axis.length * (1 - near))) ? Right : Left;
+    if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
+      number_pos = (ap > (orth_axis.length * (1 - near))) ? Pos::Right : Pos::Left;
     }
   }
 
@@ -984,31 +984,31 @@ void Axis::Build(
     obj->Attr()->TextFont()->SetBold();
     if ( angle == 0 ) {
       Pos unit_pos = this->unit_pos;
-      if ( unit_pos != Below && unit_pos != Above && unit_pos != Right ) {
-        unit_pos = (number_pos == Below) ? Above : Below;
+      if ( unit_pos != Pos::Below && unit_pos != Pos::Above && unit_pos != Pos::Right ) {
+        unit_pos = (number_pos == Pos::Below) ? Pos::Above : Pos::Below;
       }
       switch ( unit_pos ) {
-        case Above : obj->MoveTo( MaxX, MinY, ex, ey + tick_major_len + num_space_y ); break;
-        case Below : obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - num_space_y ); break;
-        default    : obj->MoveTo( MinX, MidY, ex + 4, ey );
+        case Pos::Above : obj->MoveTo( AnchorX::Max, AnchorY::Min, ex, ey + tick_major_len + num_space_y ); break;
+        case Pos::Below : obj->MoveTo( AnchorX::Max, AnchorY::Max, ex, ey - tick_major_len - num_space_y ); break;
+        default    : obj->MoveTo( AnchorX::Min, AnchorY::Mid, ex + 4, ey );
       }
       if (
-        this->unit_pos == Auto &&
+        this->unit_pos == Pos::Auto &&
         (obj->GetBB().min.x - 50) < Coor( orth_axis_cross )
       ) {
         // Move if too close to Y-axis.
         if ( orth_axis.orth_axis_cross == orth_axis.min ) {
-          obj->MoveTo( MaxX, MaxY, ex, ey - tick_major_len - num_space_y );
+          obj->MoveTo( AnchorX::Max, AnchorY::Max, ex, ey - tick_major_len - num_space_y );
         } else {
-          obj->MoveTo( MinX, MidY, ex + 4, ey );
+          obj->MoveTo( AnchorX::Min, AnchorY::Mid, ex + 4, ey );
         }
       }
     } else {
       switch ( unit_pos ) {
-        case Right : obj->MoveTo( MinX, MaxY, ex + tick_major_len + num_space_x, ey ); break;
-        case Left  : obj->MoveTo( MaxX, MaxY, ex - tick_major_len - num_space_x, ey ); break;
-        case Below : obj->MoveTo( MidX, MaxY, ex, 0 - tick_major_len - num_space_y ); break;
-        default    : obj->MoveTo( MidX, MinY, ex, ey + 4 );
+        case Pos::Right : obj->MoveTo( AnchorX::Min, AnchorY::Max, ex + tick_major_len + num_space_x, ey ); break;
+        case Pos::Left  : obj->MoveTo( AnchorX::Max, AnchorY::Max, ex - tick_major_len - num_space_x, ey ); break;
+        case Pos::Below : obj->MoveTo( AnchorX::Mid, AnchorY::Max, ex, 0 - tick_major_len - num_space_y ); break;
+        default    : obj->MoveTo( AnchorX::Mid, AnchorY::Min, ex, ey + 4 );
       }
     }
     axes_objects.push_back( obj );
@@ -1029,7 +1029,7 @@ void Axis::Build(
     );
   line_g->Add( poly );
   poly->Close();
-  poly->Attr()->FillColor()->Set( Black );
+  poly->Attr()->FillColor()->Set( ColorName::Black );
   poly->Rotate( angle, ex, ey );
 
   // Add DMZ rectangle for orthogonal axis to trigger collision for numbers
@@ -1084,7 +1084,7 @@ void Axis::Build(
       U y = 0;
       if ( y > b1.min.y ) y = b1.min.y;
       if ( y > b2.min.y ) y = b2.min.y;
-      obj->MoveTo( MidX, MaxY, x, y - gap );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Max, x, y - gap );
     } else {
       U y = length / 2;
       if (
@@ -1094,12 +1094,12 @@ void Axis::Build(
         U x = orth_axis.length;
         if ( x < b1.max.x ) x = b1.max.x;
         if ( x < b2.max.x ) x = b2.max.x;
-        obj->MoveTo( MinX, MidY, x + gap, y );
+        obj->MoveTo( AnchorX::Min, AnchorY::Mid, x + gap, y );
       } else {
         U x = 0;
         if ( x > b1.min.x ) x = b1.min.x;
         if ( x > b2.min.x ) x = b2.min.x;
-        obj->MoveTo( MaxX, MidY, x - gap, y );
+        obj->MoveTo( AnchorX::Max, AnchorY::Mid, x - gap, y );
       }
     }
     axes_objects.push_back( obj );

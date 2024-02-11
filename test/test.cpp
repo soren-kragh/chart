@@ -64,7 +64,7 @@ int main()
   chart.SetChartArea( 1600, 800 );
 
   SVG::Canvas* canvas = chart.Build();
-  canvas->Background()->Set( SVG::Black, 0.5 );
+  canvas->Background()->Set( SVG::ColorName::Black, 0.5 );
   std::cout << canvas->GenSVG( 2 );
   delete canvas;
 

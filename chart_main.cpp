@@ -20,9 +20,9 @@ using namespace Chart;
 
 Main::Main( void )
 {
-  axis_x.SetUnitPos( Auto );
-  axis_y.SetUnitPos( Auto );
-  SetLegendPos( Auto );
+  axis_x.SetUnitPos( Pos::Auto );
+  axis_y.SetUnitPos( Pos::Auto );
+  SetLegendPos( Pos::Auto );
 }
 
 Main::~Main( void )
@@ -137,8 +137,8 @@ void Main::CalcLegendBoxes(
 
   auto add_lbs = [&]( AnchorX anchor_x, AnchorY anchor_y, U dx = 0, U dy = 0 )
   {
-    uint32_t nx = (anchor_x == MidX) ? lc :  1;
-    uint32_t ny = (anchor_x == MidX) ?  1 : lc;
+    uint32_t nx = (anchor_x == AnchorX::Mid) ? lc :  1;
+    uint32_t ny = (anchor_x == AnchorX::Mid) ?  1 : lc;
     while ( nx > 0 && ny > 0 ) {
       BoundaryBox bb;
       g->Add(
@@ -150,10 +150,10 @@ void Main::CalcLegendBoxes(
       );
       U x = legend_sx + dx;
       U y = legend_sy + dy;
-      if ( anchor_x == MidX ) x = chart_w / 2;
-      if ( anchor_x == MaxX ) x = chart_w - legend_sx - dx;
-      if ( anchor_y == MidY ) y = chart_h / 2;
-      if ( anchor_y == MaxY ) y = chart_h - legend_sy - dy;
+      if ( anchor_x == AnchorX::Mid ) x = chart_w / 2;
+      if ( anchor_x == AnchorX::Max ) x = chart_w - legend_sx - dx;
+      if ( anchor_y == AnchorY::Mid ) y = chart_h / 2;
+      if ( anchor_y == AnchorY::Max ) y = chart_h - legend_sy - dy;
       g->Last()->MoveTo( anchor_x, anchor_y, x, y );
       if ( !Collides( g->Last(), axes_objects, legend_sx, legend_sy, bb ) ) {
         LegendBox lb;
@@ -170,7 +170,7 @@ void Main::CalcLegendBoxes(
         }
       }
       g->DeleteFront();
-      if ( anchor_x == MidX ) {
+      if ( anchor_x == AnchorX::Mid ) {
         if ( ny == lc ) break;
         ny++;
         nx = (lc + ny - 1) / ny;
@@ -187,22 +187,22 @@ void Main::CalcLegendBoxes(
     U dy = 0;
     if ( (i >> 0) & 1 ) dx = axis_x.tick_major_len;
     if ( (i >> 1) & 1 ) dy = axis_y.tick_major_len;
-    add_lbs( MaxX, MaxY, dx, dy );
-    add_lbs( MaxX, MinY, dx, dy );
-    add_lbs( MinX, MaxY, dx, dy );
-    add_lbs( MinX, MinY, dx, dy );
-    add_lbs( MidX, MinY, dx, dy );
-    add_lbs( MidX, MaxY, dx, dy );
+    add_lbs( AnchorX::Max, AnchorY::Max, dx, dy );
+    add_lbs( AnchorX::Max, AnchorY::Min, dx, dy );
+    add_lbs( AnchorX::Min, AnchorY::Max, dx, dy );
+    add_lbs( AnchorX::Min, AnchorY::Min, dx, dy );
+    add_lbs( AnchorX::Mid, AnchorY::Min, dx, dy );
+    add_lbs( AnchorX::Mid, AnchorY::Max, dx, dy );
   }
-  add_lbs( MaxX, MidY );
-  add_lbs( MinX, MidY );
+  add_lbs( AnchorX::Max, AnchorY::Mid );
+  add_lbs( AnchorX::Min, AnchorY::Mid );
 }
 
 //-----------------------------------------------------------------------------
 
 void Main::BuildLegend( Group* g, int nx )
 {
-  g->Attr()->SetTextAnchor( MinX, MaxY );
+  g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
   U ch;
   U tw;
   U th;
@@ -283,7 +283,7 @@ Canvas* Main::Build( void )
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
   chart_g->Attr()->TextFont()->SetFamily( "DejaVu Sans Mono,Consolas,Menlo,Courier New" );
-  chart_g->Attr()->FillColor()->Set( White );
+  chart_g->Attr()->FillColor()->Set( ColorName::White );
   chart_g->Attr()->LineColor()->Clear();
 
   Group* grid_minor_g = chart_g->AddNewGroup();
@@ -293,15 +293,15 @@ Canvas* Main::Build( void )
   grid_minor_g->Attr()
     ->SetLineWidth( 0.5 )
     ->SetLineDash( 1, 3 )
-    ->LineColor()->Set( Black );
+    ->LineColor()->Set( ColorName::Black );
   grid_major_g->Attr()
     ->SetLineWidth( 1.0 )
     ->SetLineDash( 4, 3 )
-    ->LineColor()->Set( Black );
+    ->LineColor()->Set( ColorName::Black );
   grid_zero_g->Attr()
     ->SetLineWidth( 1.0 )
     ->SetLineDash( 8, 6 )
-    ->LineColor()->Set( Black );
+    ->LineColor()->Set( ColorName::Black );
 
   Group* axes_line_g  = chart_g->AddNewGroup();
   Group* chartbox_g   = chart_g->AddNewGroup();
@@ -309,7 +309,7 @@ Canvas* Main::Build( void )
   Group* axes_label_g = chart_g->AddNewGroup();
   Group* legend_g     = chart_g->AddNewGroup();
 
-  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( Black );
+  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::Black );
 
   chartbox_g->Attr()->FillColor()->Clear();
 
@@ -357,15 +357,15 @@ Canvas* Main::Build( void )
     while ( true ) {
       U y = by;
       if ( sub2 != nullptr ) {
-        sub2->MoveTo( MidX, MinY, chart_w/2, y );
+        sub2->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w/2, y );
         y = sub2->GetBB().max.y + 3;
       }
       if ( sub1 != nullptr ) {
-        sub1->MoveTo( MidX, MinY, chart_w/2, y );
+        sub1->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w/2, y );
         y = sub1->GetBB().max.y + 3;
       }
       if ( main != nullptr ) {
-        main->MoveTo( MidX, MinY, chart_w/2, y );
+        main->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w/2, y );
         y = main->GetBB().max.y;
       }
       if ( done ) break;
@@ -402,7 +402,7 @@ Canvas* Main::Build( void )
   // Find best legend placement.
   if ( LegendCnt() > 0 ) {
     Pos legend_pos = this->legend_pos;
-    if ( legend_pos == Auto ) {
+    if ( legend_pos == Pos::Auto ) {
       LegendBox best_lb;
       bool best_lb_defined = false;
       for ( LegendBox& lb : lb_list ) {
@@ -420,21 +420,21 @@ Canvas* Main::Build( void )
       if ( best_lb_defined ) {
         BuildLegend( legend_g->AddNewGroup(), best_lb.nx );
         legend_g->Last()->MoveTo(
-          MidX, MidY,
+          AnchorX::Mid, AnchorY::Mid,
           (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
           (best_lb.bb.min.y + best_lb.bb.max.y) / 2
         );
       } else {
-        legend_pos = Bottom;
+        legend_pos = Pos::Bottom;
       }
     }
-    if ( legend_pos != Auto ) {
+    if ( legend_pos != Pos::Auto ) {
       U ch;
       U tw;
       U th;
       CalcLegendSize( legend_g, ch, tw, th );
       BoundaryBox bb = chart_g->GetBB();
-      if ( legend_pos == Left || legend_pos == Right ) {
+      if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
         U avail_h = chart_h;
         uint32_t nx = 1;
         while ( 1 ) {
@@ -448,10 +448,10 @@ Canvas* Main::Build( void )
         }
         BuildLegend( legend_g->AddNewGroup(), nx );
         U y = chart_h / 2;
-        if ( legend_pos == Left ) {
+        if ( legend_pos == Pos::Left ) {
           U x = 0 - legend_sx;
           while ( true ) {
-            legend_g->Last()->MoveTo( MaxX, MidY, x, y );
+            legend_g->Last()->MoveTo( AnchorX::Max, AnchorY::Mid, x, y );
             Collides(
               legend_g->Last(), axes_objects, legend_sx, legend_sy, bb
             );
@@ -464,7 +464,7 @@ Canvas* Main::Build( void )
         } else {
           U x = chart_w + legend_sx;
           while ( true ) {
-            legend_g->Last()->MoveTo( MinX, MidY, x, y );
+            legend_g->Last()->MoveTo( AnchorX::Min, AnchorY::Mid, x, y );
             Collides(
               legend_g->Last(), axes_objects, legend_sx, legend_sy, bb
             );
@@ -490,7 +490,7 @@ Canvas* Main::Build( void )
         }
         BuildLegend( legend_g->AddNewGroup(), nx );
         U x = chart_w / 2;
-        legend_g->Last()->MoveTo( MidX, MaxY, x, bb.min.y - legend_sy );
+        legend_g->Last()->MoveTo( AnchorX::Mid, AnchorY::Max, x, bb.min.y - legend_sy );
       }
     }
   }
@@ -500,7 +500,7 @@ Canvas* Main::Build( void )
     U x = bb.min.x + 15;
     U y = bb.min.y - 15;
     MultiLineText( chart_g, footnote, 14 );
-    chart_g->Last()->MoveTo( MinX, MaxY, x, y );
+    chart_g->Last()->MoveTo( AnchorX::Min, AnchorY::Max, x, y );
   }
 
   BoundaryBox bb = chart_g->GetBB();

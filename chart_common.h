@@ -20,9 +20,9 @@ namespace Chart {
   // Correction factor for floating point precision issues in comparisons etc.
   const double epsilon = 1e-6;
 
-  typedef enum { Auto, Center, Left, Right, Top, Bottom, Above, Below } Pos;
+  enum class Pos { Auto, Center, Left, Right, Top, Bottom, Above, Below };
 
-  typedef enum { Fixed, Scientific, Magnitude } NumberFormat;
+  enum class NumberFormat { Fixed, Scientific, Magnitude };
 
   void TextBG(
     SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h
