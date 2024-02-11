@@ -113,7 +113,7 @@ void Main::CalcLegendSize( Group* g, U& ch, U& tw, U& th )
   }
   std::string s;
   while ( s.length() < max_chars ) s += '-';
-  g->Add( new Text( 0, 0, s ) );
+  g->Add( new Text( s ) );
   BoundaryBox bb = g->Last()->GetBB();
   g->DeleteFront();
   ch = bb.max.y - bb.min.y;

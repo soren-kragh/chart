@@ -542,15 +542,15 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     if ( num == 0 ) {
       size_t pos = s.find( '.' );
       if ( pos != std::string::npos ) s.erase( pos );
-      num_g->Add( new Text( 0, 0, s ) );
+      num_g->Add( new Text( s ) );
       break;
     }
     if ( std::abs( num ) == 1 && (angle == 0 || number_pos == Left) ) {
-      num_g->Add( new Text( 0, 0, (num < 0) ? "-10" : "10" ) );
+      num_g->Add( new Text( (num < 0) ? "-10" : "10" ) );
       leading_ws = 0;
       break;
     }
-    num_g->Add( new Text( 0, 0, s ) );
+    num_g->Add( new Text( s ) );
     bb = num_g->GetBB();
     U cr = (bb.max.y - bb.min.y) * 0.15;
     U dx = cr * 0.75;
@@ -563,7 +563,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     x_g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
     x_g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
     bb = num_g->GetBB();
-    num_g->Add( new Text( 0, 0, "10" ) );
+    num_g->Add( new Text( "10" ) );
     num_g->Last()->MoveTo( MinX, MinY, bb.max.x + dx, bb.min.y );
   } while ( false );
 
@@ -589,7 +589,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     bb = num_g->GetBB();
     U h = bb.max.y - bb.min.y;
     exp_g->Attr()->TextFont()->SetSize( h * 0.9 );
-    exp_g->Add( new Text( 0, 0, s ) );
+    exp_g->Add( new Text( s ) );
     bool center = num == 0 && angle == 0;
     exp_g->MoveTo(
       center ? MidX : MinX, MaxY,
@@ -602,7 +602,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     U y = bb.min.y;
     bb = exp_g->GetBB();
     U x = bb.max.x;
-    num_g->Add( new Text( 0, 0, number_unit ) );
+    num_g->Add( new Text( number_unit ) );
     num_g->Last()->MoveTo( MinX, MinY, x, y );
   }
 
