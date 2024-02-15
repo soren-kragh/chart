@@ -24,6 +24,8 @@ namespace Chart {
 
   enum class NumberFormat { Fixed, Scientific, Magnitude };
 
+  enum class AxisStyle { Auto, None, Arrow, Edge };
+
   void TextBG(
     SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h
   );

@@ -20,8 +20,6 @@ using namespace Chart;
 
 Main::Main( void )
 {
-  axis_x.SetUnitPos( Pos::Auto );
-  axis_y.SetUnitPos( Pos::Auto );
   SetLegendPos( Pos::Auto );
 }
 
@@ -267,6 +265,36 @@ void Main::AutoRange( void )
   axis_x.LegalizeMinMax( min_x, max_x );
   axis_y.LegalizeMinMax( min_y, max_y );
 
+  if ( axis_x.style == AxisStyle::Auto ) axis_x.style = AxisStyle::Arrow;
+  if ( axis_y.style == AxisStyle::Auto ) axis_y.style = AxisStyle::Arrow;
+
+  if ( axis_x.style == AxisStyle::Edge ) {
+    axis_y.orth_axis_cross =
+      (axis_x.number_pos == Pos::Above) ? axis_y.max : axis_y.min;
+  }
+  if ( axis_y.style == AxisStyle::Edge ) {
+    axis_x.orth_axis_cross =
+      (axis_y.number_pos == Pos::Right) ? axis_x.max : axis_x.min;
+  }
+
+  axis_x.orth_length = axis_y.length;
+  axis_y.orth_length = axis_x.length;
+
+  axis_x.orth_style = axis_y.style;
+  axis_y.orth_style = axis_x.style;
+
+  axis_x.orth_length_ext =
+    axis_y.length + ((axis_y.style == AxisStyle::Arrow) ? +axis_y.overhang : 0);
+  axis_y.orth_length_ext =
+    axis_x.length + ((axis_x.style == AxisStyle::Arrow) ? +axis_x.overhang : 0);
+
+  axis_x.at_orth_min  = axis_y.orth_axis_cross == axis_y.min;
+  axis_x.at_orth_max  = axis_y.orth_axis_cross == axis_y.max;
+  axis_y.at_orth_min  = axis_x.orth_axis_cross == axis_x.min;
+  axis_y.at_orth_max  = axis_x.orth_axis_cross == axis_x.max;
+  axis_x.at_orth_coor = axis_y.Coor( axis_y.orth_axis_cross );
+  axis_y.at_orth_coor = axis_x.Coor( axis_x.orth_axis_cross );
+
   return;
 }
 
@@ -274,11 +302,6 @@ void Main::AutoRange( void )
 
 Canvas* Main::Build( void )
 {
-  axis_x.length = chart_w;
-  axis_y.length = chart_h;
-
-  AutoRange();
-
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
@@ -320,16 +343,21 @@ Canvas* Main::Build( void )
 
   std::vector< SVG::Object* > axes_objects;
 
+  axis_x.length = chart_w;
+  axis_y.length = chart_h;
+
+  AutoRange();
+
   for ( uint32_t phase : {0, 1} ) {
     axis_x.Build(
       phase,
-      axis_y, axes_objects,
+      axes_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
     axis_y.Build(
       phase,
-      axis_x, axes_objects,
+      axes_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );

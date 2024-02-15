@@ -26,6 +26,10 @@ public:
 
   Axis( int angle );
 
+  // For AxisStyle::Edge, the edge is determined by SetNumberPos() and the
+  // orth_axis_cross is ignored.
+  void SetStyle( AxisStyle style );
+
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
   void SetNumberUnit( std::string unit );
@@ -83,30 +87,41 @@ private:
     return (std::abs( v ) < num_hi && (!log_scale || v > num_lo));
   }
 
-  void BuildTicsNumsLinear(
-    Axis& orth_axis,
+  void BuildTicksHelper(
+    double v, SVG::U v_coor, int32_t sn, bool at_zero,
+    SVG::U min_coor, SVG::U max_coor, SVG::U eps_coor,
     std::vector< SVG::Object* >& axes_objects,
+    std::vector< SVG::Object* >& num_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g,
-    SVG::U sx, SVG::U sy, SVG::U ex, SVG::U ey
+    SVG::U sx, SVG::U sy
   );
-  void BuildTicsNumsLogarithmic(
-    Axis& orth_axis,
+  void BuildTicksNumsLinear(
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g,
-    SVG::U sx, SVG::U sy, SVG::U ex, SVG::U ey
+    SVG::U sx, SVG::U sy
+  );
+  void BuildTicksNumsLogarithmic(
+    std::vector< SVG::Object* >& axes_objects,
+    SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
+    SVG::Group* line_g, SVG::Group* num_g,
+    SVG::U sx, SVG::U sy
   );
 
   void Build(
     uint32_t phase,
-    Axis& orth_axis,
     std::vector< SVG::Object* >& axes_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
   );
 
   SVG::U length;
+  SVG::U orth_length;
+  SVG::U orth_length_ext;
+
+  AxisStyle style;
+  AxisStyle orth_style;
 
   SVG::U arrow_length = 10;
   SVG::U arrow_width = 10;
@@ -139,6 +154,9 @@ private:
   std::string unit;
   Pos unit_pos;
 
+  bool   at_orth_min;
+  bool   at_orth_max;
+  SVG::U at_orth_coor;
 };
 
 }
