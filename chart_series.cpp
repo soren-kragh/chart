@@ -233,7 +233,6 @@ void Series::Build(
   std::vector< LegendBox >& lb_list
 )
 {
-  bool poly_line = true;
   ApplyStyle( g );
   Group* lg = nullptr;
   Group* pg = nullptr;
@@ -252,7 +251,7 @@ void Series::Build(
       color_light.Lighten( 0.5 );
       fg->Attr()->FillColor()->Set( &color_light );
     }
-    poly_line = false;
+    lg->Attr()->SetLineJoin( LineJoin::Round );
   } else {
     lg = g;
   }
@@ -283,12 +282,8 @@ void Series::Build(
   Point prv;
   auto add_point = [&]( Point p, bool clipped = false )
   {
-    if ( poly_line ) {
-      if ( !adding_segments ) lg->Add( poly = new Poly() );
-      poly->Add( p );
-    } else {
-      if ( adding_segments ) lg->Add( new Line( prv, p ) );
-    }
+    if ( !adding_segments ) lg->Add( poly = new Poly() );
+    poly->Add( p );
     if ( adding_segments ) {
       UpdateLegendBoxes( lb_list, prv.x, prv.y, p.x, p.y );
     }
