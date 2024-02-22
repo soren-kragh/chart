@@ -32,8 +32,7 @@ Axis::Axis( int angle )
   num_max_len = 0;
   exp_max_len = 0;
   log_scale = false;
-  number_format = NumberFormat::Fixed;
-  number_format_auto = true;
+  number_format = NumberFormat::Auto;
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
   min = 0;
@@ -65,7 +64,6 @@ void Axis::SetLogScale( bool log_scale )
 void Axis::SetNumberFormat( NumberFormat number_format )
 {
   this->number_format = number_format;
-  this->number_format_auto = false;
 }
 
 void Axis::SetNumberUnit( std::string unit )
@@ -189,17 +187,22 @@ void Axis::LegalizeMajor( void ) {
         break;
       }
       if ( show_minor_mumbers_auto ) show_minor_mumbers = true;
-      if ( number_format_auto ) {
-        number_format = (min < 10e-30 || max > 0.1e30) ? NumberFormat::Scientific : NumberFormat::Magnitude;
+      if ( number_format == NumberFormat::Auto ) {
+        number_format =
+          (min < 10e-30 || max > 0.1e30)
+          ? NumberFormat::Scientific
+          : NumberFormat::Magnitude;
       }
     } else {
       if ( show_minor_mumbers_auto ) show_minor_mumbers = false;
-      if ( number_format_auto ) number_format = NumberFormat::Fixed;
+      if ( number_format == NumberFormat::Auto ) {
+        number_format = NumberFormat::Fixed;
+      }
     }
     if ( number_format == NumberFormat::Fixed ) {
       if (
-        mag < (number_format_auto ? 0.01 : lim) ||
-        mag > (number_format_auto ? 1e6 : 1e15)
+        mag < ((number_format == NumberFormat::Auto) ? 0.01 : lim) ||
+        mag > ((number_format == NumberFormat::Auto) ? 1e6 : 1e15)
       ) {
         number_format = NumberFormat::Scientific;
       }
@@ -265,7 +268,9 @@ void Axis::LegalizeMajor( void ) {
 
   if ( major == 0 ) {
     log_scale = false;
-    number_format = NumberFormat::Scientific;
+    if ( number_format != NumberFormat::None ) {
+      number_format = NumberFormat::Scientific;
+    }
   }
 
   return;
@@ -323,7 +328,7 @@ void Axis::LegalizeMinMax(
         max = std::ceil( p ) * major;
       }
     }
-    if ( angle == 0 ) {
+    if ( angle == 0 && orth_style == AxisStyle::None ) {
       orth_axis_cross = min;
     } else {
       orth_axis_cross = (max <= 0) ? max : min;
@@ -386,7 +391,12 @@ int32_t Axis::ComputeDecimals( double v, bool update )
 int32_t Axis::NormalizeExponent( double& num )
 {
   int32_t exp = 0;
-  if ( num != 0 && number_format != NumberFormat::Fixed ) {
+  if (
+    num != 0 &&
+    ( number_format == NumberFormat::Scientific ||
+      number_format == NumberFormat::Magnitude
+    )
+  ) {
     double sign = (num < 0) ? -1 : 1;
     num = num * sign;
     while ( num < 1 ) {
@@ -422,7 +432,9 @@ void Axis::ComputeNumFormat( void )
   num_max_len = 0;
   exp_max_len = 0;
 
-  if ( major <= 0 || number_format == NumberFormat::Magnitude ) return;
+  if ( number_format == NumberFormat::None      ) return;
+  if ( number_format == NumberFormat::Magnitude ) return;
+  if ( major <= 0 ) return;
 
   U min_coor = 0;
   U max_coor = length;
@@ -727,6 +739,7 @@ void Axis::BuildTicksHelper(
   }
 
   if (
+    number_format != NumberFormat::None &&
     (sn == 0 || show_minor_mumbers) &&
     ( !near_crossing_axis ||
       ( at_orth_min &&

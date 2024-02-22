@@ -22,7 +22,7 @@ namespace Chart {
 
   enum class Pos { Auto, Center, Left, Right, Top, Bottom, Above, Below };
 
-  enum class NumberFormat { Fixed, Scientific, Magnitude };
+  enum class NumberFormat { Auto, None, Fixed, Scientific, Magnitude };
 
   enum class AxisStyle { Auto, None, Arrow, Edge };
 

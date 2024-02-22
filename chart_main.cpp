@@ -262,11 +262,22 @@ void Main::AutoRange( void )
     }
   }
 
-  axis_x.LegalizeMinMax( min_x, max_x );
-  axis_y.LegalizeMinMax( min_y, max_y );
+  axis_x.orth_length = axis_y.length;
+  axis_y.orth_length = axis_x.length;
+
+  axis_x.orth_length_ext =
+    axis_y.length + ((axis_y.style == AxisStyle::Arrow) ? +axis_y.overhang : 0);
+  axis_y.orth_length_ext =
+    axis_x.length + ((axis_x.style == AxisStyle::Arrow) ? +axis_x.overhang : 0);
 
   if ( axis_x.style == AxisStyle::Auto ) axis_x.style = AxisStyle::Arrow;
   if ( axis_y.style == AxisStyle::Auto ) axis_y.style = AxisStyle::Arrow;
+
+  axis_x.orth_style = axis_y.style;
+  axis_y.orth_style = axis_x.style;
+
+  axis_x.LegalizeMinMax( min_x, max_x );
+  axis_y.LegalizeMinMax( min_y, max_y );
 
   if ( axis_x.style == AxisStyle::Edge ) {
     axis_y.orth_axis_cross =
@@ -276,17 +287,6 @@ void Main::AutoRange( void )
     axis_x.orth_axis_cross =
       (axis_y.number_pos == Pos::Right) ? axis_x.max : axis_x.min;
   }
-
-  axis_x.orth_length = axis_y.length;
-  axis_y.orth_length = axis_x.length;
-
-  axis_x.orth_style = axis_y.style;
-  axis_y.orth_style = axis_x.style;
-
-  axis_x.orth_length_ext =
-    axis_y.length + ((axis_y.style == AxisStyle::Arrow) ? +axis_y.overhang : 0);
-  axis_y.orth_length_ext =
-    axis_x.length + ((axis_x.style == AxisStyle::Arrow) ? +axis_x.overhang : 0);
 
   axis_x.at_orth_min  = axis_y.orth_axis_cross == axis_y.min;
   axis_x.at_orth_max  = axis_y.orth_axis_cross == axis_y.max;
@@ -305,9 +305,12 @@ Canvas* Main::Build( void )
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
-  chart_g->Attr()->TextFont()->SetFamily( "DejaVu Sans Mono,Consolas,Menlo,Courier New" );
+  chart_g->Attr()->TextFont()->SetFamily(
+    "DejaVu Sans Mono,Consolas,Menlo,Courier New"
+  );
   chart_g->Attr()->FillColor()->Set( ColorName::White );
   chart_g->Attr()->LineColor()->Clear();
+  chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
 
   Group* grid_minor_g = chart_g->AddNewGroup();
   Group* grid_major_g = chart_g->AddNewGroup();
@@ -518,7 +521,9 @@ Canvas* Main::Build( void )
         }
         BuildLegend( legend_g->AddNewGroup(), nx );
         U x = chart_w / 2;
-        legend_g->Last()->MoveTo( AnchorX::Mid, AnchorY::Max, x, bb.min.y - legend_sy );
+        legend_g->Last()->MoveTo(
+          AnchorX::Mid, AnchorY::Max, x, bb.min.y - legend_sy
+        );
       }
     }
   }

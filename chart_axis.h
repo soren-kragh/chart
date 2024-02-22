@@ -137,7 +137,6 @@ private:
   bool         log_scale;
   NumberFormat number_format;
   std::string  number_unit;
-  bool         number_format_auto;
   bool         show_minor_mumbers;
   bool         show_minor_mumbers_auto;
 
