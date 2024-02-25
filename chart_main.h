@@ -32,6 +32,7 @@ public:
 
   void SetChartArea( SVG::U width, SVG::U height );
   void SetMargin( SVG::U margin );
+  void SetBW( bool bw = true );
 
   void SetTitle( std::string txt );
   void SetSubTitle( std::string txt );
@@ -72,6 +73,7 @@ private:
   SVG::U margin  = 5;
   SVG::U chart_w = 1200;
   SVG::U chart_h = 800;
+  bool bw        = false;
 
   std::list< Series* > series_list;
 

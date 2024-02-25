@@ -44,8 +44,12 @@ Series::~Series( void )
 
 void Series::SetStyle( int style )
 {
-  color.Set( &color_list[ style % color_list.size() ] );
-  style = style / color_list.size();
+  if ( style < 64 ) {
+    color.Set( &color_list[ style % color_list.size() ] );
+    style = style / color_list.size();
+  } else {
+    color.Set( ColorName::Black );
+  }
   style = style % 8;
   if ( style == 0 ) {
     SetWidth( 4 );
@@ -53,15 +57,15 @@ void Series::SetStyle( int style )
   }
   if ( style == 1 ) {
     SetWidth( 4 );
-    SetDash( 3, 8 );
+    SetDash( 5, 3 );
   }
   if ( style == 2 ) {
     SetWidth( 4 );
-    SetDash( 10, 8 );
+    SetDash( 10, 6 );
   }
   if ( style == 3 ) {
     SetWidth( 4 );
-    SetDash( 20, 8 );
+    SetDash( 20, 12 );
   }
   if ( style == 4 ) {
     SetWidth( 2 );
@@ -69,15 +73,15 @@ void Series::SetStyle( int style )
   }
   if ( style == 5 ) {
     SetWidth( 2 );
-    SetDash( 3, 8 );
+    SetDash( 5, 3 );
   }
   if ( style == 6 ) {
     SetWidth( 2 );
-    SetDash( 10, 8 );
+    SetDash( 10, 6 );
   }
   if ( style == 7 ) {
     SetWidth( 2 );
-    SetDash( 20, 8 );
+    SetDash( 20, 12 );
   }
 }
 

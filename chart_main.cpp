@@ -43,6 +43,11 @@ void Main::SetMargin( SVG::U margin )
   this->margin = margin;
 }
 
+void Main::SetBW( bool bw )
+{
+  this->bw = bw;
+}
+
 void Main::SetTitle( std::string txt )
 {
   title = txt;
@@ -71,7 +76,9 @@ void Main::SetLegendPos( Pos pos )
 Series* Main::AddSeries( std::string name )
 {
   Series* series = new Series( name );
-  series->SetStyle( series_list.size() );
+  int style = series_list.size() % 64;
+  if ( bw ) style = (style % 8) + 64;
+  series->SetStyle( style );
   series_list.push_back( series );
   return series;
 }
