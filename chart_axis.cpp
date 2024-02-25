@@ -22,11 +22,9 @@ using namespace Chart;
 Axis::Axis( int angle )
 {
   this->angle = angle;
+  show = false;
   length = 0;
-  orth_length = 0;
-  orth_length_ext = 0;
   style = AxisStyle::Auto;
-  orth_style = AxisStyle::Auto;
   digits = 0;
   decimals = 0;
   num_max_len = 0;
@@ -35,6 +33,9 @@ Axis::Axis( int angle )
   number_format = NumberFormat::Auto;
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
+  data_def = false;
+  data_min = 0;
+  data_max = 0;
   min = 0;
   max = 0;
   orth_axis_cross = 0;
@@ -43,7 +44,17 @@ Axis::Axis( int angle )
   number_pos = Pos::Auto;
   major_grid_enable = true;
   minor_grid_enable = true;
+  grid_set = false;
   unit_pos = Pos::Auto;
+
+  orth_length = 0;
+  orth_length_ext[ 0 ] = 0;
+  orth_length_ext[ 1 ] = 0;
+  orth_style[ 0 ] = AxisStyle::Auto;
+  orth_style[ 1 ] = AxisStyle::Auto;
+  orth_axis_coor[ 0 ] = 0;
+  orth_axis_coor[ 1 ] = 0;
+
   at_orth_min = false;
   at_orth_max = false;
   at_orth_coor = 0;
@@ -54,27 +65,32 @@ Axis::Axis( int angle )
 void Axis::SetStyle( AxisStyle style )
 {
   this->style = style;
+  show = true;
 }
 
 void Axis::SetLogScale( bool log_scale )
 {
   this->log_scale = log_scale;
+  show = true;
 }
 
 void Axis::SetNumberFormat( NumberFormat number_format )
 {
   this->number_format = number_format;
+  show = true;
 }
 
 void Axis::SetNumberUnit( std::string unit )
 {
   this->number_unit = unit;
+  show = true;
 }
 
 void Axis::ShowMinorNumbers( bool show_minor_mumbers )
 {
   this->show_minor_mumbers = show_minor_mumbers;
   this->show_minor_mumbers_auto = false;
+  show = true;
 }
 
 void Axis::SetRange( double min, double max, double orth_axis_cross )
@@ -84,6 +100,7 @@ void Axis::SetRange( double min, double max, double orth_axis_cross )
   if ( orth_axis_cross < min ) orth_axis_cross = min;
   if ( orth_axis_cross > max ) orth_axis_cross = max;
   this->orth_axis_cross = orth_axis_cross;
+  show = true;
 }
 
 void Axis::SetRange( double min, double max )
@@ -95,32 +112,39 @@ void Axis::SetTick( double major, int sub_divs )
 {
   this->major = major;
   this->sub_divs = sub_divs;
+  show = true;
 }
 
 void Axis::SetGrid( bool major_enable, bool minor_enable )
 {
   major_grid_enable = major_enable;
   minor_grid_enable = minor_enable;
+  grid_set = true;
+  show = true;
 }
 
 void Axis::SetNumberPos( Pos pos )
 {
   this->number_pos = pos;
+  show = true;
 }
 
 void Axis::SetLabel( std::string label )
 {
   this->label = label;
+  show = true;
 }
 
 void Axis::SetUnit( std::string unit )
 {
   this->unit = unit;
+  show = true;
 }
 
 void Axis::SetUnitPos( Pos pos )
 {
   this->unit_pos = pos;
+  show = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -276,18 +300,15 @@ void Axis::LegalizeMajor( void ) {
   return;
 }
 
-void Axis::LegalizeMinMax(
-  double series_min,
-  double series_max
-)
+void Axis::LegalizeMinMax( void )
 {
-  if ( series_min == series_max ) {
+  if ( data_min == data_max ) {
     if ( log_scale ) {
-      series_min = series_min / 10;
-      series_max = series_max * 10;
+      data_min = data_min / 10;
+      data_max = data_max * 10;
     } else {
-      series_min = series_min - 1;
-      series_max = series_max + 1;
+      data_min = data_min - 1;
+      data_max = data_max + 1;
     }
   }
 
@@ -295,11 +316,11 @@ void Axis::LegalizeMinMax(
 
   if ( min >= max ) {
     automatic = true;
-    min = series_min;
-    max = series_max;
+    min = data_min;
+    max = data_max;
   }
   if ( log_scale && min <= 0 ) {
-    min = series_min;
+    min = data_min;
     if ( max <= min ) max = 1000 * min;
   }
 
@@ -328,7 +349,7 @@ void Axis::LegalizeMinMax(
         max = std::ceil( p ) * major;
       }
     }
-    if ( angle == 0 && orth_style == AxisStyle::None ) {
+    if ( angle == 0 && orth_style[ 0 ] == AxisStyle::None ) {
       orth_axis_cross = min;
     } else {
       orth_axis_cross = (max <= 0) ? max : min;
@@ -360,6 +381,11 @@ U Axis::Coor( double v )
   } else {
     return (v - min) * length / (max - min);
   }
+}
+
+bool Axis::CoorNear( SVG::U c1, SVG::U c2 )
+{
+  return ( std::abs( c1 - c2 ) < length * epsilon );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -671,15 +697,29 @@ void Axis::BuildTicksHelper(
   SVG::U sx, SVG::U sy
 )
 {
-  U oca_coor = Coor( orth_axis_cross );
-
   if ( v_coor < min_coor - eps_coor ) return;
   if ( v_coor > max_coor + eps_coor ) return;
 
-  bool near_crossing_axis =
-    orth_style != AxisStyle::None &&
-    v_coor >= oca_coor - eps_coor &&
-    v_coor <= oca_coor + eps_coor;
+  bool near_crossing_axis[ 2 ];
+  for ( int i : { 0, 1 } ) {
+    near_crossing_axis[ i ] =
+      orth_style[ i ] != AxisStyle::None &&
+      CoorNear( v_coor, orth_axis_coor[ i ] );
+  }
+
+  bool not_near_crossing_axis =
+    !near_crossing_axis[ 0 ] && !near_crossing_axis[ 1 ];
+
+  // Tick collides with orthogonal axis.
+  bool collision = false;
+  for ( int i : { 0, 1 } ) {
+    collision =
+      collision ||
+      ( near_crossing_axis[ i ] && !at_orth_min &&
+        (!at_orth_max || orth_length_ext[ i ] > orth_length)
+      );
+  }
+
   U x = (angle == 0) ? v_coor : sx;
   U y = (angle == 0) ? sy : v_coor;
 
@@ -692,37 +732,27 @@ void Axis::BuildTicksHelper(
     gx1 = gx2 = x;
     U y1 = y - d;
     U y2 = y + d;
-    if ( near_crossing_axis || style == AxisStyle::Edge ) {
+    if ( !not_near_crossing_axis || style == AxisStyle::Edge ) {
       if ( at_orth_max ) y1 = y;
       if ( at_orth_min ) y2 = y;
     }
-    if ( style != AxisStyle::None ) {
-      if (
-        !near_crossing_axis || at_orth_min ||
-        (at_orth_max && orth_length_ext == orth_length)
-      ) {
-        line_g->Add( new Line( x, y1, x, y2 ) );
-      }
+    if ( style != AxisStyle::None && !collision ) {
+      line_g->Add( new Line( x, y1, x, y2 ) );
     }
   } else {
     gy1 = gy2 = y;
     U x1 = x - d;
     U x2 = x + d;
-    if ( near_crossing_axis || style == AxisStyle::Edge ) {
+    if ( !not_near_crossing_axis || style == AxisStyle::Edge ) {
       if ( at_orth_max ) x1 = x;
       if ( at_orth_min ) x2 = x;
     }
-    if ( style != AxisStyle::None ) {
-      if (
-        !near_crossing_axis || at_orth_min ||
-        (at_orth_max && orth_length_ext == orth_length)
-      ) {
-        line_g->Add( new Line( x1, y, x2, y ) );
-      }
+    if ( style != AxisStyle::None && !collision ) {
+      line_g->Add( new Line( x1, y, x2, y ) );
     }
   }
 
-  if ( !near_crossing_axis ) {
+  if ( not_near_crossing_axis ) {
     bool mg = sn == 0 && major_grid_enable;
     if ( mg || minor_grid_enable ) {
       if ( mg ) {
@@ -740,15 +770,7 @@ void Axis::BuildTicksHelper(
 
   if (
     number_format != NumberFormat::None &&
-    (sn == 0 || show_minor_mumbers) &&
-    ( !near_crossing_axis ||
-      ( at_orth_min &&
-        ((angle == 0) ? (number_pos == Pos::Below) : (number_pos == Pos::Left))
-      ) ||
-      ( at_orth_max && orth_length_ext == orth_length &&
-        ((angle == 0) ? (number_pos == Pos::Above) : (number_pos == Pos::Right))
-      )
-    )
+    (sn == 0 || show_minor_mumbers)
   )
   {
     U d = tick_major_len;
@@ -851,9 +873,7 @@ void Axis::BuildTicksNumsLinear(
         v = mn * major + sn * major / sub_divs;
       }
       U v_coor = Coor( v );
-      bool at_zero =
-        v_coor >= zro_coor - eps_coor &&
-        v_coor <= zro_coor + eps_coor;
+      bool at_zero = CoorNear( v_coor, zro_coor );
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
@@ -953,9 +973,7 @@ void Axis::BuildTicksNumsLogarithmic(
       U v_coor = Coor( v );
       U m0_coor = Coor( m0 );
       if ( sn > 0 && v_coor <= m0_coor ) continue;
-      bool at_zero =
-        v_coor >= one_coor - eps_coor &&
-        v_coor <= one_coor + eps_coor;
+      bool at_zero = CoorNear( v_coor, one_coor );
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
@@ -978,6 +996,8 @@ void Axis::Build(
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
 )
 {
+  if ( !show ) return;
+
   // Limit for when axes are near min or max.
   double near = 0.3;
 
@@ -1015,6 +1035,7 @@ void Axis::Build(
     Object* obj = Label( label_g, unit, 16 );
     obj->Attr()->TextFont()->SetBold();
     if ( angle == 0 ) {
+      bool dual_y = orth_axis_coor[ 0 ] < orth_axis_coor[ 1 ];
       if (
         unit_pos != Pos::Below && unit_pos != Pos::Above &&
         unit_pos != Pos::Left && unit_pos != Pos::Right
@@ -1026,7 +1047,14 @@ void Axis::Build(
         y -= tick_major_len + num_space_y;
         ax = AnchorX::Max;
         ay = AnchorY::Max;
-        if ( style != AxisStyle::Arrow && orth_axis_cross == max ) {
+        if ( dual_y ) {
+          x = length / 2;
+          ax = AnchorX::Mid;
+        } else
+        if (
+          style != AxisStyle::Arrow &&
+          CoorNear( orth_axis_coor[ 1 ], length )
+        ) {
           x = sx;
           ax = AnchorX::Min;
         }
@@ -1035,7 +1063,14 @@ void Axis::Build(
         y += tick_major_len + num_space_y;
         ax = AnchorX::Max;
         ay = AnchorY::Min;
-        if ( style != AxisStyle::Arrow && orth_axis_cross == max ) {
+        if ( dual_y ) {
+          x = length / 2;
+          ax = AnchorX::Mid;
+        } else
+        if (
+          style != AxisStyle::Arrow &&
+          CoorNear( orth_axis_coor[ 1 ], length )
+        ) {
           x = sx;
           ax = AnchorX::Min;
         }
@@ -1052,9 +1087,9 @@ void Axis::Build(
       }
       obj->MoveTo( ax, ay, x, y );
       if (
-        automatic &&
-        Coor( orth_axis_cross ) >= (obj->GetBB().min.x - 48) &&
-        Coor( orth_axis_cross ) <= (obj->GetBB().max.x + 48)
+        automatic && !dual_y &&
+        orth_axis_coor[ 0 ] >= (obj->GetBB().min.x - 48) &&
+        orth_axis_coor[ 0 ] <= (obj->GetBB().max.x + 48)
       ) {
         // Move if too close to Y-axis.
         if ( at_orth_min ) {
@@ -1071,7 +1106,10 @@ void Axis::Build(
         unit_pos != Pos::Left && unit_pos != Pos::Right
       ) {
         unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
-        if ( style == AxisStyle::Arrow || orth_axis_cross < max ) {
+        if (
+          style == AxisStyle::Arrow ||
+          !CoorNear( orth_axis_coor[ 0 ], length )
+        ) {
           unit_pos = Pos::Above;
         }
         automatic = true;
@@ -1080,7 +1118,10 @@ void Axis::Build(
         x -= tick_major_len + num_space_x;
         ax = AnchorX::Max;
         ay = AnchorY::Max;
-        if ( style != AxisStyle::Arrow && orth_axis_cross == max ) {
+        if (
+          style != AxisStyle::Arrow &&
+          CoorNear( orth_axis_coor[ 0 ], length )
+        ) {
           y = sy;
           ay = AnchorY::Min;
         }
@@ -1089,7 +1130,10 @@ void Axis::Build(
         x += tick_major_len + num_space_x;
         ax = AnchorX::Min;
         ay = AnchorY::Max;
-        if ( style != AxisStyle::Arrow && orth_axis_cross == max ) {
+        if (
+          style != AxisStyle::Arrow &&
+          CoorNear( orth_axis_coor[ 0 ], length )
+        ) {
           y = sy;
           ay = AnchorY::Min;
         }
@@ -1133,16 +1177,17 @@ void Axis::Build(
 
   // Add DMZ rectangle for orthogonal axis to trigger collision for numbers
   // that are too close.
-  if ( orth_style != AxisStyle::None ) {
-    U oc = Coor( orth_axis_cross );
+  for ( int i : { 0, 1 } ) {
+    if ( orth_style[ i ] == AxisStyle::None ) continue;
+    U oc = orth_axis_coor[ i ];
     U zc = 2 * tick_major_len;
     if ( angle == 0 ) {
       axes_objects.push_back(
-        new Rect( oc - zc, 0, oc + zc, orth_length_ext )
+        new Rect( oc - zc, 0, oc + zc, orth_length_ext[ i ] )
       );
     } else {
       axes_objects.push_back(
-        new Rect( 0, oc - zc, orth_length_ext, oc + zc )
+        new Rect( 0, oc - zc, orth_length_ext[ i ], oc + zc )
       );
     }
   }
@@ -1164,7 +1209,8 @@ void Axis::Build(
   }
 
   // Remove DMZ rectangle.
-  if ( orth_style != AxisStyle::None ) {
+  for ( int i : { 0, 1 } ) {
+    if ( orth_style[ i ] == AxisStyle::None ) continue;
     delete axes_objects.back();
     axes_objects.pop_back();
   }

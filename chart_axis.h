@@ -51,6 +51,9 @@ private:
 
   int angle;
 
+  // Should axis be shown.
+  bool show;
+
   const double num_lo = 1e-300;
   const double num_hi = 1e+300;
 
@@ -73,13 +76,13 @@ private:
 
   void LegalizeMinor( void );
   void LegalizeMajor( void );
-  void LegalizeMinMax(
-    double series_min,
-    double series_max
-  );
+  void LegalizeMinMax( void );
 
   // Convert a value to an SVG coordinate.
   SVG::U Coor( double v );
+
+  // Determines if coordinates are so near as to be considered the same.
+  bool CoorNear( SVG::U c1, SVG::U c2 );
 
   // Determine if value is valid.
   bool Valid( double v )
@@ -117,11 +120,8 @@ private:
   );
 
   SVG::U length;
-  SVG::U orth_length;
-  SVG::U orth_length_ext;
 
   AxisStyle style;
-  AxisStyle orth_style;
 
   SVG::U arrow_length = 10;
   SVG::U arrow_width = 10;
@@ -140,6 +140,11 @@ private:
   bool         show_minor_mumbers;
   bool         show_minor_mumbers_auto;
 
+  // Use to determine to min/max of the associated series data.
+  bool   data_def;
+  double data_min;
+  double data_max;
+
   double min;
   double max;
   double orth_axis_cross;
@@ -148,10 +153,16 @@ private:
   Pos    number_pos;
   bool   major_grid_enable;
   bool   minor_grid_enable;
+  bool   grid_set;
 
   std::string label;
   std::string unit;
   Pos unit_pos;
+
+  SVG::U orth_length;
+  SVG::U orth_length_ext[ 2 ];
+  AxisStyle orth_style[ 2 ];
+  SVG::U orth_axis_coor[ 2 ];
 
   bool   at_orth_min;
   bool   at_orth_max;

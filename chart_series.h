@@ -30,6 +30,9 @@ public:
   Series( std::string name );
   ~Series( void );
 
+  // Select primary (0) or secondary (1) Y-axis; default is primary.
+  void SetAxisY( int axis_y_n );
+
   void SetStyle( int style );
   SVG::Color* Color( void ) { return &color; }
   void SetWidth( SVG::U width );
@@ -53,8 +56,8 @@ private:
 
   void Build(
     SVG::Group* g,
-    Axis& x_axis,
-    Axis& y_axis,
+    Axis* x_axis,
+    Axis* y_axis,
     std::vector< LegendBox >& lb_list
   );
 
@@ -63,6 +66,8 @@ private:
   );
 
   std::string name;
+
+  int axis_y_n;
 
   std::vector< Datum > datum_list;
 

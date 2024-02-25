@@ -44,8 +44,8 @@ public:
   // specify a location outside the chart area.
   void SetLegendPos( Pos pos );
 
-  Axis* AxisX( void ) { return &axis_x; }
-  Axis* AxisY( void ) { return &axis_y; }
+  Axis* AxisX( void ) { return axis_x; }
+  Axis* AxisY( int n = 0 ) { return axis_y[ n ]; }
 
   Series* AddSeries( std::string name );
 
@@ -53,7 +53,7 @@ public:
 
 private:
 
-  void AutoRange( void );
+  void AxisPrepare( void );
 
   uint32_t LegendCnt( void );
   void CalcLegendSize( SVG::Group* g, SVG::U& ch, SVG::U& tw, SVG::U& th );
@@ -77,8 +77,8 @@ private:
 
   std::list< Series* > series_list;
 
-  Axis axis_x{  0 };
-  Axis axis_y{ 90 };
+  Axis* axis_x;
+  Axis* axis_y[ 2 ];
 
   SVG::U legend_bx = 8;         // X-border around text in series legends.
   SVG::U legend_by = 4;         // Y-border around text in series legends.

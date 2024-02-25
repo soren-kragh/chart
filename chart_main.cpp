@@ -21,6 +21,9 @@ using namespace Chart;
 Main::Main( void )
 {
   SetLegendPos( Pos::Auto );
+  axis_x = new Axis( 0 );
+  axis_y[ 0 ] = new Axis( 90 );
+  axis_y[ 1 ] = new Axis( 90 );
 }
 
 Main::~Main( void )
@@ -28,6 +31,9 @@ Main::~Main( void )
   for ( auto series : series_list ) {
     delete series;
   }
+  delete axis_x;
+  delete axis_y[ 0 ];
+  delete axis_y[ 1 ];
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -187,11 +193,12 @@ void Main::CalcLegendBoxes(
     }
   };
 
+  U tml = axis_x->tick_major_len;
   for ( int i = 0; i < 4; i++ ) {
     U dx = 0;
     U dy = 0;
-    if ( (i >> 0) & 1 ) dx = axis_x.tick_major_len;
-    if ( (i >> 1) & 1 ) dy = axis_y.tick_major_len;
+    if ( (i >> 0) & 1 ) dx = tml;
+    if ( (i >> 1) & 1 ) dy = tml;
     add_lbs( AnchorX::Max, AnchorY::Max, dx, dy );
     add_lbs( AnchorX::Max, AnchorY::Min, dx, dy );
     add_lbs( AnchorX::Min, AnchorY::Max, dx, dy );
@@ -250,57 +257,147 @@ void Main::BuildLegend( Group* g, int nx )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Main::AutoRange( void )
+void Main::AxisPrepare( void )
 {
-  double min_x = axis_x.log_scale ? 10 : 0;
-  double max_x = axis_x.log_scale ? 10 : 0;
-  double min_y = axis_y.log_scale ? 10 : 0;
-  double max_y = axis_y.log_scale ? 10 : 0;
-  bool first = true;
+  axis_x->data_def = false;
+  axis_x->data_min = axis_x->log_scale ? 10 : 0;
+  axis_x->data_max = axis_x->log_scale ? 10 : 0;
+  for ( auto a : axis_y ) {
+    a->data_def = false;
+    a->data_min = a->log_scale ? 10 : 0;
+    a->data_max = a->log_scale ? 10 : 0;
+  }
   for ( Series* series : series_list ) {
+    Axis* ax = axis_x;
+    Axis* ay = axis_y[ series->axis_y_n ];
     for ( auto& datum : series->datum_list ) {
-      if ( !axis_x.Valid( datum.x ) ) continue;
-      if ( !axis_y.Valid( datum.y ) ) continue;
-      if ( first || min_x > datum.x ) min_x = datum.x;
-      if ( first || max_x < datum.x ) max_x = datum.x;
-      if ( first || min_y > datum.y ) min_y = datum.y;
-      if ( first || max_y < datum.y ) max_y = datum.y;
-      first = false;
+      if ( !ax->Valid( datum.x ) ) continue;
+      if ( !ay->Valid( datum.y ) ) continue;
+      if ( !ax->data_def || ax->data_min > datum.x ) ax->data_min = datum.x;
+      if ( !ax->data_def || ax->data_max < datum.x ) ax->data_max = datum.x;
+      if ( !ay->data_def || ay->data_min > datum.y ) ay->data_min = datum.y;
+      if ( !ay->data_def || ay->data_max < datum.y ) ay->data_max = datum.y;
+      ax->data_def = true;
+      ay->data_def = true;
     }
   }
 
-  axis_x.orth_length = axis_y.length;
-  axis_y.orth_length = axis_x.length;
-
-  axis_x.orth_length_ext =
-    axis_y.length + ((axis_y.style == AxisStyle::Arrow) ? +axis_y.overhang : 0);
-  axis_y.orth_length_ext =
-    axis_x.length + ((axis_x.style == AxisStyle::Arrow) ? +axis_x.overhang : 0);
-
-  if ( axis_x.style == AxisStyle::Auto ) axis_x.style = AxisStyle::Arrow;
-  if ( axis_y.style == AxisStyle::Auto ) axis_y.style = AxisStyle::Arrow;
-
-  axis_x.orth_style = axis_y.style;
-  axis_y.orth_style = axis_x.style;
-
-  axis_x.LegalizeMinMax( min_x, max_x );
-  axis_y.LegalizeMinMax( min_y, max_y );
-
-  if ( axis_x.style == AxisStyle::Edge ) {
-    axis_y.orth_axis_cross =
-      (axis_x.number_pos == Pos::Above) ? axis_y.max : axis_y.min;
-  }
-  if ( axis_y.style == AxisStyle::Edge ) {
-    axis_x.orth_axis_cross =
-      (axis_y.number_pos == Pos::Right) ? axis_x.max : axis_x.min;
+  // Show the Y-axis if series data has been associated to the given Y-axis.
+  for ( auto a : axis_y ) {
+    a->show = a->show || a->data_def;
   }
 
-  axis_x.at_orth_min  = axis_y.orth_axis_cross == axis_y.min;
-  axis_x.at_orth_max  = axis_y.orth_axis_cross == axis_y.max;
-  axis_y.at_orth_min  = axis_x.orth_axis_cross == axis_x.min;
-  axis_y.at_orth_max  = axis_x.orth_axis_cross == axis_x.max;
-  axis_x.at_orth_coor = axis_y.Coor( axis_y.orth_axis_cross );
-  axis_y.at_orth_coor = axis_x.Coor( axis_x.orth_axis_cross );
+  // If we only show the secondary axis, then swap the roles.
+  if ( !axis_y[ 0 ]->show && axis_y[ 1 ]->show ) {
+    std::swap( axis_y[ 0 ], axis_y[ 1 ] );
+  }
+
+  // Always show X-axis and primary Y-axis
+  axis_x->show = true;
+  axis_y[ 0 ]->show = true;
+
+  bool dual_y = axis_y[ 0 ]->show && axis_y[ 1 ]->show;
+
+  for ( int i : { 0, 1 } ) {
+    axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
+    axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
+    axis_x->orth_style[ i ] = axis_y[ i ]->style;
+  }
+
+  axis_x->LegalizeMinMax();
+  for ( auto a : axis_y ) a->LegalizeMinMax();
+
+  // Edge style forces cross point to be at min or max.
+  if ( axis_x->style == AxisStyle::Edge ) {
+    axis_y[ 0 ]->orth_axis_cross =
+      (axis_y[ 0 ]->orth_axis_cross < axis_y[ 0 ]->max)
+      ? axis_y[ 0 ]->min
+      : axis_y[ 0 ]->max;
+  }
+  if ( axis_y[ 0 ]->style == AxisStyle::Edge ) {
+    axis_x->orth_axis_cross =
+      (axis_x->orth_axis_cross < axis_x->max)
+      ? axis_x->min
+      : axis_x->max;
+  }
+
+  axis_x->orth_axis_coor[ 0 ] =
+  axis_x->orth_axis_coor[ 1 ] = axis_x->Coor( axis_x->orth_axis_cross );
+  for ( auto a : axis_y ) {
+    a->orth_axis_coor[ 0 ] =
+    a->orth_axis_coor[ 1 ] = a->Coor( a->orth_axis_cross );
+  }
+  if ( dual_y ) {
+    axis_x->orth_axis_coor[ 0 ] = 0;
+    axis_x->orth_axis_coor[ 1 ] = axis_x->length;
+  }
+  axis_y[ 1 ]->orth_axis_coor[ 0 ] = axis_y[ 0 ]->orth_axis_coor[ 0 ];
+  axis_y[ 1 ]->orth_axis_coor[ 1 ] = axis_y[ 0 ]->orth_axis_coor[ 1 ];
+
+  if ( axis_x->style == AxisStyle::Auto ) {
+    axis_x->style =
+      ( dual_y &&
+        ( axis_y[ 0 ]->orth_axis_cross == axis_y[ 0 ]->min ||
+          axis_y[ 0 ]->orth_axis_cross == axis_y[ 0 ]->max
+        )
+      )
+      ? AxisStyle::Edge
+      : AxisStyle::Arrow;
+  }
+  for ( auto a : axis_y ) {
+    if ( a->style == AxisStyle::Auto ) {
+      a->style = dual_y ? AxisStyle::Edge : AxisStyle::Arrow;
+    }
+  }
+
+  for ( auto a : axis_y ) {
+    a->orth_length_ext[ 0 ] =
+    a->orth_length_ext[ 1 ] =
+      axis_x->length +
+      ((axis_x->style == AxisStyle::Arrow) ? +axis_x->overhang : 0);
+  }
+  for ( int i : { 0, 1 } ) {
+    axis_x->orth_length_ext[ i ] =
+      axis_y[ i ]->length +
+      ((axis_y[ i ]->style == AxisStyle::Arrow) ? +axis_y[ i ]->overhang : 0);
+  }
+
+  for ( int i : { 0, 1 } ) {
+    axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
+    axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
+    axis_x->orth_style[ i ] = axis_y[ i ]->style;
+  }
+
+  axis_x->at_orth_min =
+    axis_y[ 0 ]->CoorNear(
+      axis_y[ 0 ]->orth_axis_coor[ 0 ], 0
+    );
+  axis_x->at_orth_max =
+    axis_y[ 0 ]->CoorNear(
+      axis_y[ 0 ]->orth_axis_coor[ 0 ], axis_y[ 0 ]->length
+    );
+  axis_x->at_orth_coor = axis_y[ 0 ]->orth_axis_coor[ 0 ];
+  for ( int i : { 0, 1 } ) {
+    axis_y[ i ]->at_orth_min =
+      axis_x->CoorNear( axis_x->orth_axis_coor[ i ], 0 );
+    axis_y[ i ]->at_orth_max =
+      axis_x->CoorNear( axis_x->orth_axis_coor[ i ], axis_x->length );
+    axis_y[ i ]->at_orth_coor = axis_x->orth_axis_coor[ i ];
+  }
+
+  if ( dual_y ) {
+    auto has_grid = [&]( int i ) {
+      return
+        axis_y[ i ]->major_grid_enable ||
+        axis_y[ i ]->minor_grid_enable;
+    };
+    if ( has_grid( 0 ) && has_grid( 1 ) && !axis_y[ 1 ]->grid_set ) {
+      axis_y[ 1 ]->SetGrid( false );
+    }
+    if ( has_grid( 1 ) && has_grid( 0 ) && !axis_y[ 0 ]->grid_set ) {
+      axis_y[ 0 ]->SetGrid( false );
+    }
+  }
 
   return;
 }
@@ -353,24 +450,30 @@ Canvas* Main::Build( void )
 
   std::vector< SVG::Object* > axes_objects;
 
-  axis_x.length = chart_w;
-  axis_y.length = chart_h;
+  axis_x->length = chart_w;
+  axis_x->orth_length = chart_h;
+  for ( auto a : axis_y ) {
+    a->length = chart_h;
+    a->orth_length = chart_w;
+  }
 
-  AutoRange();
+  AxisPrepare();
 
   for ( uint32_t phase : {0, 1} ) {
-    axis_x.Build(
+    axis_x->Build(
       phase,
       axes_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
-    axis_y.Build(
-      phase,
-      axes_objects,
-      grid_minor_g, grid_major_g, grid_zero_g,
-      axes_line_g, axes_num_g, axes_label_g
-    );
+    for ( auto a : axis_y ) {
+      a->Build(
+        phase,
+        axes_objects,
+        grid_minor_g, grid_major_g, grid_zero_g,
+        axes_line_g, axes_num_g, axes_label_g
+      );
+    }
   }
 
   // Do title.
@@ -434,7 +537,7 @@ Canvas* Main::Build( void )
 
   for ( Series* series : series_list ) {
     Group* series_g = chartbox_g->AddNewGroup();
-    series->Build( series_g, axis_x, axis_y, lb_list );
+    series->Build( series_g, axis_x, axis_y[ series->axis_y_n ], lb_list );
   }
 
   // Find best legend placement.

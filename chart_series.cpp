@@ -22,6 +22,8 @@ using namespace Chart;
 Series::Series( std::string name )
 {
   this->name = name;
+  this->axis_y_n = 0;
+
   SetWidth( 1 );
   SetDash( 0 );
   SetPointSize( 0 );
@@ -41,6 +43,11 @@ Series::~Series( void )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void Series::SetAxisY( int axis_y_n )
+{
+  this->axis_y_n = axis_y_n;
+}
 
 void Series::SetStyle( int style )
 {
@@ -232,8 +239,8 @@ int Series::ClipLine(
 
 void Series::Build(
   SVG::Group* g,
-  Axis& x_axis,
-  Axis& y_axis,
+  Axis* x_axis,
+  Axis* y_axis,
   std::vector< LegendBox >& lb_list
 )
 {
@@ -261,8 +268,8 @@ void Series::Build(
   }
 
   // Define clip-box.
-  box.Update( 0, y_axis.length );
-  box.Update( x_axis.length, 0 );
+  box.Update( 0, y_axis->length );
+  box.Update( x_axis->length, 0 );
 
   // Used for extra margin in comparisons to account for precision issues. This
   // may cause an unintended extra clip-detection near the corners, but the
@@ -313,9 +320,9 @@ void Series::Build(
   Point old;
   for ( Datum& datum : datum_list ) {
     old = cur;
-    cur.x = x_axis.Coor( datum.x );
-    cur.y = y_axis.Coor( datum.y );
-    bool valid = x_axis.Valid( datum.x ) && y_axis.Valid( datum.y );
+    cur.x = x_axis->Coor( datum.x );
+    cur.y = y_axis->Coor( datum.y );
+    bool valid = x_axis->Valid( datum.x ) && y_axis->Valid( datum.y );
     bool inside =
       cur.x >= box.min.x && cur.x <= box.max.x &&
       cur.y >= box.min.y && cur.y <= box.max.y;
