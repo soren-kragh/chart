@@ -22,6 +22,8 @@ namespace Chart {
 
   enum class Pos { Auto, Center, Left, Right, Top, Bottom, Above, Below };
 
+  enum class Dir { Right, Left, Up, Down };
+
   enum class NumberFormat { Auto, None, Fixed, Scientific, Magnitude };
 
   enum class AxisStyle { Auto, None, Arrow, Edge };
@@ -59,4 +61,10 @@ namespace Chart {
     SVG::U margin_x, SVG::U margin_y
   );
 
+  void MoveObjs(
+    const std::vector< SVG::Object* >& avoid_objs,
+    const std::vector< SVG::Object* >& move_objs,
+    SVG::U margin_x, SVG::U margin_y,
+    Dir dir
+  );
 }

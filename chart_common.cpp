@@ -133,8 +133,8 @@ bool Chart::Collides(
   SVG::BoundaryBox& bb
 )
 {
-  if ( obj == nullptr || obj->Empty() ) return false;
   bb = BoundaryBox();
+  if ( obj == nullptr || obj->Empty() ) return false;
   bool collision = false;
   for ( Object* object : objects ) {
     if ( object->Empty() ) continue;
@@ -156,5 +156,47 @@ bool Chart::Collides(
   BoundaryBox bb;
   return Chart::Collides( obj, objects, margin_x, margin_y, bb );
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Move objects so as to avoid collisions with other objects.
+void Chart::MoveObjs(
+  const std::vector< SVG::Object* >& avoid_objs,
+  const std::vector< SVG::Object* >& move_objs,
+  SVG::U margin_x, SVG::U margin_y,
+  Dir dir
+)
+{
+  BoundaryBox col_bb;
+  do {
+    bool collision = false;
+    U dx = 0;
+    U dy = 0;
+    for ( auto obj : move_objs ) {
+      if (
+        Collides(
+          obj, avoid_objs, margin_x - epsilon, margin_y - epsilon, col_bb
+        )
+      ) {
+        collision = true;
+        BoundaryBox obj_bb = obj->GetBB();
+        switch ( dir ) {
+          case Dir::Right : dx = col_bb.max.x - obj_bb.min.x + margin_x; break;
+          case Dir::Left  : dx = col_bb.min.x - obj_bb.max.x - margin_x; break;
+          case Dir::Up    : dy = col_bb.max.y - obj_bb.min.y + margin_y; break;
+          case Dir::Down  : dy = col_bb.min.y - obj_bb.max.y - margin_y; break;
+        }
+        break;
+      }
+    }
+    if ( collision ) {
+      for ( auto obj : move_objs ) {
+        obj->Move( dx, dy );
+      }
+      continue;
+    }
+  } while ( false );
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
