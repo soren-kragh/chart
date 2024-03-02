@@ -161,15 +161,14 @@ bool Chart::Collides(
 
 // Move objects so as to avoid collisions with other objects.
 void Chart::MoveObjs(
-  const std::vector< SVG::Object* >& avoid_objs,
+  Dir dir,
   const std::vector< SVG::Object* >& move_objs,
-  SVG::U margin_x, SVG::U margin_y,
-  Dir dir
+  const std::vector< SVG::Object* >& avoid_objs,
+  SVG::U margin_x, SVG::U margin_y
 )
 {
   BoundaryBox col_bb;
   do {
-    bool collision = false;
     U dx = 0;
     U dy = 0;
     for ( auto obj : move_objs ) {
@@ -178,7 +177,6 @@ void Chart::MoveObjs(
           obj, avoid_objs, margin_x - epsilon, margin_y - epsilon, col_bb
         )
       ) {
-        collision = true;
         BoundaryBox obj_bb = obj->GetBB();
         switch ( dir ) {
           case Dir::Right : dx = col_bb.max.x - obj_bb.min.x + margin_x; break;
@@ -189,7 +187,7 @@ void Chart::MoveObjs(
         break;
       }
     }
-    if ( collision ) {
+    if ( dx != 0 || dy != 0  ) {
       for ( auto obj : move_objs ) {
         obj->Move( dx, dy );
       }
@@ -197,6 +195,5 @@ void Chart::MoveObjs(
     }
   } while ( false );
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////

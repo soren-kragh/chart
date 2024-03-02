@@ -62,9 +62,9 @@ namespace Chart {
   );
 
   void MoveObjs(
-    const std::vector< SVG::Object* >& avoid_objs,
+    Dir dir,
     const std::vector< SVG::Object* >& move_objs,
-    SVG::U margin_x, SVG::U margin_y,
-    Dir dir
+    const std::vector< SVG::Object* >& avoid_objs,
+    SVG::U margin_x, SVG::U margin_y
   );
 }

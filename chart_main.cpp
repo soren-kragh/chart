@@ -476,6 +476,21 @@ Canvas* Main::Build( void )
     }
   }
 
+  {
+    for ( auto obj : axes_objects ) {
+      if ( obj->Empty() ) continue;
+      BoundaryBox bb = obj->GetBB();
+      chart_g->Add( new Rect( bb.min, bb.max ) );
+      chart_g->Last()->Attr()->FillColor()->Clear();
+      chart_g->Last()->Attr()->SetLineWidth( 4 )->LineColor()->Set( ColorName::Orange );
+    }
+  }
+
+  axis_x->BuildLabel( axes_objects, axes_label_g );
+  for ( auto a : axis_y ) {
+    a->BuildLabel( axes_objects, axes_label_g );
+  }
+
   // Do title.
   {
     U space_x = 50;

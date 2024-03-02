@@ -1215,34 +1215,50 @@ void Axis::Build(
     axes_objects.pop_back();
   }
 
-  if ( label != "" ) {
-    BoundaryBox bb;
-    bb.Update( 0, 0 );
-    if ( angle == 0 ) {
-      bb.Update( length, orth_length );
-    } else {
-      bb.Update( orth_length, length );
-    }
-    if ( !line_g->Empty() ) bb.Update( line_g->GetBB() );
-    if ( !num_g->Empty() ) bb.Update( num_g->GetBB() );
-    U gap = 10;
-    Object* obj = MultiLineText( label_g, label, 24 );
-    obj->Rotate( angle );
-    U c = length / 2;
-    if ( angle == 0 ) {
-      obj->MoveTo( AnchorX::Mid, AnchorY::Max, c, bb.min.y - gap );
-    } else {
-      if ( at_orth_max || (number_pos == Pos::Right && !at_orth_min) ) {
-        obj->MoveTo( AnchorX::Min, AnchorY::Mid, bb.max.x + gap, c );
-      } else {
-        obj->MoveTo( AnchorX::Max, AnchorY::Mid, bb.min.x - gap, c );
-      }
-    }
-    axes_objects.push_back( obj );
-  }
-
   axes_objects.push_back( line_g );
   axes_objects.push_back( num_g );
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Axis::BuildLabel(
+  std::vector< SVG::Object* >& axes_objects,
+  SVG::Group* label_g
+)
+{
+  if ( label == "" ) return;
+
+  Group* g = label_g->AddNewGroup();
+  Object* t1 = MultiLineText( g, label, 24 );
+  g->Rotate( angle );
+
+  t1 = t1;
+
+  U mx = 10;
+  U my = 10;
+  Dir dir;
+  if ( angle == 0 ) {
+    mx = 30;
+    dir = Dir::Down;
+    g->MoveTo( AnchorX::Mid, AnchorY::Max, length / 2, -my );
+  } else {
+    my = 30;
+    if ( at_orth_max || (number_pos == Pos::Right && !at_orth_min) ) {
+      dir = Dir::Right;
+      g->MoveTo( AnchorX::Min, AnchorY::Mid, orth_length + mx, length / 2 );
+    } else {
+      dir = Dir::Left;
+      g->MoveTo( AnchorX::Max, AnchorY::Mid, -mx, length / 2 );
+    }
+  }
+
+  std::vector< SVG::Object* > move_objs;
+  move_objs.push_back( g );
+  MoveObjs( dir, move_objs, axes_objects, mx, my );
+
+  axes_objects.push_back( g );
 
   return;
 }

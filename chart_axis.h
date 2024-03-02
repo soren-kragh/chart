@@ -119,6 +119,11 @@ private:
     SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
   );
 
+  void BuildLabel(
+    std::vector< SVG::Object* >& axes_objects,
+    SVG::Group* label_g
+  );
+
   SVG::U length;
 
   AxisStyle style;
