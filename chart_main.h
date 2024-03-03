@@ -59,9 +59,14 @@ private:
   void CalcLegendSize( SVG::Group* g, SVG::U& ch, SVG::U& tw, SVG::U& th );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
-    const std::vector< SVG::Object* >& axes_objects
+    const std::vector< SVG::Object* >& axis_objects
   );
   void BuildLegend( SVG::Group* g, int nx );
+  void PlaceLegend(
+    const std::vector< SVG::Object* >& axis_objects,
+    const std::vector< LegendBox >& lb_list,
+    SVG::Group* legend_g
+  );
 
   std::string title;
   std::string sub_title;
@@ -82,8 +87,8 @@ private:
 
   SVG::U legend_bx = 8;         // X-border around text in series legends.
   SVG::U legend_by = 4;         // Y-border around text in series legends.
-  SVG::U legend_sx = 15;        // X-space between series legends.
-  SVG::U legend_sy = 15;        // Y-space between series legends.
+  SVG::U legend_sx = 12;        // X-space between series legends.
+  SVG::U legend_sy = 12;        // Y-space between series legends.
 };
 
 }

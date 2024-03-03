@@ -690,7 +690,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 void Axis::BuildTicksHelper(
   double v, SVG::U v_coor, int32_t sn, bool at_zero,
   SVG::U min_coor, SVG::U max_coor, SVG::U eps_coor,
-  std::vector< SVG::Object* >& axes_objects,
+  std::vector< SVG::Object* >& axis_objects,
   std::vector< SVG::Object* >& num_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g,
@@ -790,7 +790,7 @@ void Axis::BuildTicksHelper(
     }
     U mx = (angle == 0) ? 4 : 0;
     if (
-      Chart::Collides( obj, axes_objects, mx, 0 ) ||
+      Chart::Collides( obj, axis_objects, mx, 0 ) ||
       Chart::Collides( obj, num_objects, mx, 0 )
     ) {
       num_g->DeleteFront();
@@ -805,7 +805,7 @@ void Axis::BuildTicksHelper(
 //------------------------------------------------------------------------------
 
 void Axis::BuildTicksNumsLinear(
-  std::vector< SVG::Object* >& axes_objects,
+  std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g,
   SVG::U sx, SVG::U sy
@@ -877,7 +877,7 @@ void Axis::BuildTicksNumsLinear(
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
-        axes_objects, num_objects,
+        axis_objects, num_objects,
         minor_g, major_g, zero_g, line_g, num_g,
         sx, sy
       );
@@ -890,7 +890,7 @@ void Axis::BuildTicksNumsLinear(
 //------------------------------------------------------------------------------
 
 void Axis::BuildTicksNumsLogarithmic(
-  std::vector< SVG::Object* >& axes_objects,
+  std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g,
   SVG::U sx, SVG::U sy
@@ -977,7 +977,7 @@ void Axis::BuildTicksNumsLogarithmic(
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
-        axes_objects, num_objects,
+        axis_objects, num_objects,
         minor_g, major_g, zero_g, line_g, num_g,
         sx, sy
       );
@@ -991,7 +991,7 @@ void Axis::BuildTicksNumsLogarithmic(
 
 void Axis::Build(
   uint32_t phase,
-  std::vector< SVG::Object* >& axes_objects,
+  std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
 )
@@ -1150,7 +1150,7 @@ void Axis::Build(
       }
       obj->MoveTo( ax, ay, x, y );
     }
-    axes_objects.push_back( obj );
+    axis_objects.push_back( obj );
   }
 
   if ( phase == 0 ) return;
@@ -1182,11 +1182,11 @@ void Axis::Build(
     U oc = orth_axis_coor[ i ];
     U zc = 2 * tick_major_len;
     if ( angle == 0 ) {
-      axes_objects.push_back(
+      axis_objects.push_back(
         new Rect( oc - zc, 0, oc + zc, orth_length_ext[ i ] )
       );
     } else {
-      axes_objects.push_back(
+      axis_objects.push_back(
         new Rect( 0, oc - zc, orth_length_ext[ i ], oc + zc )
       );
     }
@@ -1196,13 +1196,13 @@ void Axis::Build(
 
   if ( log_scale ) {
     BuildTicksNumsLogarithmic(
-      axes_objects,
+      axis_objects,
       minor_g, major_g, zero_g, line_g, num_g,
       sx, sy
     );
   } else {
     BuildTicksNumsLinear(
-      axes_objects,
+      axis_objects,
       minor_g, major_g, zero_g, line_g, num_g,
       sx, sy
     );
@@ -1211,12 +1211,12 @@ void Axis::Build(
   // Remove DMZ rectangle.
   for ( int i : { 0, 1 } ) {
     if ( orth_style[ i ] == AxisStyle::None ) continue;
-    delete axes_objects.back();
-    axes_objects.pop_back();
+    delete axis_objects.back();
+    axis_objects.pop_back();
   }
 
-  axes_objects.push_back( line_g );
-  axes_objects.push_back( num_g );
+  axis_objects.push_back( line_g );
+  axis_objects.push_back( num_g );
 
   return;
 }
@@ -1224,7 +1224,7 @@ void Axis::Build(
 ////////////////////////////////////////////////////////////////////////////////
 
 void Axis::BuildLabel(
-  std::vector< SVG::Object* >& axes_objects,
+  std::vector< SVG::Object* >& axis_objects,
   SVG::Group* label_g
 )
 {
@@ -1254,9 +1254,9 @@ void Axis::BuildLabel(
     }
   }
 
-  MoveObj( dir, g, axes_objects, mx, my );
+  MoveObj( dir, g, axis_objects, mx, my );
 
-  axes_objects.push_back( g );
+  axis_objects.push_back( g );
 
   return;
 }

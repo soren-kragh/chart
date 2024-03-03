@@ -132,36 +132,13 @@ void Series::Add( double x, double y )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Series::UpdateLegendBoxes(
-  std::vector< LegendBox >& lb_list,
-  U x1, U y1,
-  U x2, U y2
-)
-{
-  U vx = x2 - x1;
-  U vy = y2 - y1;
-  for ( LegendBox& lb : lb_list ) {
-    if ( x1 < lb.bb.min.x && x2 < lb.bb.min.x ) continue;
-    if ( x1 > lb.bb.max.x && x2 > lb.bb.max.x ) continue;
-    if ( y1 < lb.bb.min.y && y2 < lb.bb.min.y ) continue;
-    if ( y1 > lb.bb.max.y && y2 > lb.bb.max.y ) continue;
-    int c = 0;
-    if ( vx * (y2 - lb.bb.min.y) - vy * (x2 - lb.bb.min.x) < 0 ) c++;
-    if ( vx * (y2 - lb.bb.max.y) - vy * (x2 - lb.bb.min.x) < 0 ) c++;
-    if ( vx * (y2 - lb.bb.min.y) - vy * (x2 - lb.bb.max.x) < 0 ) c++;
-    if ( vx * (y2 - lb.bb.max.y) - vy * (x2 - lb.bb.max.x) < 0 ) c++;
-    if ( (c > 0 && c < 4) || (vx == 0 && vy == 0) ) lb.collisions++;
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 // Returns:
 //   0 : No intersection.
 //   1 : One intersection; c1 is the point.
 //   2 : Two intersections; c1 and c2 are the points.
 int Series::ClipLine(
-  SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2
+  SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
+  BoundaryBox& box
 )
 {
   auto intersect_x = []( U x, Point p1, Point p2 )
@@ -237,6 +214,37 @@ int Series::ClipLine(
   return n;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void Series::UpdateLegendBoxes(
+  std::vector< LegendBox >& lb_list, Point p1, Point p2
+)
+{
+  Point c1;
+  Point c2;
+  for ( LegendBox& lb : lb_list ) {
+    if ( p1.x < lb.bb.min.x && p2.x < lb.bb.min.x ) continue;
+    if ( p1.x > lb.bb.max.x && p2.x > lb.bb.max.x ) continue;
+    if ( p1.y < lb.bb.min.y && p2.y < lb.bb.min.y ) continue;
+    if ( p1.y > lb.bb.max.y && p2.y > lb.bb.max.y ) continue;
+    int c = ClipLine( c1, c2, p1, p2, lb.bb );
+    if ( c != 1 && c != 2 ) continue;
+    if ( c == 1 ) {
+      c2 =
+        ( p1.x >= lb.bb.min.x && p1.x <= lb.bb.max.x &&
+          p1.y >= lb.bb.min.y && p1.y <= lb.bb.max.y
+        )
+        ? p1
+        : p2;
+    }
+    double dx = c1.x - c2.x;
+    double dy = c1.y - c2.y;
+    lb.collision_weight += std::sqrt( dx*dx + dy*dy );
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Series::Build(
   SVG::Group* g,
   Axis* x_axis,
@@ -268,6 +276,7 @@ void Series::Build(
   }
 
   // Define clip-box.
+  SVG::BoundaryBox box;
   box.Update( 0, y_axis->length );
   box.Update( x_axis->length, 0 );
 
@@ -296,7 +305,7 @@ void Series::Build(
     if ( !adding_segments ) lg->Add( poly = new Poly() );
     poly->Add( p );
     if ( adding_segments ) {
-      UpdateLegendBoxes( lb_list, prv.x, prv.y, p.x, p.y );
+      UpdateLegendBoxes( lb_list, prv, p );
     }
     if ( !clipped && point_size > 0 ) {
       U r = (width + point_size) / 2;
@@ -304,7 +313,6 @@ void Series::Build(
       if ( fg != nullptr ) {
         fg->Add( new Circle( p, r - width ) );
       }
-      UpdateLegendBoxes( lb_list, p.x, p.y, p.x, p.y );
     }
     prv = p;
     adding_segments = true;
@@ -342,7 +350,7 @@ void Series::Build(
       } else {
         // Handle clipping in and out of the chart area.
         Point c1, c2;
-        int n = ClipLine( c1, c2, old, cur );
+        int n = ClipLine( c1, c2, old, cur, box );
         if ( !adding_segments ) {
           // We were outside.
           if ( inside ) {

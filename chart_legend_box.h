@@ -29,7 +29,7 @@ private:
   uint32_t nx = 1;      // Number of columns.
   uint32_t sx = 0;      // Spare in last row.
 
-  uint32_t collisions = 0;
+  double collision_weight = 0;
 
 };
 

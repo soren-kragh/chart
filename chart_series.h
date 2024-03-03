@@ -49,9 +49,7 @@ private:
   void ApplyStyle( SVG::Object* obj );
 
   void UpdateLegendBoxes(
-    std::vector< LegendBox >& lb_list,
-    SVG::U x1, SVG::U y1,
-    SVG::U x2, SVG::U y2
+    std::vector< LegendBox >& lb_list, SVG::Point p1, SVG::Point p2
   );
 
   void Build(
@@ -62,7 +60,8 @@ private:
   );
 
   int ClipLine(
-    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2
+    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
+    SVG::BoundaryBox& box
   );
 
   std::string name;
@@ -77,9 +76,6 @@ private:
   SVG::U dash;
   SVG::U hole;
   SVG::U point_size;
-
-  // Box within which to display graph.
-  SVG::BoundaryBox box;
 
   // Used for floating point precision issues.
   double e1 = 0;

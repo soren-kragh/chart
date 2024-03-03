@@ -137,7 +137,7 @@ void Main::CalcLegendSize( Group* g, U& ch, U& tw, U& th )
 // Determine potential placement of series legends in chart interior.
 void Main::CalcLegendBoxes(
   Group* g, std::vector< LegendBox >& lb_list,
-  const std::vector< SVG::Object* >& axes_objects
+  const std::vector< SVG::Object* >& axis_objects
 )
 {
   U ch;
@@ -146,7 +146,9 @@ void Main::CalcLegendBoxes(
   CalcLegendSize( g, ch, tw, th );
   uint32_t lc = LegendCnt();
 
-  auto add_lbs = [&]( AnchorX anchor_x, AnchorY anchor_y, U dx = 0, U dy = 0 )
+  auto add_lbs = [&](
+    AnchorX anchor_x, AnchorY anchor_y, bool can_move_x, bool can_move_y
+  )
   {
     uint32_t nx = (anchor_x == AnchorX::Mid) ? lc :  1;
     uint32_t ny = (anchor_x == AnchorX::Mid) ?  1 : lc;
@@ -158,17 +160,79 @@ void Main::CalcLegendBoxes(
           ny * (th + 2*legend_by) + (ny - 1) * legend_sy
         )
       );
-      U x = legend_sx + dx;
-      U y = legend_sy + dy;
+      Object* obj = g->Last();
+      U x = legend_sx;
+      U y = legend_sy;
       if ( anchor_x == AnchorX::Mid ) x = chart_w / 2;
-      if ( anchor_x == AnchorX::Max ) x = chart_w - legend_sx - dx;
+      if ( anchor_x == AnchorX::Max ) x = chart_w - legend_sx;
       if ( anchor_y == AnchorY::Mid ) y = chart_h / 2;
-      if ( anchor_y == AnchorY::Max ) y = chart_h - legend_sy - dy;
-      g->Last()->MoveTo( anchor_x, anchor_y, x, y );
-      if ( !Collides( g->Last(), axes_objects, legend_sx, legend_sy ) ) {
+      if ( anchor_y == AnchorY::Max ) y = chart_h - legend_sy;
+      obj->MoveTo( anchor_x, anchor_y, x, y );
+
+      if ( can_move_y && anchor_y != AnchorY::Mid ) {
+        while ( true ) {
+          BoundaryBox obj_bb = obj->GetBB();
+          U dy = 0;
+          for ( auto ao : axis_objects ) {
+            if (
+              !SVG::Collides(
+                obj, ao, legend_sx - epsilon, legend_sy - epsilon
+              )
+            ) continue;
+            BoundaryBox ao_bb = ao->GetBB();
+            if ( anchor_y == AnchorY::Min ) {
+              if ( ao_bb.max.y < (chart_h * 1 / 4) ) {
+                dy = ao_bb.max.y - obj_bb.min.y + legend_sy;
+                break;
+              }
+            } else {
+              if ( ao_bb.min.y > (chart_h * 3 / 4) ) {
+                dy = ao_bb.min.y - obj_bb.max.y - legend_sy;
+                break;
+              }
+            }
+          }
+          if ( dy == 0 ) break;
+          obj->Move( 0, dy );
+        }
+      }
+
+      if ( can_move_x && anchor_x != AnchorX::Mid ) {
+        while ( true ) {
+          BoundaryBox obj_bb = obj->GetBB();
+          U dx = 0;
+          for ( auto ao : axis_objects ) {
+            if (
+              SVG::Collides(
+                obj, ao, legend_sx - epsilon, legend_sy - epsilon
+              )
+            ) {
+              BoundaryBox ao_bb = ao->GetBB();
+              if ( anchor_x == AnchorX::Min ) {
+                if ( ao_bb.max.x < (chart_w * 1 / 4) ) {
+                  dx = ao_bb.max.x - obj_bb.min.x + legend_sx;
+                  break;
+                }
+              } else {
+                if ( ao_bb.min.x > (chart_w * 3 / 4) ) {
+                  dx = ao_bb.min.x - obj_bb.max.x - legend_sx;
+                  break;
+                }
+              }
+            }
+          }
+          if ( dx == 0 ) break;
+          obj->Move( dx, 0 );
+        }
+      }
+
+      if ( !Collides( obj, axis_objects, legend_sx, legend_sy ) ) {
         LegendBox lb;
-        lb.bb = g->Last()->GetBB();
+        lb.bb = obj->GetBB();
         if (
+          ( anchor_x != AnchorX::Mid ||
+            (lb.bb.max.x - lb.bb.min.x) > (lb.bb.max.y - lb.bb.min.y)
+          ) &&
           lb.bb.min.x > 0 && lb.bb.max.x < chart_w &&
           lb.bb.min.y > 0 && lb.bb.max.y < chart_h
         ) {
@@ -192,21 +256,38 @@ void Main::CalcLegendBoxes(
     }
   };
 
-  U tml = axis_x->tick_major_len;
-  for ( int i = 0; i < 4; i++ ) {
-    U dx = 0;
-    U dy = 0;
-    if ( (i >> 0) & 1 ) dx = tml;
-    if ( (i >> 1) & 1 ) dy = tml;
-    add_lbs( AnchorX::Max, AnchorY::Max, dx, dy );
-    add_lbs( AnchorX::Max, AnchorY::Min, dx, dy );
-    add_lbs( AnchorX::Min, AnchorY::Max, dx, dy );
-    add_lbs( AnchorX::Min, AnchorY::Min, dx, dy );
-    add_lbs( AnchorX::Mid, AnchorY::Min, dx, dy );
-    add_lbs( AnchorX::Mid, AnchorY::Max, dx, dy );
+  bool dual_y = axis_y[ 0 ]->show && axis_y[ 1 ]->show;
+
+  for ( bool can_move : { false, true } ) {
+    if ( dual_y ) {
+      add_lbs( AnchorX::Mid, AnchorY::Max, can_move, can_move );
+      add_lbs( AnchorX::Mid, AnchorY::Min, can_move, can_move );
+    }
+    add_lbs( AnchorX::Max, AnchorY::Max, can_move, can_move );
+    add_lbs( AnchorX::Max, AnchorY::Min, can_move, can_move );
+    add_lbs( AnchorX::Min, AnchorY::Max, can_move, can_move );
+    add_lbs( AnchorX::Min, AnchorY::Min, can_move, can_move );
+    if ( !dual_y ) {
+      add_lbs( AnchorX::Mid, AnchorY::Max, can_move, can_move );
+      add_lbs( AnchorX::Mid, AnchorY::Min, can_move, can_move );
+    }
+    if ( can_move ) {
+      add_lbs( AnchorX::Mid, AnchorY::Mid, false, false );
+      if ( !dual_y ) {
+        add_lbs( AnchorX::Max, AnchorY::Mid, true, false );
+        add_lbs( AnchorX::Min, AnchorY::Mid, true, false );
+      }
+    }
   }
-  add_lbs( AnchorX::Max, AnchorY::Mid );
-  add_lbs( AnchorX::Min, AnchorY::Mid );
+
+/*
+  for ( auto lb : lb_list ) {
+    g->Add( new Rect( lb.bb.min, lb.bb.max ) );
+    g->Last()->Attr()->SetLineWidth( 0.5 );
+    g->Last()->Attr()->FillColor()->Clear();
+    g->Last()->Attr()->LineColor()->Set( ColorName::Black );
+  }
+*/
 }
 
 //-----------------------------------------------------------------------------
@@ -252,6 +333,125 @@ void Main::BuildLegend( Group* g, int nx )
     }
     n++;
   }
+}
+
+//-----------------------------------------------------------------------------
+
+void Main::PlaceLegend(
+  const std::vector< SVG::Object* >& axis_objects,
+  const std::vector< LegendBox >& lb_list,
+  Group* legend_g
+)
+{
+  if ( LegendCnt() == 0 ) return;
+
+  Pos legend_pos = this->legend_pos;
+
+  if ( legend_pos == Pos::Auto ) {
+    LegendBox best_lb;
+    bool best_lb_defined = false;
+    for ( const LegendBox& lb : lb_list ) {
+      if ( !best_lb_defined ) {
+        best_lb = lb;
+        best_lb_defined = true;
+      }
+      if (
+        lb.collision_weight < best_lb.collision_weight ||
+        (lb.collision_weight == best_lb.collision_weight && lb.sx < best_lb.sx)
+      ) {
+        best_lb = lb;
+      }
+    }
+    if ( best_lb_defined ) {
+      BuildLegend( legend_g->AddNewGroup(), best_lb.nx );
+      legend_g->Last()->MoveTo(
+        AnchorX::Mid, AnchorY::Mid,
+        (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
+        (best_lb.bb.min.y + best_lb.bb.max.y) / 2
+      );
+    } else {
+      legend_pos = Pos::Bottom;
+    }
+  }
+
+  if ( legend_pos == Pos::Auto ) return;
+
+  U ch;
+  U tw;
+  U th;
+  CalcLegendSize( legend_g, ch, tw, th );
+
+  if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
+
+    U avail_h = chart_h;
+    uint32_t nx = 1;
+    while ( 1 ) {
+      uint32_t ny = (LegendCnt() + nx - 1) / nx;
+      U need_h = ny * (th + 2*legend_by) + (ny + 1) * legend_sy;
+      if ( need_h > avail_h && ny > 1 ) {
+        nx++;
+        continue;
+      }
+      break;
+    }
+    BuildLegend( legend_g->AddNewGroup(), nx );
+    Object* legend = legend_g->Last();
+
+    U x = 0 - legend_sx;
+    Dir dir = Dir::Left;
+    AnchorX anchor_x = AnchorX::Max;
+    if ( legend_pos == Pos::Right ) {
+      x = chart_w + legend_sx;
+      dir = Dir::Right;
+      anchor_x = AnchorX::Min;
+    }
+    AnchorY best_anchor_y{ AnchorY::Mid };
+    U best_x{ 0 };
+    U best_y{ 0 };
+    for ( auto anchor_y : { AnchorY::Max, AnchorY::Mid, AnchorY::Min } ) {
+      U y = chart_h / 2;
+      if ( anchor_y == AnchorY::Max ) y = chart_h - legend_sy;
+      if ( anchor_y == AnchorY::Min ) y = legend_sy;
+      legend->MoveTo( anchor_x, anchor_y, x, y );
+      MoveObj( dir, legend, axis_objects, legend_sx, legend_sy );
+      BoundaryBox bb = legend->GetBB();
+      if (
+        anchor_y == AnchorY::Max ||
+        ((legend_pos == Pos::Left) ? (bb.min.x > best_x) : (bb.min.x < best_x))
+      ) {
+        best_anchor_y = anchor_y;
+        best_x = bb.min.x;
+        best_y = y;
+      }
+    }
+    legend->MoveTo( anchor_x, best_anchor_y, x, best_y );
+    MoveObj( dir, legend, axis_objects, legend_sx, legend_sy );
+
+  } else {
+
+    U avail_w = chart_w;
+    uint32_t nx = LegendCnt();
+    uint32_t ny = 1;
+    while ( 1 ) {
+      nx = (LegendCnt() + ny - 1) / ny;
+      U need_w = nx * (tw + 2*legend_bx) + (nx - 1) * legend_sx;
+      if ( need_w > avail_w && nx > 1 ) {
+        ny++;
+        continue;
+      }
+      break;
+    }
+    BuildLegend( legend_g->AddNewGroup(), nx );
+    Object* legend = legend_g->Last();
+
+    U x = chart_w / 2;
+    U y = 0 - legend_sy;
+    legend->MoveTo( AnchorX::Mid, AnchorY::Max, x, y );
+    MoveObj( Dir::Down, legend, axis_objects, legend_sx, legend_sy );
+
+  }
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -447,7 +647,7 @@ Canvas* Main::Build( void )
 
   legend_g->Attr()->TextFont()->SetSize( 14 );
 
-  std::vector< SVG::Object* > axes_objects;
+  std::vector< SVG::Object* > axis_objects;
 
   axis_x->length = chart_w;
   axis_x->orth_length = chart_h;
@@ -461,23 +661,23 @@ Canvas* Main::Build( void )
   for ( uint32_t phase : {0, 1} ) {
     axis_x->Build(
       phase,
-      axes_objects,
+      axis_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
     for ( auto a : axis_y ) {
       a->Build(
         phase,
-        axes_objects,
+        axis_objects,
         grid_minor_g, grid_major_g, grid_zero_g,
         axes_line_g, axes_num_g, axes_label_g
       );
     }
   }
 
-  axis_x->BuildLabel( axes_objects, axes_label_g );
+  axis_x->BuildLabel( axis_objects, axes_label_g );
   for ( auto a : axis_y ) {
-    a->BuildLabel( axes_objects, axes_label_g );
+    a->BuildLabel( axis_objects, axes_label_g );
   }
 
   // Do title.
@@ -507,113 +707,31 @@ Canvas* Main::Build( void )
       BoundaryBox bb = obj->GetBB();
       y += bb.max.y - bb.min.y;
     }
-    MoveObjs( Dir::Up, title_objs, axes_objects, space_x, space_y );
+    MoveObjs( Dir::Up, title_objs, axis_objects, space_x, space_y );
   }
 
+/*
+  {
+    for ( auto obj : axis_objects ) {
+      if ( obj->Empty() ) continue;
+      BoundaryBox bb = obj->GetBB();
+      chart_g->Add( new Rect( bb.min, bb.max ) );
+      chart_g->Last()->Attr()->FillColor()->Clear();
+      chart_g->Last()->Attr()->SetLineWidth( 4 );
+      chart_g->Last()->Attr()->LineColor()->Set( ColorName::Orange );
+    }
+  }
+*/
+
   std::vector< LegendBox > lb_list;
-  CalcLegendBoxes( legend_g, lb_list, axes_objects );
+  CalcLegendBoxes( legend_g, lb_list, axis_objects );
 
   for ( Series* series : series_list ) {
     Group* series_g = chartbox_g->AddNewGroup();
     series->Build( series_g, axis_x, axis_y[ series->axis_y_n ], lb_list );
   }
 
-
-  {
-    for ( auto obj : axes_objects ) {
-      if ( obj->Empty() ) continue;
-      BoundaryBox bb = obj->GetBB();
-      chart_g->Add( new Rect( bb.min, bb.max ) );
-      chart_g->Last()->Attr()->FillColor()->Clear();
-      chart_g->Last()->Attr()->SetLineWidth( 4 )->LineColor()->Set( ColorName::Orange );
-    }
-  }
-
-
-  // Find best legend placement.
-  if ( LegendCnt() > 0 ) {
-    Pos legend_pos = this->legend_pos;
-    if ( legend_pos == Pos::Auto ) {
-      LegendBox best_lb;
-      bool best_lb_defined = false;
-      for ( LegendBox& lb : lb_list ) {
-        if ( !best_lb_defined ) {
-          best_lb = lb;
-          best_lb_defined = true;
-        }
-        if (
-          lb.collisions < best_lb.collisions ||
-          (lb.collisions == best_lb.collisions && lb.sx < best_lb.sx)
-        ) {
-          best_lb = lb;
-        }
-      }
-      if ( best_lb_defined ) {
-        BuildLegend( legend_g->AddNewGroup(), best_lb.nx );
-        legend_g->Last()->MoveTo(
-          AnchorX::Mid, AnchorY::Mid,
-          (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
-          (best_lb.bb.min.y + best_lb.bb.max.y) / 2
-        );
-      } else {
-        legend_pos = Pos::Bottom;
-      }
-    }
-    if ( legend_pos != Pos::Auto ) {
-      U ch;
-      U tw;
-      U th;
-      CalcLegendSize( legend_g, ch, tw, th );
-      if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
-        U avail_h = chart_h;
-        uint32_t nx = 1;
-        while ( 1 ) {
-          uint32_t ny = (LegendCnt() + nx - 1) / nx;
-          U need_h = ny * (th + 2*legend_by) + (ny + 1) * legend_sy;
-          if ( need_h > avail_h && ny > 1 ) {
-            nx++;
-            continue;
-          }
-          break;
-        }
-        BuildLegend( legend_g->AddNewGroup(), nx );
-        U y = chart_h / 2;
-        if ( legend_pos == Pos::Left ) {
-          U x = 0 - legend_sx;
-          legend_g->Last()->MoveTo( AnchorX::Max, AnchorY::Mid, x, y );
-          MoveObj(
-            Dir::Left, legend_g->Last(), axes_objects, legend_sx, legend_sy
-          );
-        } else {
-          U x = chart_w + legend_sx;
-          legend_g->Last()->MoveTo( AnchorX::Min, AnchorY::Mid, x, y );
-          MoveObj(
-            Dir::Right, legend_g->Last(), axes_objects, legend_sx, legend_sy
-          );
-        }
-      } else {
-        U avail_w = chart_w;
-        uint32_t nx = LegendCnt();
-        uint32_t ny = 1;
-        while ( 1 ) {
-          nx = (LegendCnt() + ny - 1) / ny;
-          U need_w = nx * (tw + 2*legend_bx) + (nx - 1) * legend_sx;
-          if ( need_w > avail_w && nx > 1 ) {
-            ny++;
-            continue;
-          }
-          break;
-        }
-        BuildLegend( legend_g->AddNewGroup(), nx );
-        U x = chart_w / 2;
-        U y = 0 - legend_sy;
-        legend_g->Last()->MoveTo( AnchorX::Mid, AnchorY::Max, x, y );
-        MoveObj(
-          Dir::Down, legend_g->Last(), axes_objects, legend_sx, legend_sy
-        );
-      }
-    }
-  }
+  PlaceLegend( axis_objects, lb_list, legend_g );
 
   if ( footnote != "" ) {
     BoundaryBox bb = chart_g->GetBB();
