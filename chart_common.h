@@ -51,12 +51,7 @@ namespace Chart {
     SVG::Group* g, const std::string txt, SVG::U size = 0
   );
 
-  bool Collides(
-    SVG::Object* obj, const std::vector< SVG::Object* >& objects,
-    SVG::U margin_x, SVG::U margin_y,
-    SVG::BoundaryBox& bb
-  );
-  bool Collides(
+  SVG::Object* Collides(
     SVG::Object* obj, const std::vector< SVG::Object* >& objects,
     SVG::U margin_x, SVG::U margin_y
   );
@@ -67,4 +62,12 @@ namespace Chart {
     const std::vector< SVG::Object* >& avoid_objs,
     SVG::U margin_x, SVG::U margin_y
   );
+
+  void MoveObj(
+    Dir dir,
+    SVG::Object* obj,
+    const std::vector< SVG::Object* >& avoid_objs,
+    SVG::U margin_x, SVG::U margin_y
+  );
+
 }

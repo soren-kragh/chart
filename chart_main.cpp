@@ -151,7 +151,6 @@ void Main::CalcLegendBoxes(
     uint32_t nx = (anchor_x == AnchorX::Mid) ? lc :  1;
     uint32_t ny = (anchor_x == AnchorX::Mid) ?  1 : lc;
     while ( nx > 0 && ny > 0 ) {
-      BoundaryBox bb;
       g->Add(
         new Rect(
           0, 0,
@@ -166,7 +165,7 @@ void Main::CalcLegendBoxes(
       if ( anchor_y == AnchorY::Mid ) y = chart_h / 2;
       if ( anchor_y == AnchorY::Max ) y = chart_h - legend_sy - dy;
       g->Last()->MoveTo( anchor_x, anchor_y, x, y );
-      if ( !Collides( g->Last(), axes_objects, legend_sx, legend_sy, bb ) ) {
+      if ( !Collides( g->Last(), axes_objects, legend_sx, legend_sy ) ) {
         LegendBox lb;
         lb.bb = g->Last()->GetBB();
         if (
@@ -476,6 +475,50 @@ Canvas* Main::Build( void )
     }
   }
 
+  axis_x->BuildLabel( axes_objects, axes_label_g );
+  for ( auto a : axis_y ) {
+    a->BuildLabel( axes_objects, axes_label_g );
+  }
+
+  // Do title.
+  {
+    U space_x = 50;
+    U space_y = 10;
+    std::vector< SVG::Object* > title_objs;
+    U y = chart_h + space_y;
+    if ( sub_sub_title != "" ) {
+      Object* obj = MultiLineText( chart_g, sub_sub_title, 14 );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
+      title_objs.push_back( obj );
+      BoundaryBox bb = obj->GetBB();
+      y += bb.max.y - bb.min.y + 3;
+    }
+    if ( sub_title != "" ) {
+      Object* obj = MultiLineText( chart_g, sub_title, 20 );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
+      title_objs.push_back( obj );
+      BoundaryBox bb = obj->GetBB();
+      y += bb.max.y - bb.min.y + 3;
+    }
+    if ( title != "" ) {
+      Object* obj = MultiLineText( chart_g, title, 36 );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
+      title_objs.push_back( obj );
+      BoundaryBox bb = obj->GetBB();
+      y += bb.max.y - bb.min.y;
+    }
+    MoveObjs( Dir::Up, title_objs, axes_objects, space_x, space_y );
+  }
+
+  std::vector< LegendBox > lb_list;
+  CalcLegendBoxes( legend_g, lb_list, axes_objects );
+
+  for ( Series* series : series_list ) {
+    Group* series_g = chartbox_g->AddNewGroup();
+    series->Build( series_g, axis_x, axis_y[ series->axis_y_n ], lb_list );
+  }
+
+
   {
     for ( auto obj : axes_objects ) {
       if ( obj->Empty() ) continue;
@@ -486,74 +529,6 @@ Canvas* Main::Build( void )
     }
   }
 
-  axis_x->BuildLabel( axes_objects, axes_label_g );
-  for ( auto a : axis_y ) {
-    a->BuildLabel( axes_objects, axes_label_g );
-  }
-
-  // Do title.
-  {
-    U space_x = 50;
-    U space_y = 10;
-    U by = chart_h + space_y;
-    BoundaryBox bb;
-    Object* main = nullptr;
-    Object* sub1 = nullptr;
-    Object* sub2 = nullptr;
-    if ( sub_sub_title != "" ) {
-      sub2 = MultiLineText( chart_g, sub_sub_title, 14 );
-    }
-    if ( sub_title != "" ) {
-      sub1 = MultiLineText( chart_g, sub_title, 20 );
-    }
-    if ( title != "" ) {
-      main = MultiLineText( chart_g, title, 36 );
-    }
-    bool done = false;
-    while ( true ) {
-      U y = by;
-      if ( sub2 != nullptr ) {
-        sub2->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w/2, y );
-        y = sub2->GetBB().max.y + 3;
-      }
-      if ( sub1 != nullptr ) {
-        sub1->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w/2, y );
-        y = sub1->GetBB().max.y + 3;
-      }
-      if ( main != nullptr ) {
-        main->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w/2, y );
-        y = main->GetBB().max.y;
-      }
-      if ( done ) break;
-      U ny = by;
-      if ( Chart::Collides( sub2, axes_objects, space_x, space_y, bb ) ) {
-        ny += bb.max.y + space_y - sub2->GetBB().min.y;
-      } else
-      if ( Chart::Collides( sub1, axes_objects, space_x, space_y, bb ) ) {
-        ny += bb.max.y + space_y - sub1->GetBB().min.y;
-      } else
-      if ( Chart::Collides( main, axes_objects, space_x, space_y, bb ) ) {
-        ny += bb.max.y + space_y - main->GetBB().min.y;
-      }
-      if ( ny > by ) {
-        by = ny;
-        continue;
-      }
-      bb = chart_g->GetBB();
-      if ( y < bb.max.y ) {
-        by += bb.max.y - y;
-      }
-      done = true;
-    }
-  }
-
-  std::vector< LegendBox > lb_list;
-  CalcLegendBoxes( legend_g, lb_list, axes_objects );
-
-  for ( Series* series : series_list ) {
-    Group* series_g = chartbox_g->AddNewGroup();
-    series->Build( series_g, axis_x, axis_y[ series->axis_y_n ], lb_list );
-  }
 
   // Find best legend placement.
   if ( LegendCnt() > 0 ) {
@@ -589,7 +564,6 @@ Canvas* Main::Build( void )
       U tw;
       U th;
       CalcLegendSize( legend_g, ch, tw, th );
-      BoundaryBox bb = chart_g->GetBB();
       if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
         U avail_h = chart_h;
         uint32_t nx = 1;
@@ -606,30 +580,16 @@ Canvas* Main::Build( void )
         U y = chart_h / 2;
         if ( legend_pos == Pos::Left ) {
           U x = 0 - legend_sx;
-          while ( true ) {
-            legend_g->Last()->MoveTo( AnchorX::Max, AnchorY::Mid, x, y );
-            Collides(
-              legend_g->Last(), axes_objects, legend_sx, legend_sy, bb
-            );
-            if ( bb.min.x - legend_sx < x ) {
-              x = bb.min.x - legend_sx;
-            } else {
-              break;
-            }
-          }
+          legend_g->Last()->MoveTo( AnchorX::Max, AnchorY::Mid, x, y );
+          MoveObj(
+            Dir::Left, legend_g->Last(), axes_objects, legend_sx, legend_sy
+          );
         } else {
           U x = chart_w + legend_sx;
-          while ( true ) {
-            legend_g->Last()->MoveTo( AnchorX::Min, AnchorY::Mid, x, y );
-            Collides(
-              legend_g->Last(), axes_objects, legend_sx, legend_sy, bb
-            );
-            if ( bb.max.x + legend_sx > x ) {
-              x = bb.max.x + legend_sx;
-            } else {
-              break;
-            }
-          }
+          legend_g->Last()->MoveTo( AnchorX::Min, AnchorY::Mid, x, y );
+          MoveObj(
+            Dir::Right, legend_g->Last(), axes_objects, legend_sx, legend_sy
+          );
         }
       } else {
         U avail_w = chart_w;
@@ -646,8 +606,10 @@ Canvas* Main::Build( void )
         }
         BuildLegend( legend_g->AddNewGroup(), nx );
         U x = chart_w / 2;
-        legend_g->Last()->MoveTo(
-          AnchorX::Mid, AnchorY::Max, x, bb.min.y - legend_sy
+        U y = 0 - legend_sy;
+        legend_g->Last()->MoveTo( AnchorX::Mid, AnchorY::Max, x, y );
+        MoveObj(
+          Dir::Down, legend_g->Last(), axes_objects, legend_sx, legend_sy
         );
       }
     }

@@ -1254,9 +1254,7 @@ void Axis::BuildLabel(
     }
   }
 
-  std::vector< SVG::Object* > move_objs;
-  move_objs.push_back( g );
-  MoveObjs( dir, move_objs, axes_objects, mx, my );
+  MoveObj( dir, g, axes_objects, mx, my );
 
   axes_objects.push_back( g );
 

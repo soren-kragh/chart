@@ -127,34 +127,19 @@ SVG::Group* Chart::Label(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool Chart::Collides(
-  SVG::Object* obj, const std::vector< SVG::Object* >& objects,
-  SVG::U margin_x, SVG::U margin_y,
-  SVG::BoundaryBox& bb
-)
-{
-  bb = BoundaryBox();
-  if ( obj == nullptr || obj->Empty() ) return false;
-  bool collision = false;
-  for ( Object* object : objects ) {
-    if ( object->Empty() ) continue;
-    if ( SVG::Collides( obj, object, margin_x, margin_y ) ) {
-      BoundaryBox cb = object->GetBB();
-      bb.Update( cb.min );
-      bb.Update( cb.max );
-      collision = true;
-    }
-  }
-  return collision;
-}
-
-bool Chart::Collides(
+Object* Chart::Collides(
   SVG::Object* obj, const std::vector< SVG::Object* >& objects,
   SVG::U margin_x, SVG::U margin_y
 )
 {
-  BoundaryBox bb;
-  return Chart::Collides( obj, objects, margin_x, margin_y, bb );
+  if ( obj == nullptr || obj->Empty() ) return nullptr;
+  for ( auto object : objects ) {
+    if ( object->Empty() ) continue;
+    if ( SVG::Collides( obj, object, margin_x, margin_y ) ) {
+      return object;
+    }
+  }
+  return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -167,16 +152,14 @@ void Chart::MoveObjs(
   SVG::U margin_x, SVG::U margin_y
 )
 {
-  BoundaryBox col_bb;
   do {
     U dx = 0;
     U dy = 0;
     for ( auto obj : move_objs ) {
-      if (
-        Collides(
-          obj, avoid_objs, margin_x - epsilon, margin_y - epsilon, col_bb
-        )
-      ) {
+      Object* col =
+        Collides( obj, avoid_objs, margin_x - epsilon, margin_y - epsilon );
+      if ( col != nullptr ) {
+        BoundaryBox col_bb = col->GetBB();
         BoundaryBox obj_bb = obj->GetBB();
         switch ( dir ) {
           case Dir::Right : dx = col_bb.max.x - obj_bb.min.x + margin_x; break;
@@ -194,6 +177,18 @@ void Chart::MoveObjs(
       continue;
     }
   } while ( false );
+}
+
+void Chart::MoveObj(
+  Dir dir,
+  SVG::Object* obj,
+  const std::vector< SVG::Object* >& avoid_objs,
+  SVG::U margin_x, SVG::U margin_y
+)
+{
+  std::vector< SVG::Object* > move_objs;
+  move_objs.push_back( obj );
+  MoveObjs( dir, move_objs, avoid_objs, margin_x, margin_y );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
