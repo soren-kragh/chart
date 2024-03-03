@@ -152,7 +152,7 @@ void Chart::MoveObjs(
   SVG::U margin_x, SVG::U margin_y
 )
 {
-  do {
+  while ( true ) {
     U dx = 0;
     U dy = 0;
     for ( auto obj : move_objs ) {
@@ -170,13 +170,11 @@ void Chart::MoveObjs(
         break;
       }
     }
-    if ( dx != 0 || dy != 0  ) {
-      for ( auto obj : move_objs ) {
-        obj->Move( dx, dy );
-      }
-      continue;
+    if ( dx == 0 && dy == 0 ) break;
+    for ( auto obj : move_objs ) {
+      obj->Move( dx, dy );
     }
-  } while ( false );
+  }
 }
 
 void Chart::MoveObj(
@@ -190,5 +188,21 @@ void Chart::MoveObj(
   move_objs.push_back( obj );
   MoveObjs( dir, move_objs, avoid_objs, margin_x, margin_y );
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*
+// To be used for debug.
+void Chart::ShowObjBB( SVG::Object* obj )
+{
+  SVG::BoundaryBox bb = obj->GetBB();
+  SVG_DBG(
+    std::fixed << std::setprecision( 3 ) <<
+    "            " << std::setw( 12 ) << bb.min.x << std::setw( 12 ) << bb.max.x << '\n' <<
+     std::setw( 12 ) << bb.max.y << "        +----------+" << '\n' <<
+     std::setw( 12 ) << bb.min.y << "        +----------+"
+  );
+}
+*/
 
 ///////////////////////////////////////////////////////////////////////////////

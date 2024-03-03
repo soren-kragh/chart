@@ -70,4 +70,6 @@ namespace Chart {
     SVG::U margin_x, SVG::U margin_y
   );
 
+  void ShowObjBB( SVG::Object* obj );
+
 }
