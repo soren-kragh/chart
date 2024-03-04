@@ -351,8 +351,6 @@ void Main::PlaceLegend(
 {
   if ( LegendCnt() == 0 ) return;
 
-  Pos legend_pos = this->legend_pos;
-
   if ( legend_pos == Pos::Auto ) {
     LegendBox best_lb;
     bool best_lb_defined = false;
@@ -645,6 +643,7 @@ Canvas* Main::Build( void )
   Group* legend_g     = chart_g->AddNewGroup();
 
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::Black );
+  axes_line_g->Attr()->SetLineCap( LineCap::Square );
 
   chartbox_g->Attr()->FillColor()->Clear();
 

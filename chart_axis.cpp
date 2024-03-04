@@ -713,11 +713,23 @@ void Axis::BuildTicksHelper(
   // Tick collides with orthogonal axis.
   bool collision = false;
   for ( int i : { 0, 1 } ) {
-    collision =
-      collision ||
-      ( near_crossing_axis[ i ] && !at_orth_min &&
-        (!at_orth_max || orth_length_ext[ i ] > orth_length)
-      );
+    if ( !near_crossing_axis[ i ] ) continue;
+    if ( angle == 0 ) {
+      if ( at_orth_min && number_pos == Pos::Below  ) continue;
+      if ( at_orth_min && style == AxisStyle::Arrow ) continue;
+      if ( orth_length_ext[ i ] == orth_length ) {
+        if ( at_orth_max && number_pos == Pos::Above  ) continue;
+        if ( at_orth_max && style == AxisStyle::Arrow ) continue;
+      }
+    } else {
+      if ( at_orth_min && number_pos == Pos::Left   ) continue;
+      if ( at_orth_min && style == AxisStyle::Arrow ) continue;
+      if ( orth_length_ext[ i ] == orth_length ) {
+        if ( at_orth_max && number_pos == Pos::Right  ) continue;
+        if ( at_orth_max && style == AxisStyle::Arrow ) continue;
+      }
+    }
+    collision = true;
   }
 
   U x = (angle == 0) ? v_coor : sx;
@@ -732,9 +744,13 @@ void Axis::BuildTicksHelper(
     gx1 = gx2 = x;
     U y1 = y - d;
     U y2 = y + d;
-    if ( !not_near_crossing_axis || style == AxisStyle::Edge ) {
+    if ( !not_near_crossing_axis && style == AxisStyle::Arrow ) {
       if ( at_orth_max ) y1 = y;
       if ( at_orth_min ) y2 = y;
+    }
+    if ( style == AxisStyle::Edge ) {
+      if ( number_pos == Pos::Above ) y1 = y;
+      if ( number_pos == Pos::Below ) y2 = y;
     }
     if ( style != AxisStyle::None && !collision ) {
       line_g->Add( new Line( x, y1, x, y2 ) );
@@ -743,9 +759,13 @@ void Axis::BuildTicksHelper(
     gy1 = gy2 = y;
     U x1 = x - d;
     U x2 = x + d;
-    if ( !not_near_crossing_axis || style == AxisStyle::Edge ) {
+    if ( !not_near_crossing_axis && style == AxisStyle::Arrow ) {
       if ( at_orth_max ) x1 = x;
       if ( at_orth_min ) x2 = x;
+    }
+    if ( style == AxisStyle::Edge ) {
+      if ( number_pos == Pos::Right ) x1 = x;
+      if ( number_pos == Pos::Left  ) x2 = x;
     }
     if ( style != AxisStyle::None && !collision ) {
       line_g->Add( new Line( x1, y, x2, y ) );
@@ -1001,6 +1021,8 @@ void Axis::Build(
   // Limit for when axes are near min or max.
   double near = 0.3;
 
+  if ( number_pos == Pos::Top    ) number_pos = Pos::Above;
+  if ( number_pos == Pos::Bottom ) number_pos = Pos::Below;
   if ( angle == 0 ) {
     if ( number_pos != Pos::Below && number_pos != Pos::Above ) {
       number_pos =
@@ -1027,6 +1049,8 @@ void Axis::Build(
   U ey = (angle == 0) ? sy : ae;
 
   if ( phase == 0 && unit != "" ) {
+    if ( unit_pos == Pos::Top    ) unit_pos = Pos::Above;
+    if ( unit_pos == Pos::Bottom ) unit_pos = Pos::Below;
     AnchorX ax = AnchorX::Mid;
     AnchorY ay = AnchorY::Mid;
     U x = ex;
@@ -1160,6 +1184,7 @@ void Axis::Build(
 
   if ( style != AxisStyle::None ) {
     line_g->Add( new Line( sx, sy, ex, ey ) );
+//    line_g->Last()->Attr()->LineColor()->Set( ColorName::Orange );
     if ( style == AxisStyle::Arrow ) {
       Poly* poly =
         new Poly(
