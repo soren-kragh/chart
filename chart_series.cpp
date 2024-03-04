@@ -227,15 +227,23 @@ void Series::UpdateLegendBoxes(
     if ( p1.x > lb.bb.max.x && p2.x > lb.bb.max.x ) continue;
     if ( p1.y < lb.bb.min.y && p2.y < lb.bb.min.y ) continue;
     if ( p1.y > lb.bb.max.y && p2.y > lb.bb.max.y ) continue;
-    int c = ClipLine( c1, c2, p1, p2, lb.bb );
-    if ( c != 1 && c != 2 ) continue;
-    if ( c == 1 ) {
-      c2 =
-        ( p1.x >= lb.bb.min.x && p1.x <= lb.bb.max.x &&
-          p1.y >= lb.bb.min.y && p1.y <= lb.bb.max.y
-        )
-        ? p1
-        : p2;
+    bool p1_inside =
+      p1.x >= lb.bb.min.x && p1.x <= lb.bb.max.x &&
+      p1.y >= lb.bb.min.y && p1.y <= lb.bb.max.y;
+    bool p2_inside =
+      p2.x >= lb.bb.min.x && p2.x <= lb.bb.max.x &&
+      p2.y >= lb.bb.min.y && p2.y <= lb.bb.max.y;
+    if ( p1_inside && p2_inside ) {
+      c1 = p1;
+      c2 = p2;
+    } else {
+      int c = ClipLine( c1, c2, p1, p2, lb.bb );
+      if ( p1_inside || p2_inside ) {
+        if ( c != 1 ) continue;
+        c2 = p1_inside ? p1 : p2;
+      } else {
+        if ( c != 2 ) continue;
+      }
     }
     double dx = c1.x - c2.x;
     double dy = c1.y - c2.y;

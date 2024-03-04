@@ -246,12 +246,18 @@ void Main::CalcLegendBoxes(
       g->DeleteFront();
       if ( anchor_x == AnchorX::Mid ) {
         if ( ny == lc ) break;
-        ny++;
-        nx = (lc + ny - 1) / ny;
+        uint32_t onx = nx;
+        while ( ny < lc && onx == nx ) {
+          ny++;
+          nx = (lc + ny - 1) / ny;
+        }
       } else {
         if ( nx == lc ) break;
-        nx++;
-        ny = (lc + nx - 1) / nx;
+        uint32_t ony = ny;
+        while ( nx < lc && ony == ny ) {
+          nx++;
+          ny = (lc + nx - 1) / nx;
+        }
       }
     }
   };
