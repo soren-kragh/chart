@@ -54,17 +54,17 @@ void Main::SetBW( bool bw )
   this->bw = bw;
 }
 
-void Main::SetTitle( std::string txt )
+void Main::SetTitle( const std::string& txt )
 {
   title = txt;
 }
 
-void Main::SetSubTitle( std::string txt )
+void Main::SetSubTitle( const std::string& txt )
 {
   sub_title = txt;
 }
 
-void Main::SetSubSubTitle( std::string txt )
+void Main::SetSubSubTitle( const std::string& txt )
 {
   sub_sub_title = txt;
 }
@@ -722,8 +722,8 @@ Canvas* Main::Build( void )
       BoundaryBox bb = obj->GetBB();
       chart_g->Add( new Rect( bb.min, bb.max ) );
       chart_g->Last()->Attr()->FillColor()->Clear();
-      chart_g->Last()->Attr()->SetLineWidth( 4 );
-      chart_g->Last()->Attr()->LineColor()->Set( ColorName::Orange );
+      chart_g->Last()->Attr()->SetLineWidth( 1 );
+      chart_g->Last()->Attr()->LineColor()->Set( ColorName::Blue );
     }
   }
 */

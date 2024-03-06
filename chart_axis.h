@@ -32,7 +32,7 @@ public:
 
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
-  void SetNumberUnit( std::string unit );
+  void SetNumberUnit( const std::string& txt );
   void ShowMinorNumbers( bool show_minor_mumbers = true );
 
   void SetRange( double min, double max, double orth_axis_cross );
@@ -43,8 +43,9 @@ public:
 
   void SetGrid( bool major_enable = true, bool minor_enable = false );
   void SetNumberPos( Pos pos );
-  void SetLabel( std::string label );
-  void SetUnit( std::string unit );
+  void SetLabel( const std::string& txt );
+  void SetSubLabel( const std::string& txt );
+  void SetUnit( const std::string& txt );
   void SetUnitPos( Pos pos );
 
 private:
@@ -161,6 +162,7 @@ private:
   bool   grid_set;
 
   std::string label;
+  std::string sub_label;
   std::string unit;
   Pos unit_pos;
 

@@ -80,9 +80,9 @@ void Axis::SetNumberFormat( NumberFormat number_format )
   show = true;
 }
 
-void Axis::SetNumberUnit( std::string unit )
+void Axis::SetNumberUnit( const std::string& txt )
 {
-  this->number_unit = unit;
+  number_unit = txt;
   show = true;
 }
 
@@ -129,15 +129,21 @@ void Axis::SetNumberPos( Pos pos )
   show = true;
 }
 
-void Axis::SetLabel( std::string label )
+void Axis::SetLabel( const std::string& txt )
 {
-  this->label = label;
+  label = txt;
   show = true;
 }
 
-void Axis::SetUnit( std::string unit )
+void Axis::SetSubLabel( const std::string& txt )
 {
-  this->unit = unit;
+  sub_label = txt;
+  show = true;
+}
+
+void Axis::SetUnit( const std::string& txt )
+{
+  unit = txt;
   show = true;
 }
 
@@ -1253,35 +1259,66 @@ void Axis::BuildLabel(
   SVG::Group* label_g
 )
 {
-  if ( label == "" ) return;
+  U space_x = 30;
+  U space_y = 10;
+  if ( angle != 0 ) std::swap( space_x, space_y );
 
-  Group* g = label_g->AddNewGroup();
-  Object* t1 = MultiLineText( g, label, 24 );
-  g->Rotate( angle );
+  std::vector< SVG::Object* > label_objs;
 
-  t1 = t1;
+  Object* lab0 = nullptr;
+  Object* lab1 = nullptr;
+  if ( label != "" ) {
+    lab0 = MultiLineText( label_g, label, 24 );
+    label_objs.push_back( lab0 );
+  }
+  if ( sub_label != "" ) {
+    lab1 = MultiLineText( label_g, sub_label, 16 );
+    label_objs.push_back( lab1 );
+  }
 
-  U mx = 10;
-  U my = 10;
-  Dir dir;
-  if ( angle == 0 ) {
-    mx = 30;
-    dir = Dir::Down;
-    g->MoveTo( AnchorX::Mid, AnchorY::Max, length / 2, -my );
-  } else {
-    my = 30;
+  if ( lab0 == nullptr && lab1 == nullptr ) return;
+
+  Dir dir = Dir::Down;
+  if ( angle != 0 ) {
     if ( at_orth_max || (number_pos == Pos::Right && !at_orth_min) ) {
       dir = Dir::Right;
-      g->MoveTo( AnchorX::Min, AnchorY::Mid, orth_length + mx, length / 2 );
+      if ( lab0 ) lab0->Rotate( -90 );
+      if ( lab1 ) lab1->Rotate( -90 );
     } else {
       dir = Dir::Left;
-      g->MoveTo( AnchorX::Max, AnchorY::Mid, -mx, length / 2 );
+      if ( lab0 ) lab0->Rotate( +90 );
+      if ( lab1 ) lab1->Rotate( +90 );
     }
   }
 
-  MoveObj( dir, g, axis_objects, mx, my );
+  if ( dir == Dir::Down ) {
+    U y = 0 - space_y;
+    if ( lab0 != nullptr ) {
+      lab0->MoveTo( AnchorX::Mid, AnchorY::Max, length / 2, y );
+      BoundaryBox bb = lab0->GetBB();
+      y -= bb.max.y - bb.min.y + 3;
+    }
+    if ( lab1 != nullptr ) {
+      lab1->MoveTo( AnchorX::Mid, AnchorY::Max, length / 2, y );
+    }
+  } else {
+    U x        = (dir == Dir::Left) ? (0 - space_x) : (orth_length + space_x);
+    AnchorX ax = (dir == Dir::Left) ? AnchorX::Max : AnchorX::Min;
+    double vx  = (dir == Dir::Left) ? -1 : 1;
+    if ( lab1 != nullptr ) {
+      lab1->MoveTo( ax, AnchorY::Mid, x, length / 2 );
+      BoundaryBox bb = lab1->GetBB();
+      x += (bb.max.x - bb.min.x + 3) * vx;
+    }
+    if ( lab0 != nullptr ) {
+      lab0->MoveTo( ax, AnchorY::Mid, x, length / 2 );
+    }
+  }
 
-  axis_objects.push_back( g );
+  MoveObjs( dir, label_objs, axis_objects, space_x, space_y );
+
+  if ( lab0 ) axis_objects.push_back( lab0 );
+  if ( lab1 ) axis_objects.push_back( lab1 );
 
   return;
 }

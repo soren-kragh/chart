@@ -34,9 +34,9 @@ public:
   void SetMargin( SVG::U margin );
   void SetBW( bool bw = true );
 
-  void SetTitle( std::string txt );
-  void SetSubTitle( std::string txt );
-  void SetSubSubTitle( std::string txt );
+  void SetTitle( const std::string& txt );
+  void SetSubTitle( const std::string& txt );
+  void SetSubSubTitle( const std::string& txt );
   void SetFootnote( std::string txt );
 
   // Normally it will strive to place the series legends somewhere inside the
