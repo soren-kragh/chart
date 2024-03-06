@@ -600,6 +600,26 @@ void Main::AxisPrepare( void )
     if ( has_grid( 1 ) && has_grid( 0 ) && !axis_y[ 0 ]->grid_set ) {
       axis_y[ 0 ]->SetGrid( false );
     }
+    if ( has_grid( 0 ) && has_grid( 1 ) ) {
+      for ( int i : { 0, 1 } ) {
+        if (
+          axis_y[ i ]->grid_style == GridStyle::Auto &&
+          axis_y[ 1 - i ]->grid_style != GridStyle::Auto
+        ) {
+          axis_y[ i ]->grid_style =
+            (axis_y[ 1 - i ]->grid_style == GridStyle::Dash)
+            ? GridStyle::Solid
+            : GridStyle::Dash;
+        }
+      }
+      if (
+        axis_y[ 0 ]->grid_style == GridStyle::Auto &&
+        axis_y[ 1 ]->grid_style == GridStyle::Auto
+      ) {
+        axis_y[ 0 ]->grid_style = GridStyle::Dash;
+        axis_y[ 1 ]->grid_style = GridStyle::Solid;
+      }
+    }
   }
 
   return;
@@ -622,19 +642,6 @@ Canvas* Main::Build( void )
   Group* grid_minor_g = chart_g->AddNewGroup();
   Group* grid_major_g = chart_g->AddNewGroup();
   Group* grid_zero_g  = chart_g->AddNewGroup();
-
-  grid_minor_g->Attr()
-    ->SetLineWidth( 0.5 )
-    ->SetLineDash( 1, 3 )
-    ->LineColor()->Set( ColorName::Black );
-  grid_major_g->Attr()
-    ->SetLineWidth( 1.0 )
-    ->SetLineDash( 4, 3 )
-    ->LineColor()->Set( ColorName::Black );
-  grid_zero_g->Attr()
-    ->SetLineWidth( 1.0 )
-    ->SetLineDash( 8, 6 )
-    ->LineColor()->Set( ColorName::Black );
 
   Group* axes_line_g  = chart_g->AddNewGroup();
   Group* chartbox_g   = chart_g->AddNewGroup();
@@ -670,8 +677,8 @@ Canvas* Main::Build( void )
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
-    for ( auto a : axis_y ) {
-      a->Build(
+    for ( int i : { 1, 0 } ) {
+      axis_y[ i ]->Build(
         phase,
         axis_objects,
         grid_minor_g, grid_major_g, grid_zero_g,
@@ -687,7 +694,7 @@ Canvas* Main::Build( void )
 
   // Do title.
   {
-    U space_x = 50;
+    U space_x = 40;
     U space_y = 10;
     std::vector< SVG::Object* > title_objs;
     U y = chart_h + space_y;

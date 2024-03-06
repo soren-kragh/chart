@@ -42,6 +42,7 @@ Axis::Axis( int angle )
   major = 0;
   sub_divs = 0;
   number_pos = Pos::Auto;
+  grid_style = GridStyle::Auto;
   major_grid_enable = true;
   minor_grid_enable = true;
   grid_set = false;
@@ -113,6 +114,11 @@ void Axis::SetTick( double major, int sub_divs )
   this->major = major;
   this->sub_divs = sub_divs;
   show = true;
+}
+
+void Axis::SetGridStyle( GridStyle gs )
+{
+  grid_style = gs;
 }
 
 void Axis::SetGrid( bool major_enable, bool minor_enable )
@@ -1225,6 +1231,34 @@ void Axis::Build(
 
   ComputeNumFormat();
 
+  minor_g = minor_g->AddNewGroup();
+  major_g = major_g->AddNewGroup();
+  zero_g  = zero_g->AddNewGroup();
+  if ( grid_style == GridStyle::Solid ) {
+    minor_g->Attr()
+      ->SetLineWidth( 0.5 )
+      ->LineColor()->Set( ColorName::Black, 0.8 );
+    major_g->Attr()
+      ->SetLineWidth( 1.0 )
+      ->LineColor()->Set( ColorName::Black, 0.8 );
+    zero_g->Attr()
+      ->SetLineWidth( 1.0 )
+      ->LineColor()->Set( ColorName::Black, 0.5 );
+  } else {
+    minor_g->Attr()
+      ->SetLineWidth( 0.5 )
+      ->SetLineDash( 1, 2 )
+      ->LineColor()->Set( ColorName::Black );
+    major_g->Attr()
+      ->SetLineWidth( 1.0 )
+      ->SetLineDash( 4, 3 )
+      ->LineColor()->Set( ColorName::Black );
+    zero_g->Attr()
+      ->SetLineWidth( 1.0 )
+      ->SetLineDash( 8, 6 )
+      ->LineColor()->Set( ColorName::Black );
+  }
+
   if ( log_scale ) {
     BuildTicksNumsLogarithmic(
       axis_objects,
@@ -1259,7 +1293,7 @@ void Axis::BuildLabel(
   SVG::Group* label_g
 )
 {
-  U space_x = 30;
+  U space_x = 25;
   U space_y = 10;
   if ( angle != 0 ) std::swap( space_x, space_y );
 

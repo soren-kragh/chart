@@ -41,6 +41,7 @@ public:
   // For logarithmic scale, major refers to the power, usually 10.
   void SetTick( double major, int sub_divs = 0 );
 
+  void SetGridStyle( GridStyle gs );
   void SetGrid( bool major_enable = true, bool minor_enable = false );
   void SetNumberPos( Pos pos );
   void SetLabel( const std::string& txt );
@@ -128,6 +129,7 @@ private:
   SVG::U length;
 
   AxisStyle style;
+  GridStyle grid_style;
 
   SVG::U arrow_length = 10;
   SVG::U arrow_width = 10;

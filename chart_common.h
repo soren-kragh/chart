@@ -28,6 +28,8 @@ namespace Chart {
 
   enum class AxisStyle { Auto, None, Arrow, Edge };
 
+  enum class GridStyle { Auto, Dash, Solid };
+
   void TextBG(
     SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h
   );
