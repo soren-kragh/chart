@@ -264,24 +264,26 @@ void Main::CalcLegendBoxes(
 
   bool dual_y = axis_y[ 0 ]->show && axis_y[ 1 ]->show;
 
+  AnchorX ax1 = AnchorX::Max;
+  AnchorX ax2 = AnchorX::Min;
+  AnchorY ay1 = AnchorY::Max;
+  AnchorY ay2 = AnchorY::Min;
+  if ( axis_y[ 0 ]->at_orth_max ) std::swap( ax1, ax2 );
+  if ( axis_x->at_orth_max ) std::swap( ay1, ay2 );
+
   for ( bool can_move : { false, true } ) {
-    if ( dual_y ) {
-      add_lbs( AnchorX::Mid, AnchorY::Max, can_move, can_move );
-      add_lbs( AnchorX::Mid, AnchorY::Min, can_move, can_move );
-    }
-    add_lbs( AnchorX::Max, AnchorY::Max, can_move, can_move );
-    add_lbs( AnchorX::Max, AnchorY::Min, can_move, can_move );
-    add_lbs( AnchorX::Min, AnchorY::Max, can_move, can_move );
-    add_lbs( AnchorX::Min, AnchorY::Min, can_move, can_move );
-    if ( !dual_y ) {
-      add_lbs( AnchorX::Mid, AnchorY::Max, can_move, can_move );
-      add_lbs( AnchorX::Mid, AnchorY::Min, can_move, can_move );
-    }
+    if ( !dual_y ) add_lbs( ax1, ay1, can_move, can_move );
+    add_lbs( AnchorX::Mid, ay1, can_move, can_move );
+    add_lbs( AnchorX::Mid, ay2, can_move, can_move );
+    if ( dual_y ) add_lbs( ax1, ay1, can_move, can_move );
+    add_lbs( ax1, ay2, can_move, can_move );
+    add_lbs( ax2, ay1, can_move, can_move );
+    add_lbs( ax2, ay2, can_move, can_move );
     if ( can_move ) {
       add_lbs( AnchorX::Mid, AnchorY::Mid, false, false );
       if ( !dual_y ) {
-        add_lbs( AnchorX::Max, AnchorY::Mid, true, false );
-        add_lbs( AnchorX::Min, AnchorY::Mid, true, false );
+        add_lbs( ax1, AnchorY::Mid, true, false );
+        add_lbs( ax2, AnchorY::Mid, true, false );
       }
     }
   }
@@ -504,7 +506,7 @@ void Main::AxisPrepare( void )
   for ( int i : { 0, 1 } ) {
     axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
     axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
-    axis_x->orth_style[ i ] = axis_y[ i ]->style;
+    axis_x->orth_style[ i ] = axis_y[ dual_y ? i : 0 ]->style;
   }
 
   axis_x->LegalizeMinMax();
@@ -560,15 +562,15 @@ void Main::AxisPrepare( void )
       ((axis_x->style == AxisStyle::Arrow) ? +axis_x->overhang : 0);
   }
   for ( int i : { 0, 1 } ) {
+    Axis* a = dual_y ? axis_y[ i ] : axis_y[ 0 ];
     axis_x->orth_length_ext[ i ] =
-      axis_y[ i ]->length +
-      ((axis_y[ i ]->style == AxisStyle::Arrow) ? +axis_y[ i ]->overhang : 0);
+      a->length + ((a->style == AxisStyle::Arrow) ? +a->overhang : 0);
   }
 
   for ( int i : { 0, 1 } ) {
     axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
     axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
-    axis_x->orth_style[ i ] = axis_y[ i ]->style;
+    axis_x->orth_style[ i ] = axis_y[ dual_y ? i : 0 ]->style;
   }
 
   axis_x->at_orth_min =
