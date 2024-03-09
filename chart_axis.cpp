@@ -69,6 +69,12 @@ void Axis::SetStyle( AxisStyle style )
   show = true;
 }
 
+void Axis::SetPos( Pos pos )
+{
+  this->pos = pos;
+  show = true;
+}
+
 void Axis::SetLogScale( bool log_scale )
 {
   this->log_scale = log_scale;
@@ -106,7 +112,7 @@ void Axis::SetRange( double min, double max, double orth_axis_cross )
 
 void Axis::SetRange( double min, double max )
 {
-  SetRange( min, max, min );
+  SetRange( min, max, 0 );
 }
 
 void Axis::SetTick( double major, int sub_divs )

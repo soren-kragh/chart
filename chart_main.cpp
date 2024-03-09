@@ -531,6 +531,18 @@ void Main::AxisPrepare( void )
       ? axis_x->min
       : axis_x->max;
   }
+  if ( axis_x->pos == Pos::Bottom ) {
+    axis_y[ 0 ]->orth_axis_cross = axis_y[ 0 ]->min;
+  }
+  if ( axis_x->pos == Pos::Top ) {
+    axis_y[ 0 ]->orth_axis_cross = axis_y[ 0 ]->max;
+  }
+  if ( axis_y[ 0 ]->pos == Pos::Left ) {
+    axis_x->orth_axis_cross = axis_x->min;
+  }
+  if ( axis_y[ 0 ]->pos == Pos::Right ) {
+    axis_x->orth_axis_cross = axis_x->max;
+  }
 
   axis_x->orth_axis_coor[ 0 ] =
   axis_x->orth_axis_coor[ 1 ] = axis_x->Coor( axis_x->orth_axis_cross );

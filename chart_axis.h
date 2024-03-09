@@ -30,6 +30,9 @@ public:
   // orth_axis_cross is ignored.
   void SetStyle( AxisStyle style );
 
+  // Position of axis, will override orth_axis_cross.
+  void SetPos( Pos pos );
+
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
   void SetNumberUnit( const std::string& txt );
@@ -129,6 +132,7 @@ private:
   SVG::U length;
 
   AxisStyle style;
+  Pos       pos;
   GridStyle grid_style;
 
   SVG::U arrow_length = 10;
