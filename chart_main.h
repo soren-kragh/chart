@@ -38,6 +38,7 @@ public:
   void SetSubTitle( const std::string& txt );
   void SetSubSubTitle( const std::string& txt );
   void SetFootnote( std::string txt );
+  void SetFootnotePos( Pos pos );
 
   // Normally it will strive to place the series legends somewhere inside the
   // chart area, but if the legends obscure too much of the charts you may
@@ -72,6 +73,7 @@ private:
   std::string sub_title;
   std::string sub_sub_title;
   std::string footnote;
+  Pos         footnote_pos;
 
   Pos legend_pos;
 

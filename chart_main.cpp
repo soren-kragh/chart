@@ -21,6 +21,7 @@ using namespace Chart;
 Main::Main( void )
 {
   SetLegendPos( Pos::Auto );
+  SetFootnotePos( Pos::Auto );
   axis_x = new Axis( 0 );
   axis_y[ 0 ] = new Axis( 90 );
   axis_y[ 1 ] = new Axis( 90 );
@@ -72,6 +73,11 @@ void Main::SetSubSubTitle( const std::string& txt )
 void Main::SetFootnote( std::string txt )
 {
   footnote = txt;
+}
+
+void Main::SetFootnotePos( Pos pos )
+{
+  footnote_pos = pos;
 }
 
 void Main::SetLegendPos( Pos pos )
@@ -751,8 +757,17 @@ Canvas* Main::Build( void )
     BoundaryBox bb = chart_g->GetBB();
     U x = bb.min.x + 15;
     U y = bb.min.y - 15;
+    AnchorX a = AnchorX::Min;
     MultiLineText( chart_g, footnote, 14 );
-    chart_g->Last()->MoveTo( AnchorX::Min, AnchorY::Max, x, y );
+    if ( footnote_pos == Pos::Center ) {
+      x = chart_w / 2;
+      a = AnchorX::Mid;
+    }
+    if ( footnote_pos == Pos::Right ) {
+      x = bb.max.x - 15;
+      a = AnchorX::Max;
+    }
+    chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
   }
 
   BoundaryBox bb = chart_g->GetBB();
