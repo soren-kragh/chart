@@ -138,7 +138,7 @@ private:
   SVG::U arrow_length = 10;
   SVG::U arrow_width = 10;
 
-  SVG::U overhang = 2*arrow_length;
+  SVG::U overhang = 3*arrow_length;
   SVG::U tick_major_len = 8;
   SVG::U tick_minor_len = 4;
 

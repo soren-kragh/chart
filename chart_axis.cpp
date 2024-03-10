@@ -1249,7 +1249,7 @@ void Axis::Build(
       ->LineColor()->Set( ColorName::Black, 0.8 );
     zero_g->Attr()
       ->SetLineWidth( 1.0 )
-      ->LineColor()->Set( ColorName::Black, 0.5 );
+      ->LineColor()->Set( ColorName::Black, 0.6 );
   } else {
     minor_g->Attr()
       ->SetLineWidth( 0.5 )
@@ -1257,11 +1257,11 @@ void Axis::Build(
       ->LineColor()->Set( ColorName::Black );
     major_g->Attr()
       ->SetLineWidth( 1.0 )
-      ->SetLineDash( 4, 3 )
+      ->SetLineDash( 2, 2 )
       ->LineColor()->Set( ColorName::Black );
     zero_g->Attr()
       ->SetLineWidth( 1.0 )
-      ->SetLineDash( 8, 6 )
+      ->SetLineDash( 4, 2 )
       ->LineColor()->Set( ColorName::Black );
   }
 
