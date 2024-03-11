@@ -1202,7 +1202,6 @@ void Axis::Build(
 
   if ( style != AxisStyle::None ) {
     line_g->Add( new Line( sx, sy, ex, ey ) );
-    line_g->Last()->Attr()->LineColor()->Set( ColorName::Orange );
     if ( style == AxisStyle::Arrow ) {
       Poly* poly =
         new Poly(
