@@ -1241,26 +1241,26 @@ void Axis::Build(
   zero_g  = zero_g->AddNewGroup();
   if ( grid_style == GridStyle::Solid ) {
     minor_g->Attr()
-      ->SetLineWidth( 0.5 )
+      ->SetLineWidth( 0.50 )
       ->LineColor()->Set( ColorName::Black, 0.8 );
     major_g->Attr()
-      ->SetLineWidth( 1.0 )
-      ->LineColor()->Set( ColorName::Black, 0.8 );
+      ->SetLineWidth( 1.00 )
+      ->LineColor()->Set( ColorName::Black, 0.7 );
     zero_g->Attr()
-      ->SetLineWidth( 1.0 )
-      ->LineColor()->Set( ColorName::Black, 0.6 );
+      ->SetLineWidth( 1.00 )
+      ->LineColor()->Set( ColorName::Black, 0.5 );
   } else {
     minor_g->Attr()
-      ->SetLineWidth( 0.5 )
-      ->SetLineDash( 1, 2 )
+      ->SetLineWidth( 0.25 )
+      ->SetLineDash( 2, 3 )
       ->LineColor()->Set( ColorName::Black );
     major_g->Attr()
-      ->SetLineWidth( 1.0 )
-      ->SetLineDash( 2, 2 )
+      ->SetLineWidth( 0.50 )
+      ->SetLineDash( 5, 3 )
       ->LineColor()->Set( ColorName::Black );
     zero_g->Attr()
-      ->SetLineWidth( 1.0 )
-      ->SetLineDash( 4, 2 )
+      ->SetLineWidth( 1.00 )
+      ->SetLineDash( 5, 3 )
       ->LineColor()->Set( ColorName::Black );
   }
 
