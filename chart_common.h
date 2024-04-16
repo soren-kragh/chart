@@ -30,6 +30,10 @@ namespace Chart {
 
   enum class GridStyle { Auto, Dash, Solid };
 
+  enum class SeriesType { XY, Scatter };
+
+  enum class PointShape { Circle, Square, Triangle, Diamond };
+
   void TextBG(
     SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h
   );

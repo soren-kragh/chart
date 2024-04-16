@@ -14,6 +14,7 @@
 #pragma once
 
 #include <svg_canvas.h>
+#include <chart_common.h>
 #include <chart_datum.h>
 #include <chart_legend_box.h>
 
@@ -30,6 +31,8 @@ public:
   Series( std::string name );
   ~Series( void );
 
+  void SetType( SeriesType type );
+
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
 
@@ -38,7 +41,11 @@ public:
   void SetWidth( SVG::U width );
   void SetDash( SVG::U dash );
   void SetDash( SVG::U dash, SVG::U hole );
+
+  // The given size is the diameter of the point in addition to the line width.
   void SetPointSize( SVG::U point_size );
+
+  void SetPointShape( PointShape point_shape );
 
   void Add( double x, double y );
 
@@ -65,10 +72,8 @@ private:
   );
 
   std::string name;
-
+  SeriesType type;
   int axis_y_n;
-
-  std::vector< Datum > datum_list;
 
   std::vector< SVG::Color > color_list;
   SVG::Color color;
@@ -76,11 +81,13 @@ private:
   SVG::U dash;
   SVG::U hole;
   SVG::U point_size;
+  PointShape point_shape;
 
   // Used for floating point precision issues.
   double e1 = 0;
   double e2 = 0;
 
+  std::vector< Datum > datum_list;
 };
 
 }

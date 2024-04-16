@@ -22,11 +22,13 @@ using namespace Chart;
 Series::Series( std::string name )
 {
   this->name = name;
-  this->axis_y_n = 0;
 
+  SetType( SeriesType::XY );
+  SetAxisY( 0 );
   SetWidth( 1 );
   SetDash( 0 );
-  SetPointSize( 0 );
+  point_size = -1;      // Negative means auto.
+  SetPointShape( PointShape::Circle );
 
   color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.1 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Red );
@@ -43,6 +45,11 @@ Series::~Series( void )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void Series::SetType( SeriesType type )
+{
+  this->type = type;
+}
 
 void Series::SetAxisY( int axis_y_n )
 {
@@ -112,6 +119,11 @@ void Series::SetDash( SVG::U dash, SVG::U hole )
 void Series::SetPointSize( SVG::U point_size )
 {
   this->point_size = point_size;
+}
+
+void Series::SetPointShape( PointShape point_shape )
+{
+  this->point_shape = point_shape;
 }
 
 void Series::ApplyStyle( SVG::Object* obj )
@@ -247,7 +259,7 @@ void Series::UpdateLegendBoxes(
     }
     double dx = c1.x - c2.x;
     double dy = c1.y - c2.y;
-    lb.collision_weight += std::sqrt( dx*dx + dy*dy );
+    lb.collision_weight += std::sqrt( dx*dx + dy*dy ) + 1;
   }
 }
 
@@ -260,17 +272,30 @@ void Series::Build(
   std::vector< LegendBox >& lb_list
 )
 {
+  bool show_point = false;
+  U point_diameter = 0;
+  if ( point_size < 0 ) {
+    if ( type == SeriesType::Scatter ) point_diameter = 3 * width;
+  } else {
+    point_diameter = point_size;
+    if ( type == SeriesType::XY ) point_diameter += width;
+  }
+  show_point =
+    (type == SeriesType::XY) ? (point_diameter > width) : (point_diameter > 0);
   ApplyStyle( g );
   Group* lg = nullptr;
   Group* pg = nullptr;
   Group* fg = nullptr;
-  if ( point_size > 0 ) {
-    lg = g->AddNewGroup();
+  if ( show_point ) {
+    if ( type == SeriesType::XY ) {
+      lg = g->AddNewGroup();
+      lg->Attr()->SetLineJoin( LineJoin::Round );
+    }
     pg = g->AddNewGroup();
     pg->Attr()->SetLineDash( 0 );
     pg->Attr()->LineColor()->Clear();
     pg->Attr()->FillColor()->Set( &color );
-    if ( point_size >= 3*width ) {
+    if ( point_diameter >= 4 * width ) {
       fg = g->AddNewGroup();
       fg->Attr()->SetLineDash( 0 );
       fg->Attr()->LineColor()->Clear();
@@ -278,9 +303,53 @@ void Series::Build(
       color_light.Lighten( 0.5 );
       fg->Attr()->FillColor()->Set( &color_light );
     }
-    lg->Attr()->SetLineJoin( LineJoin::Round );
   } else {
     lg = g;
+  }
+  U point_radius = point_diameter / 2;
+
+  // Outer and inner left/right/bottom/top radius of point marker.
+  U oprx1 = point_radius;
+  U oprx2 = point_radius;
+  U opry1 = point_radius;
+  U opry2 = point_radius;
+  U iprx1 = point_radius - width;
+  U iprx2 = point_radius - width;
+  U ipry1 = point_radius - width;
+  U ipry2 = point_radius - width;
+  switch ( point_shape ) {
+    case PointShape::Square :
+      oprx1 = 0.9 * point_radius;
+      oprx2 = 0.9 * point_radius;
+      opry1 = 0.9 * point_radius;
+      opry2 = 0.9 * point_radius;
+      iprx1 = 0.9 * point_radius - width;
+      iprx2 = 0.9 * point_radius - width;
+      ipry1 = 0.9 * point_radius - width;
+      ipry2 = 0.9 * point_radius - width;
+      break;
+    case PointShape::Triangle :
+      oprx1 = 1.7320 * (0.7 * point_radius);
+      oprx2 = 1.7320 * (0.7 * point_radius);
+      opry1 = 1.0000 * (0.7 * point_radius);
+      opry2 = 2.0000 * (0.7 * point_radius);
+      iprx1 = 1.7320 * (0.7 * point_radius - width);
+      iprx2 = 1.7320 * (0.7 * point_radius - width);
+      ipry1 = 1.0000 * (0.7 * point_radius - width);
+      ipry2 = 2.0000 * (0.7 * point_radius - width);
+      break;
+    case PointShape::Diamond :
+      oprx1 = 1.4142 * (0.9 * point_radius);
+      oprx2 = 1.4142 * (0.9 * point_radius);
+      opry1 = 1.4142 * (0.9 * point_radius);
+      opry2 = 1.4142 * (0.9 * point_radius);
+      iprx1 = 1.4142 * (0.9 * point_radius - width);
+      iprx2 = 1.4142 * (0.9 * point_radius - width);
+      ipry1 = 1.4142 * (0.9 * point_radius - width);
+      ipry2 = 1.4142 * (0.9 * point_radius - width);
+      break;
+    default :
+      break;
   }
 
   // Define clip-box.
@@ -310,16 +379,90 @@ void Series::Build(
   Point prv;
   auto add_point = [&]( Point p, bool clipped = false )
   {
-    if ( !adding_segments ) lg->Add( poly = new Poly() );
-    poly->Add( p );
-    if ( adding_segments ) {
-      UpdateLegendBoxes( lb_list, prv, p );
+    if ( type == SeriesType::XY ) {
+      if ( !adding_segments ) lg->Add( poly = new Poly() );
+      poly->Add( p );
+      if ( adding_segments ) {
+        UpdateLegendBoxes( lb_list, prv, p );
+      }
+    } else {
+      UpdateLegendBoxes( lb_list, p, p );
     }
-    if ( !clipped && point_size > 0 ) {
-      U r = (width + point_size) / 2;
-      pg->Add( new Circle( p, r ) );
+    if ( !clipped && show_point ) {
+      Poly* ply;
+      switch ( point_shape ) {
+        case PointShape::Circle :
+          pg->Add( new Circle( p, oprx1 ) );
+          break;
+        case PointShape::Square :
+          pg->Add( new Rect(
+            p.x - oprx1, p.y - opry1,
+            p.x + oprx2, p.y + opry2
+          ) );
+          break;
+        case PointShape::Triangle :
+          ply =
+            new Poly(
+              { p.x - oprx1, p.y - opry1,
+                p.x + oprx2, p.y - opry1,
+                p.x, p.y + opry2
+              }
+            );
+          ply->Close();
+          pg->Add( ply );
+          break;
+        case PointShape::Diamond :
+          ply =
+            new Poly(
+              { p.x + oprx2, p.y,
+                p.x, p.y + opry2,
+                p.x - oprx1, p.y,
+                p.x, p.y - opry1
+              }
+            );
+          ply->Close();
+          pg->Add( ply );
+          break;
+        default :
+          break;
+      }
       if ( fg != nullptr ) {
-        fg->Add( new Circle( p, r - width ) );
+        switch ( point_shape ) {
+          case PointShape::Circle :
+            fg->Add( new Circle( p, iprx1 ) );
+            break;
+          case PointShape::Square :
+            fg->Add( new Rect(
+              p.x - iprx1, p.y - ipry1,
+              p.x + iprx2, p.y + ipry2
+            ) );
+            break;
+          case PointShape::Triangle :
+            ply =
+              new Poly(
+                { p.x - iprx1, p.y - ipry1,
+                  p.x + iprx2, p.y - ipry1,
+                  p.x, p.y + ipry2
+                }
+              );
+            ply->Close();
+            fg->Add( ply );
+            break;
+          case PointShape::Diamond :
+            ply =
+              new Poly(
+                { p.x + iprx2, p.y,
+                  p.x, p.y + ipry2,
+                  p.x - iprx1, p.y,
+                  p.x, p.y - ipry1
+                }
+              );
+            ply->Close();
+            fg->Add( ply );
+            break;
+          default :
+            break;
+        }
       }
     }
     prv = p;
