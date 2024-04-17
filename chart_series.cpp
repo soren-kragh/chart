@@ -27,8 +27,8 @@ Series::Series( std::string name )
   SetAxisY( 0 );
   SetWidth( 1 );
   SetDash( 0 );
-  point_size = -1;      // Negative means auto.
-  SetPointShape( PointShape::Circle );
+  marker_size = -1;     // Negative means auto.
+  SetMarkerShape( MarkerShape::Circle );
 
   color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.1 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Red );
@@ -116,14 +116,14 @@ void Series::SetDash( SVG::U dash, SVG::U hole )
   this->hole = hole;
 }
 
-void Series::SetPointSize( SVG::U point_size )
+void Series::SetMarkerSize( SVG::U marker_size )
 {
-  this->point_size = point_size;
+  this->marker_size = marker_size;
 }
 
-void Series::SetPointShape( PointShape point_shape )
+void Series::SetMarkerShape( MarkerShape marker_shape )
 {
-  this->point_shape = point_shape;
+  this->marker_shape = marker_shape;
 }
 
 void Series::ApplyStyle( SVG::Object* obj )
@@ -269,20 +269,20 @@ void Series::ComputeMarker( SVG::U rim )
 {
   auto compute = [&]( MarkerDims& m, U delta )
   {
-    switch ( point_shape ) {
-      case PointShape::Square :
+    switch ( marker_shape ) {
+      case MarkerShape::Square :
         m.x1 = -1.0000 * (0.9 * marker_radius + delta);
         m.x2 = +1.0000 * (0.9 * marker_radius + delta);
         m.y1 = -1.0000 * (0.9 * marker_radius + delta);
         m.y2 = +1.0000 * (0.9 * marker_radius + delta);
         break;
-      case PointShape::Triangle :
+      case MarkerShape::Triangle :
         m.x1 = -1.7320 * (0.7 * marker_radius + delta);
         m.x2 = +1.7320 * (0.7 * marker_radius + delta);
         m.y1 = -2.0000 * (0.7 * marker_radius + delta);
         m.y2 = +1.0000 * (0.7 * marker_radius + delta);
         break;
-      case PointShape::Diamond :
+      case MarkerShape::Diamond :
         m.x1 = -1.4142 * (0.9 * marker_radius + delta);
         m.x2 = +1.4142 * (0.9 * marker_radius + delta);
         m.y1 = -1.4142 * (0.9 * marker_radius + delta);
@@ -300,10 +300,10 @@ void Series::ComputeMarker( SVG::U rim )
 
   marker_show = false;
   marker_diameter = 0;
-  if ( point_size < 0 ) {
+  if ( marker_size < 0 ) {
     if ( type == SeriesType::Scatter ) marker_diameter = 3 * width;
   } else {
-    marker_diameter = point_size;
+    marker_diameter = marker_size;
     if ( type == SeriesType::XY ) marker_diameter += width;
   }
   marker_radius = marker_diameter / 2;
@@ -326,17 +326,17 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
 {
   Poly* poly;
 
-  switch ( point_shape ) {
-    case PointShape::Circle :
+  switch ( marker_shape ) {
+    case MarkerShape::Circle :
       g->Add( new Circle( p, m.x2 ) );
       break;
-    case PointShape::Square :
+    case MarkerShape::Square :
       g->Add( new Rect(
         p.x + m.x1, p.y + m.y1,
         p.x + m.x2, p.y + m.y2
       ) );
       break;
-    case PointShape::Triangle :
+    case MarkerShape::Triangle :
       poly =
         new Poly(
           { p.x, p.y + m.y1,
@@ -347,7 +347,7 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
       poly->Close();
       g->Add( poly );
       break;
-    case PointShape::Diamond :
+    case MarkerShape::Diamond :
       poly =
         new Poly(
           { p.x + m.x2, p.y,

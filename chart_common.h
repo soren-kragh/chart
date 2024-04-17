@@ -32,7 +32,7 @@ namespace Chart {
 
   enum class SeriesType { XY, Scatter };
 
-  enum class PointShape { Circle, Square, Triangle, Diamond };
+  enum class MarkerShape { Circle, Square, Triangle, Diamond };
 
   void TextBG(
     SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h

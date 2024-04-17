@@ -42,10 +42,10 @@ public:
   void SetDash( SVG::U dash );
   void SetDash( SVG::U dash, SVG::U hole );
 
-  // The given size is the diameter of the point in addition to the line width.
-  void SetPointSize( SVG::U point_size );
+  // The given size is the diameter of the marker in addition to the line width.
+  void SetMarkerSize( SVG::U marker_size );
 
-  void SetPointShape( PointShape point_shape );
+  void SetMarkerShape( MarkerShape marker_shape );
 
   void Add( double x, double y );
 
@@ -80,8 +80,6 @@ private:
   SVG::U width;
   SVG::U dash;
   SVG::U hole;
-  SVG::U point_size;
-  PointShape point_shape;
 
   // Used for floating point precision issues.
   double e1 = 0;
@@ -96,13 +94,15 @@ private:
     SVG::U y2;
   } MarkerDims;
 
-  bool       marker_show;
-  bool       marker_hollow;
-  SVG::U     marker_diameter;
-  SVG::U     marker_radius;
-  MarkerDims marker_int;        // Interior dimension for hollow marker.
-  MarkerDims marker_out;        // Outer marker dimension.
-  MarkerDims marker_rim;        // Dimension of rim around marker.
+  SVG::U      marker_size;
+  MarkerShape marker_shape;
+  bool        marker_show;
+  bool        marker_hollow;
+  SVG::U      marker_diameter;
+  SVG::U      marker_radius;
+  MarkerDims  marker_int;       // Interior dimension for hollow marker.
+  MarkerDims  marker_out;       // Outer marker dimension.
+  MarkerDims  marker_rim;       // Dimension of rim around marker.
 
   // Compute marker_* variables.
   void ComputeMarker( SVG::U rim = 0 );
