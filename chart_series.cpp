@@ -17,7 +17,7 @@
 using namespace SVG;
 using namespace Chart;
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 Series::Series( std::string name )
 {
@@ -44,7 +44,7 @@ Series::~Series( void )
 {
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 void Series::SetType( SeriesType type )
 {
@@ -135,14 +135,14 @@ void Series::ApplyStyle( SVG::Object* obj )
   obj->Attr()->LineColor()->Set( &color );
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 void Series::Add( double x, double y )
 {
   datum_list.emplace_back( x, y );
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // Returns:
 //   0 : No intersection.
@@ -226,7 +226,7 @@ int Series::ClipLine(
   return n;
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 void Series::UpdateLegendBoxes(
   std::vector< LegendBox >& lb_list, Point p1, Point p2
@@ -263,7 +263,110 @@ void Series::UpdateLegendBoxes(
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+void Series::ComputeMarker( SVG::U rim )
+{
+  auto compute = [&]( MarkerDims& m, U delta )
+  {
+    switch ( point_shape ) {
+      case PointShape::Square :
+        m.x1 = -1.0000 * (0.9 * marker_radius + delta);
+        m.x2 = +1.0000 * (0.9 * marker_radius + delta);
+        m.y1 = -1.0000 * (0.9 * marker_radius + delta);
+        m.y2 = +1.0000 * (0.9 * marker_radius + delta);
+        break;
+      case PointShape::Triangle :
+        m.x1 = -1.7320 * (0.7 * marker_radius + delta);
+        m.x2 = +1.7320 * (0.7 * marker_radius + delta);
+        m.y1 = -2.0000 * (0.7 * marker_radius + delta);
+        m.y2 = +1.0000 * (0.7 * marker_radius + delta);
+        break;
+      case PointShape::Diamond :
+        m.x1 = -1.4142 * (0.9 * marker_radius + delta);
+        m.x2 = +1.4142 * (0.9 * marker_radius + delta);
+        m.y1 = -1.4142 * (0.9 * marker_radius + delta);
+        m.y2 = +1.4142 * (0.9 * marker_radius + delta);
+        break;
+      default :
+        m.x1 = -1.0000 * (1.0 * marker_radius + delta);
+        m.x2 = +1.0000 * (1.0 * marker_radius + delta);
+        m.y1 = -1.0000 * (1.0 * marker_radius + delta);
+        m.y2 = +1.0000 * (1.0 * marker_radius + delta);
+        break;
+    }
+    return;
+  };
+
+  marker_show = false;
+  marker_diameter = 0;
+  if ( point_size < 0 ) {
+    if ( type == SeriesType::Scatter ) marker_diameter = 3 * width;
+  } else {
+    marker_diameter = point_size;
+    if ( type == SeriesType::XY ) marker_diameter += width;
+  }
+  marker_radius = marker_diameter / 2;
+  marker_show =
+    (type == SeriesType::XY)
+    ? (marker_diameter > width)
+    : (marker_diameter > 0);
+  marker_hollow = marker_diameter >= 4 * width;
+
+  compute( marker_int, -width );
+  compute( marker_out, 0 );
+  compute( marker_rim, rim );
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
+void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
+{
+  Poly* poly;
+
+  switch ( point_shape ) {
+    case PointShape::Circle :
+      g->Add( new Circle( p, m.x2 ) );
+      break;
+    case PointShape::Square :
+      g->Add( new Rect(
+        p.x + m.x1, p.y + m.y1,
+        p.x + m.x2, p.y + m.y2
+      ) );
+      break;
+    case PointShape::Triangle :
+      poly =
+        new Poly(
+          { p.x, p.y + m.y1,
+            p.x + m.x2, p.y + m.y2,
+            p.x + m.x1, p.y + m.y2
+          }
+        );
+      poly->Close();
+      g->Add( poly );
+      break;
+    case PointShape::Diamond :
+      poly =
+        new Poly(
+          { p.x + m.x2, p.y,
+            p.x, p.y + m.y2,
+            p.x + m.x1, p.y,
+            p.x, p.y + m.y1
+          }
+        );
+      poly->Close();
+      g->Add( poly );
+      break;
+    default :
+      break;
+  }
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 void Series::Build(
   SVG::Group* g,
@@ -272,21 +375,13 @@ void Series::Build(
   std::vector< LegendBox >& lb_list
 )
 {
-  bool show_point = false;
-  U point_diameter = 0;
-  if ( point_size < 0 ) {
-    if ( type == SeriesType::Scatter ) point_diameter = 3 * width;
-  } else {
-    point_diameter = point_size;
-    if ( type == SeriesType::XY ) point_diameter += width;
-  }
-  show_point =
-    (type == SeriesType::XY) ? (point_diameter > width) : (point_diameter > 0);
+  ComputeMarker();
+
   ApplyStyle( g );
   Group* lg = nullptr;
   Group* pg = nullptr;
   Group* fg = nullptr;
-  if ( show_point ) {
+  if ( marker_show ) {
     if ( type == SeriesType::XY ) {
       lg = g->AddNewGroup();
       lg->Attr()->SetLineJoin( LineJoin::Round );
@@ -295,7 +390,7 @@ void Series::Build(
     pg->Attr()->SetLineDash( 0 );
     pg->Attr()->LineColor()->Clear();
     pg->Attr()->FillColor()->Set( &color );
-    if ( point_diameter >= 4 * width ) {
+    if ( marker_hollow ) {
       fg = g->AddNewGroup();
       fg->Attr()->SetLineDash( 0 );
       fg->Attr()->LineColor()->Clear();
@@ -305,51 +400,6 @@ void Series::Build(
     }
   } else {
     lg = g;
-  }
-  U point_radius = point_diameter / 2;
-
-  // Outer and inner left/right/bottom/top radius of point marker.
-  U oprx1 = point_radius;
-  U oprx2 = point_radius;
-  U opry1 = point_radius;
-  U opry2 = point_radius;
-  U iprx1 = point_radius - width;
-  U iprx2 = point_radius - width;
-  U ipry1 = point_radius - width;
-  U ipry2 = point_radius - width;
-  switch ( point_shape ) {
-    case PointShape::Square :
-      oprx1 = 0.9 * point_radius;
-      oprx2 = 0.9 * point_radius;
-      opry1 = 0.9 * point_radius;
-      opry2 = 0.9 * point_radius;
-      iprx1 = 0.9 * point_radius - width;
-      iprx2 = 0.9 * point_radius - width;
-      ipry1 = 0.9 * point_radius - width;
-      ipry2 = 0.9 * point_radius - width;
-      break;
-    case PointShape::Triangle :
-      oprx1 = 1.7320 * (0.7 * point_radius);
-      oprx2 = 1.7320 * (0.7 * point_radius);
-      opry1 = 1.0000 * (0.7 * point_radius);
-      opry2 = 2.0000 * (0.7 * point_radius);
-      iprx1 = 1.7320 * (0.7 * point_radius - width);
-      iprx2 = 1.7320 * (0.7 * point_radius - width);
-      ipry1 = 1.0000 * (0.7 * point_radius - width);
-      ipry2 = 2.0000 * (0.7 * point_radius - width);
-      break;
-    case PointShape::Diamond :
-      oprx1 = 1.4142 * (0.9 * point_radius);
-      oprx2 = 1.4142 * (0.9 * point_radius);
-      opry1 = 1.4142 * (0.9 * point_radius);
-      opry2 = 1.4142 * (0.9 * point_radius);
-      iprx1 = 1.4142 * (0.9 * point_radius - width);
-      iprx2 = 1.4142 * (0.9 * point_radius - width);
-      ipry1 = 1.4142 * (0.9 * point_radius - width);
-      ipry2 = 1.4142 * (0.9 * point_radius - width);
-      break;
-    default :
-      break;
   }
 
   // Define clip-box.
@@ -388,81 +438,10 @@ void Series::Build(
     } else {
       UpdateLegendBoxes( lb_list, p, p );
     }
-    if ( !clipped && show_point ) {
-      Poly* ply;
-      switch ( point_shape ) {
-        case PointShape::Circle :
-          pg->Add( new Circle( p, oprx1 ) );
-          break;
-        case PointShape::Square :
-          pg->Add( new Rect(
-            p.x - oprx1, p.y - opry1,
-            p.x + oprx2, p.y + opry2
-          ) );
-          break;
-        case PointShape::Triangle :
-          ply =
-            new Poly(
-              { p.x - oprx1, p.y - opry1,
-                p.x + oprx2, p.y - opry1,
-                p.x, p.y + opry2
-              }
-            );
-          ply->Close();
-          pg->Add( ply );
-          break;
-        case PointShape::Diamond :
-          ply =
-            new Poly(
-              { p.x + oprx2, p.y,
-                p.x, p.y + opry2,
-                p.x - oprx1, p.y,
-                p.x, p.y - opry1
-              }
-            );
-          ply->Close();
-          pg->Add( ply );
-          break;
-        default :
-          break;
-      }
-      if ( fg != nullptr ) {
-        switch ( point_shape ) {
-          case PointShape::Circle :
-            fg->Add( new Circle( p, iprx1 ) );
-            break;
-          case PointShape::Square :
-            fg->Add( new Rect(
-              p.x - iprx1, p.y - ipry1,
-              p.x + iprx2, p.y + ipry2
-            ) );
-            break;
-          case PointShape::Triangle :
-            ply =
-              new Poly(
-                { p.x - iprx1, p.y - ipry1,
-                  p.x + iprx2, p.y - ipry1,
-                  p.x, p.y + ipry2
-                }
-              );
-            ply->Close();
-            fg->Add( ply );
-            break;
-          case PointShape::Diamond :
-            ply =
-              new Poly(
-                { p.x + iprx2, p.y,
-                  p.x, p.y + ipry2,
-                  p.x - iprx1, p.y,
-                  p.x, p.y - ipry1
-                }
-              );
-            ply->Close();
-            fg->Add( ply );
-            break;
-          default :
-            break;
-        }
+    if ( !clipped && marker_show ) {
+      BuildMarker( pg, marker_out, p );
+      if ( marker_hollow ) {
+        BuildMarker( fg, marker_int, p );
       }
     }
     prv = p;
@@ -528,4 +507,4 @@ void Series::Build(
   end_point();
 }
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////

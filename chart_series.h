@@ -88,6 +88,27 @@ private:
   double e2 = 0;
 
   std::vector< Datum > datum_list;
+
+  typedef struct {
+    SVG::U x1;
+    SVG::U y1;
+    SVG::U x2;
+    SVG::U y2;
+  } MarkerDims;
+
+  bool       marker_show;
+  bool       marker_hollow;
+  SVG::U     marker_diameter;
+  SVG::U     marker_radius;
+  MarkerDims marker_int;        // Interior dimension for hollow marker.
+  MarkerDims marker_out;        // Outer marker dimension.
+  MarkerDims marker_rim;        // Dimension of rim around marker.
+
+  // Compute marker_* variables.
+  void ComputeMarker( SVG::U rim = 0 );
+
+  // Build marker based on marker_* variables.
+  void BuildMarker( SVG::Group* g, const MarkerDims& m, SVG::Point p );
 };
 
 }
