@@ -54,15 +54,25 @@ public:
 
 private:
 
+  typedef struct {
+    SVG::U ch;  // Height of characters.
+    SVG::U ti;  // Text indentation (to make room for marker).
+    SVG::U w;   // Width of a single legend.
+    SVG::U h;   // Height of a single legend.
+    SVG::U sx;  // X-space between legends.
+    SVG::U sy;  // Y-space between legends.
+    SVG::U mx;  // Left margin caused by marker.
+  } LegendDims;
+
   void AxisPrepare( void );
 
   uint32_t LegendCnt( void );
-  void CalcLegendSize( SVG::Group* g, SVG::U& ch, SVG::U& tw, SVG::U& th );
+  void CalcLegendSize( SVG::Group* g, LegendDims& legend_dims );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& axis_objects
   );
-  void BuildLegend( SVG::Group* g, int nx );
+  void BuildLegend( SVG::Group* g, int nx, SVG::U mx = 0 );
   void PlaceLegend(
     const std::vector< SVG::Object* >& axis_objects,
     const std::vector< LegendBox >& lb_list,
@@ -87,10 +97,12 @@ private:
   Axis* axis_x;
   Axis* axis_y[ 2 ];
 
-  SVG::U legend_bx = 8;         // X-border around text in series legends.
-  SVG::U legend_by = 4;         // Y-border around text in series legends.
-  SVG::U legend_sx = 12;        // X-space between series legends.
-  SVG::U legend_sy = 12;        // Y-space between series legends.
+  SVG::U legend_bx  = 8;        // X-border around text in series legends.
+  SVG::U legend_by  = 4;        // Y-border around text in series legends.
+  SVG::U legend_sx  = 12;       // X-space between series legends.
+  SVG::U legend_sy  = 12;       // Y-space between series legends.
+  SVG::U legend_rim = 2;        // Rim around label.
+
 };
 
 }

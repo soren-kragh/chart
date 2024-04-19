@@ -59,21 +59,21 @@ namespace Chart {
 
   SVG::Object* Collides(
     SVG::Object* obj, const std::vector< SVG::Object* >& objects,
-    SVG::U margin_x, SVG::U margin_y
+    SVG::U margin_x = 0, SVG::U margin_y = 0
   );
 
   void MoveObjs(
     Dir dir,
     const std::vector< SVG::Object* >& move_objs,
     const std::vector< SVG::Object* >& avoid_objs,
-    SVG::U margin_x, SVG::U margin_y
+    SVG::U margin_x = 0, SVG::U margin_y = 0
   );
 
   void MoveObj(
     Dir dir,
     SVG::Object* obj,
     const std::vector< SVG::Object* >& avoid_objs,
-    SVG::U margin_x, SVG::U margin_y
+    SVG::U margin_x = 0, SVG::U margin_y = 0
   );
 
   void ShowObjBB( SVG::Object* obj );

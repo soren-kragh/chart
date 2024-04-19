@@ -108,11 +108,26 @@ uint32_t Main::LegendCnt( void )
 
 //-----------------------------------------------------------------------------
 
-void Main::CalcLegendSize( Group* g, U& ch, U& tw, U& th )
+void Main::CalcLegendSize( Group* g, LegendDims& legend_dims )
 {
   uint32_t max_chars = 1;
   uint32_t max_lines = 1;
+  Series::MarkerDims mo;
+  Series::MarkerDims mr;
+  mo.x1 = 0; mo.y1 = 0; mo.x2 = 0; mo.y2 = 0;
+  mr.x1 = 0; mr.y1 = 0; mr.x2 = 0; mr.y2 = 0;
   for ( Series* series : series_list ) {
+    series->ComputeMarker( legend_rim );
+    if ( series->marker_show ) {
+      mo.x1 = std::min( mo.x1, series->marker_out.x1 );
+      mo.y1 = std::min( mo.y1, series->marker_out.y1 );
+      mo.x2 = std::max( mo.x2, series->marker_out.x2 );
+      mo.y2 = std::max( mo.y2, series->marker_out.y2 );
+      mr.x1 = std::min( mr.x1, series->marker_rim.x1 );
+      mr.y1 = std::min( mr.y1, series->marker_rim.y1 );
+      mr.x2 = std::max( mr.x2, series->marker_rim.x2 );
+      mr.y2 = std::max( mr.y2, series->marker_rim.y2 );
+    }
     if ( series->name.length() == 0 ) continue;
     uint32_t cur_chars = 0;
     uint32_t cur_lines = 1;
@@ -133,9 +148,14 @@ void Main::CalcLegendSize( Group* g, U& ch, U& tw, U& th )
   g->Add( new Text( s ) );
   BoundaryBox bb = g->Last()->GetBB();
   g->DeleteFront();
-  ch = bb.max.y - bb.min.y;
-  tw = bb.max.x - bb.min.x;
-  th = ch * max_lines;
+  legend_dims.ch = bb.max.y - bb.min.y;
+  legend_dims.ti = mo.x2;
+  legend_dims.w  = (bb.max.x - bb.min.x) + 2 * legend_bx + legend_dims.ti;
+  legend_dims.h  = legend_dims.ch * max_lines;
+  legend_dims.h  = std::max( +legend_dims.h, mo.y2 - mo.y1 + 4 ) + 2 * legend_by;
+  legend_dims.sx = legend_sx - mo.x1;
+  legend_dims.sy = legend_sy;
+  legend_dims.mx = -mr.x1;
 }
 
 //-----------------------------------------------------------------------------
@@ -146,10 +166,8 @@ void Main::CalcLegendBoxes(
   const std::vector< SVG::Object* >& axis_objects
 )
 {
-  U ch;
-  U tw;
-  U th;
-  CalcLegendSize( g, ch, tw, th );
+  LegendDims legend_dims;
+  CalcLegendSize( g, legend_dims );
   uint32_t lc = LegendCnt();
 
   auto add_lbs = [&](
@@ -162,17 +180,18 @@ void Main::CalcLegendBoxes(
       g->Add(
         new Rect(
           0, 0,
-          nx * (tw + 2*legend_bx) + (nx - 1) * legend_sx,
-          ny * (th + 2*legend_by) + (ny - 1) * legend_sy
+          nx * legend_dims.w + (nx - 1) * legend_dims.sx + 2 * legend_sx +
+          ((anchor_x == AnchorX::Mid) ? 0 : +legend_dims.mx),
+          ny * legend_dims.h + (ny - 1) * legend_dims.sy + 2 * legend_sy
         )
       );
       Object* obj = g->Last();
-      U x = legend_sx;
-      U y = legend_sy;
+      U x = 0;
+      U y = 0;
       if ( anchor_x == AnchorX::Mid ) x = chart_w / 2;
-      if ( anchor_x == AnchorX::Max ) x = chart_w - legend_sx;
+      if ( anchor_x == AnchorX::Max ) x = chart_w;
       if ( anchor_y == AnchorY::Mid ) y = chart_h / 2;
-      if ( anchor_y == AnchorY::Max ) y = chart_h - legend_sy;
+      if ( anchor_y == AnchorY::Max ) y = chart_h;
       obj->MoveTo( anchor_x, anchor_y, x, y );
 
       if ( can_move_y && anchor_y != AnchorY::Mid ) {
@@ -180,20 +199,16 @@ void Main::CalcLegendBoxes(
           BoundaryBox obj_bb = obj->GetBB();
           U dy = 0;
           for ( auto ao : axis_objects ) {
-            if (
-              !SVG::Collides(
-                obj, ao, legend_sx - epsilon, legend_sy - epsilon
-              )
-            ) continue;
+            if ( !SVG::Collides( obj, ao ) ) continue;
             BoundaryBox ao_bb = ao->GetBB();
             if ( anchor_y == AnchorY::Min ) {
               if ( ao_bb.max.y < (chart_h * 1 / 4) ) {
-                dy = ao_bb.max.y - obj_bb.min.y + legend_sy;
+                dy = ao_bb.max.y - obj_bb.min.y;
                 break;
               }
             } else {
               if ( ao_bb.min.y > (chart_h * 3 / 4) ) {
-                dy = ao_bb.min.y - obj_bb.max.y - legend_sy;
+                dy = ao_bb.min.y - obj_bb.max.y;
                 break;
               }
             }
@@ -208,22 +223,17 @@ void Main::CalcLegendBoxes(
           BoundaryBox obj_bb = obj->GetBB();
           U dx = 0;
           for ( auto ao : axis_objects ) {
-            if (
-              SVG::Collides(
-                obj, ao, legend_sx - epsilon, legend_sy - epsilon
-              )
-            ) {
-              BoundaryBox ao_bb = ao->GetBB();
-              if ( anchor_x == AnchorX::Min ) {
-                if ( ao_bb.max.x < (chart_w * 1 / 4) ) {
-                  dx = ao_bb.max.x - obj_bb.min.x + legend_sx;
-                  break;
-                }
-              } else {
-                if ( ao_bb.min.x > (chart_w * 3 / 4) ) {
-                  dx = ao_bb.min.x - obj_bb.max.x - legend_sx;
-                  break;
-                }
+            if ( !SVG::Collides( obj, ao ) ) continue;
+            BoundaryBox ao_bb = ao->GetBB();
+            if ( anchor_x == AnchorX::Min ) {
+              if ( ao_bb.max.x < (chart_w * 1 / 4) ) {
+                dx = ao_bb.max.x - obj_bb.min.x;
+                break;
+              }
+            } else {
+              if ( ao_bb.min.x > (chart_w * 3 / 4) ) {
+                dx = ao_bb.min.x - obj_bb.max.x;
+                break;
               }
             }
           }
@@ -232,20 +242,19 @@ void Main::CalcLegendBoxes(
         }
       }
 
-      if ( !Collides( obj, axis_objects, legend_sx, legend_sy ) ) {
+      if ( !Collides( obj, axis_objects ) ) {
         LegendBox lb;
         lb.bb = obj->GetBB();
         if (
           ( anchor_x != AnchorX::Mid ||
             (lb.bb.max.x - lb.bb.min.x) > (lb.bb.max.y - lb.bb.min.y)
           ) &&
-          lb.bb.min.x > 0 && lb.bb.max.x < chart_w &&
-          lb.bb.min.y > 0 && lb.bb.max.y < chart_h
+          lb.bb.min.x > -epsilon && lb.bb.max.x < chart_w + epsilon &&
+          lb.bb.min.y > -epsilon && lb.bb.max.y < chart_h + epsilon
         ) {
-          lb.bb.min.x -= legend_sx; lb.bb.max.x += legend_sx;
-          lb.bb.min.y -= legend_sy; lb.bb.max.y += legend_sy;
           lb.nx = nx;
           lb.sx = nx * ny - lc;
+          lb.mx = (anchor_x == AnchorX::Mid) ? +legend_dims.mx : 0;
           lb_list.push_back( lb );
         }
       }
@@ -306,37 +315,73 @@ void Main::CalcLegendBoxes(
 
 //-----------------------------------------------------------------------------
 
-void Main::BuildLegend( Group* g, int nx )
+void Main::BuildLegend( Group* g, int nx, U mx )
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
-  U ch;
-  U tw;
-  U th;
-  CalcLegendSize( g, ch, tw, th );
+  LegendDims legend_dims;
+  CalcLegendSize( g, legend_dims );
   int n = 0;
+  if ( mx > 0 ) {
+    g->Add(
+      new Line( -mx, 0, nx * legend_dims.w + (nx - 1) * legend_dims.sx + mx, 0 )
+    );
+    g->Last()->Attr()->LineColor()->Clear();
+  }
   for ( Series* series : series_list ) {
     if ( series->name.length() == 0 ) continue;
-    U px = (n % nx) * +(tw + 2*legend_bx + legend_sx);
-    U py = (n / nx) * -(th + 2*legend_by + legend_sy);
-    U d = series->width / 2 + 2;
+    U px = (n % nx) * +(legend_dims.w + legend_dims.sx);
+    U py = (n / nx) * -(legend_dims.h + legend_dims.sy);
+    U d = series->width / 2 + legend_rim;
+    if ( series->type != SeriesType::XY ) d = 0;
     g->Add(
       new Rect(
-        px - d, py + d,
-        px + tw + 2*legend_bx + d, py - th - 2*legend_by - d,
-        ch/2 + d
+        px - d,
+        py + d,
+        px + legend_dims.w + d,
+        py - legend_dims.h - d,
+        legend_dims.ch/2 + d
       )
     );
-    g->Add(
-      new Rect( px, py, px + tw + 2*legend_bx, py - th - 2*legend_by, ch/2 )
-    );
-    series->ApplyStyle( g->Last() );
-    px += legend_bx;
-    py -= legend_by;
+    Point marker_p{ px, (py + py - legend_dims.h) / 2 };
+    marker_p.y -= (series->marker_out.y1 + series->marker_out.y2) / 2;
+    if ( series->marker_show ) {
+      series->BuildMarker( g, series->marker_rim, marker_p );
+    }
+    if ( series->type == SeriesType::XY ) {
+      g->Add(
+        new Rect(
+          px, py,
+          px + legend_dims.w,
+          py - legend_dims.h,
+          legend_dims.ch/2
+        )
+      );
+      series->ApplyStyle( g->Last() );
+    }
+    if ( series->marker_show ) {
+      series->BuildMarker( g, series->marker_out, marker_p );
+      series->ApplyStyle( g->Last() );
+      g->Last()->Attr()->SetLineDash( 0 );
+      g->Last()->Attr()->LineColor()->Clear();
+      g->Last()->Attr()->FillColor()->Set( &series->color );
+      if ( series->marker_hollow ) {
+        series->BuildMarker( g, series->marker_int, marker_p );
+        g->Last()->Attr()->SetLineDash( 0 );
+        g->Last()->Attr()->LineColor()->Clear();
+        SVG::Color color_light{ series->color };
+        color_light.Lighten( 0.5 );
+        g->Last()->Attr()->FillColor()->Set( &color_light );
+      }
+    }
+    int lines = 1;
+    for ( char c : series->name ) if ( c == '\n' ) lines++;
+    px += legend_bx + legend_dims.ti;
+    py -= legend_by + (legend_dims.h - 2 * legend_by - lines * legend_dims.ch) / 2;
     std::string s;
     for ( char c : series->name ) {
       if ( c == '\n' ) {
         g->Add( new Text( px, py, s ) );
-        py -= ch;
+        py -= legend_dims.ch;
         s = "";
       } else {
         s += c;
@@ -375,7 +420,7 @@ void Main::PlaceLegend(
       }
     }
     if ( best_lb_defined ) {
-      BuildLegend( legend_g->AddNewGroup(), best_lb.nx );
+      BuildLegend( legend_g->AddNewGroup(), best_lb.nx, best_lb.mx );
       legend_g->Last()->MoveTo(
         AnchorX::Mid, AnchorY::Mid,
         (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
@@ -388,10 +433,8 @@ void Main::PlaceLegend(
 
   if ( legend_pos == Pos::Auto ) return;
 
-  U ch;
-  U tw;
-  U th;
-  CalcLegendSize( legend_g, ch, tw, th );
+  LegendDims legend_dims;
+  CalcLegendSize( legend_g, legend_dims );
 
   if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
 
@@ -399,7 +442,7 @@ void Main::PlaceLegend(
     uint32_t nx = 1;
     while ( 1 ) {
       uint32_t ny = (LegendCnt() + nx - 1) / nx;
-      U need_h = ny * (th + 2*legend_by) + (ny + 1) * legend_sy;
+      U need_h = ny * legend_dims.h + (ny - 1) * legend_dims.sy + 2 * legend_sy;
       if ( need_h > avail_h && ny > 1 ) {
         nx++;
         continue;
@@ -446,7 +489,7 @@ void Main::PlaceLegend(
     uint32_t ny = 1;
     while ( 1 ) {
       nx = (LegendCnt() + ny - 1) / ny;
-      U need_w = nx * (tw + 2*legend_bx) + (nx - 1) * legend_sx;
+      U need_w = nx * legend_dims.w + (nx - 1) * legend_dims.sx + 2 * legend_sx;
       if ( need_w > avail_w && nx > 1 ) {
         ny++;
         continue;
