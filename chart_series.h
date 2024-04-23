@@ -42,9 +42,7 @@ public:
   void SetDash( SVG::U dash );
   void SetDash( SVG::U dash, SVG::U hole );
 
-  // The given size is the diameter of the marker in addition to the line width.
   void SetMarkerSize( SVG::U marker_size );
-
   void SetMarkerShape( MarkerShape marker_shape );
 
   void Add( double x, double y );

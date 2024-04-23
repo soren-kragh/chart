@@ -304,7 +304,6 @@ void Series::ComputeMarker( SVG::U rim )
     if ( type == SeriesType::Scatter ) marker_diameter = 3 * width;
   } else {
     marker_diameter = marker_size;
-    if ( type == SeriesType::XY ) marker_diameter += width;
   }
   marker_radius = marker_diameter / 2;
   marker_show =
