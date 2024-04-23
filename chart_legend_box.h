@@ -27,10 +27,7 @@ private:
   SVG::BoundaryBox bb;
 
   uint32_t nx = 1;      // Number of columns.
-  uint32_t sx = 0;      // Spare in last row.
-
-  SVG::U mx = 0;        // X-margin caused by marker; only set for X-mid
-                        // aligned legend boxes.
+  uint32_t sp = 0;      // Spare in last row.
 
   double collision_weight = 0;
 
