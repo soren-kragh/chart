@@ -20,7 +20,7 @@ namespace Chart {
   // Correction factor for floating point precision issues in comparisons etc.
   const double epsilon = 1e-6;
 
-  enum class Pos { Auto, Center, Left, Right, Top, Bottom, Above, Below };
+  enum class Pos { Auto, Center, Left, Right, Top, Bottom };
 
   enum class Dir { Right, Left, Up, Down };
 

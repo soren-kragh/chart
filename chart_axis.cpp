@@ -19,10 +19,13 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Axis::Axis( int angle )
+Axis::Axis( bool x_axis )
 {
-  this->angle = angle;
   show = false;
+  this->x_axis = x_axis;
+  angle = x_axis ? 0 : 90;
+  y_dual = false;
+  orth_dual = false;
   length = 0;
   style = AxisStyle::Auto;
   digits = 0;
@@ -62,6 +65,11 @@ Axis::Axis( int angle )
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+void Axis::SetAngle( int angle )
+{
+  this->angle = angle;
+}
 
 void Axis::SetStyle( AxisStyle style )
 {
@@ -342,7 +350,7 @@ void Axis::LegalizeMinMax( void )
     if ( max <= min ) max = 1000 * min;
   }
 
-  if ( angle == 90 && automatic && !log_scale ) {
+  if ( automatic && !log_scale && !x_axis ) {
     if ( min > 0 && (max - min) / max > 0.5 ) min = 0;
     if ( max < 0 && (min - max) / min > 0.5 ) max = 0;
   }
@@ -367,7 +375,7 @@ void Axis::LegalizeMinMax( void )
         max = std::ceil( p ) * major;
       }
     }
-    if ( angle == 0 && orth_style[ 0 ] == AxisStyle::None ) {
+    if ( x_axis && orth_style[ 0 ] == AxisStyle::None ) {
       orth_axis_cross = min;
     } else {
       orth_axis_cross = (max <= 0) ? max : min;
@@ -733,10 +741,10 @@ void Axis::BuildTicksHelper(
   for ( int i : { 0, 1 } ) {
     if ( !near_crossing_axis[ i ] ) continue;
     if ( angle == 0 ) {
-      if ( at_orth_min && number_pos == Pos::Below  ) continue;
+      if ( at_orth_min && number_pos == Pos::Bottom ) continue;
       if ( at_orth_min && style == AxisStyle::Arrow ) continue;
       if ( orth_length_ext[ i ] == orth_length ) {
-        if ( at_orth_max && number_pos == Pos::Above  ) continue;
+        if ( at_orth_max && number_pos == Pos::Top    ) continue;
         if ( at_orth_max && style == AxisStyle::Arrow ) continue;
       }
     } else {
@@ -767,8 +775,8 @@ void Axis::BuildTicksHelper(
       if ( at_orth_min ) y2 = y;
     }
     if ( style == AxisStyle::Edge ) {
-      if ( number_pos == Pos::Above ) y1 = y;
-      if ( number_pos == Pos::Below ) y2 = y;
+      if ( number_pos == Pos::Top    ) y1 = y;
+      if ( number_pos == Pos::Bottom ) y2 = y;
     }
     if ( style != AxisStyle::None && !collision ) {
       line_g->Add( new Line( x, y1, x, y2 ) );
@@ -814,7 +822,7 @@ void Axis::BuildTicksHelper(
     U d = tick_major_len;
     Object* obj = BuildNum( num_g, v, sn == 0 );
     if ( angle == 0 ) {
-      if ( number_pos == Pos::Above ) {
+      if ( number_pos == Pos::Top ) {
         obj->MoveTo( AnchorX::Mid, AnchorY::Min, x, y + d + num_space_y );
       } else {
         obj->MoveTo( AnchorX::Mid, AnchorY::Max, x, y - d - num_space_y );
@@ -1039,12 +1047,10 @@ void Axis::Build(
   // Limit for when axes are near min or max.
   double near = 0.3;
 
-  if ( number_pos == Pos::Top    ) number_pos = Pos::Above;
-  if ( number_pos == Pos::Bottom ) number_pos = Pos::Below;
   if ( angle == 0 ) {
-    if ( number_pos != Pos::Below && number_pos != Pos::Above ) {
+    if ( number_pos != Pos::Bottom && number_pos != Pos::Top ) {
       number_pos =
-        (at_orth_coor > (orth_length * (1 - near))) ? Pos::Above : Pos::Below;
+        (at_orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
     }
   } else {
     if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
@@ -1067,131 +1073,126 @@ void Axis::Build(
   U ey = (angle == 0) ? sy : ae;
 
   if ( phase == 0 && unit != "" ) {
-    if ( unit_pos == Pos::Top    ) unit_pos = Pos::Above;
-    if ( unit_pos == Pos::Bottom ) unit_pos = Pos::Below;
-    AnchorX ax = AnchorX::Mid;
-    AnchorY ay = AnchorY::Mid;
-    U x = ex;
-    U y = ey;
-    bool automatic = false;
     Object* obj = Label( label_g, unit, 16 );
     obj->Attr()->TextFont()->SetBold();
-    if ( angle == 0 ) {
-      bool dual_y = orth_axis_coor[ 0 ] < orth_axis_coor[ 1 ];
-      if (
-        unit_pos != Pos::Below && unit_pos != Pos::Above &&
-        unit_pos != Pos::Left && unit_pos != Pos::Right
-      ) {
-        unit_pos = (number_pos == Pos::Below) ? Pos::Above : Pos::Below;
-        automatic = true;
+    bool collision = false;
+
+    auto place = [&]( Pos px, Pos py )
+    {
+      AnchorX ax = AnchorX::Mid;
+      AnchorY ay = AnchorY::Mid;
+      U x = length / 2;
+      U y = length / 2;
+      if ( px == Pos::Left ) {
+        x = sx - ((angle == 0) ? 0 : (tick_major_len + num_space_x));
+        ax = (angle == 0 && py != Pos::Center) ? AnchorX::Min : AnchorX::Max;
       }
-      if ( unit_pos == Pos::Below ) {
-        y -= tick_major_len + num_space_y;
-        ax = AnchorX::Max;
-        ay = AnchorY::Max;
-        if ( dual_y ) {
-          x = length / 2;
-          ax = AnchorX::Mid;
-        } else
-        if (
-          style != AxisStyle::Arrow &&
-          CoorNear( orth_axis_coor[ 1 ], length )
-        ) {
-          x = sx;
-          ax = AnchorX::Min;
-        }
+      if ( px == Pos::Right ) {
+        x = ex + ((angle == 0) ? 0 : (tick_major_len + num_space_x));
+        ax = (angle == 0 && py != Pos::Center) ? AnchorX::Max : AnchorX::Min;
       }
-      if ( unit_pos == Pos::Above ) {
-        y += tick_major_len + num_space_y;
-        ax = AnchorX::Max;
-        ay = AnchorY::Min;
-        if ( dual_y ) {
-          x = length / 2;
-          ax = AnchorX::Mid;
-        } else
-        if (
-          style != AxisStyle::Arrow &&
-          CoorNear( orth_axis_coor[ 1 ], length )
-        ) {
-          x = sx;
-          ax = AnchorX::Min;
-        }
+      if ( px == Pos::Center ) {
+        x = (angle == 0) ? U(length / 2) : sx;
+        ax = AnchorX::Mid;
       }
-      if ( unit_pos == Pos::Left ) {
-        x = sx;
-        ax = AnchorX::Max;
-        ay = AnchorY::Mid;
+      if ( py == Pos::Bottom ) {
+        y = sy - ((angle != 0) ? 0 : (tick_major_len + num_space_y));
+        ay = (angle != 0 && px != Pos::Center) ? AnchorY::Min : AnchorY::Max;
       }
-      if ( unit_pos == Pos::Right ) {
-        x = ex;
-        ax = AnchorX::Min;
+      if ( py == Pos::Top ) {
+        y = ey + ((angle != 0) ? 0 : (tick_major_len + num_space_y));
+        ay = (angle != 0 && px != Pos::Center) ? AnchorY::Max : AnchorY::Min;
+      }
+      if ( py == Pos::Center ) {
+        y = (angle == 0) ? sy: U(length / 2);
         ay = AnchorY::Mid;
       }
       obj->MoveTo( ax, ay, x, y );
-      if (
-        automatic && !dual_y &&
-        orth_axis_coor[ 0 ] >= (obj->GetBB().min.x - 48) &&
-        orth_axis_coor[ 0 ] <= (obj->GetBB().max.x + 48)
-      ) {
-        // Move if too close to Y-axis.
-        if ( at_orth_min ) {
-          obj->MoveTo(
-            AnchorX::Max, AnchorY::Max, ex, ey - tick_major_len - num_space_y
-          );
+      BoundaryBox bb = obj->GetBB();
+      collision = false;
+      for ( int i = 0; i < 2; i++ ) {
+        if ( angle == 0 ) {
+          if ( orth_axis_coor[ i ] <= bb.min.x - 48 )
+            continue;
+          if ( orth_axis_coor[ i ] >= bb.max.x + 48 )
+            continue;
+          if (
+            at_orth_min && py == Pos::Bottom && px == Pos::Right &&
+            style == AxisStyle::Arrow
+          )
+            continue;
         } else {
-          obj->MoveTo( AnchorX::Min, AnchorY::Mid, ex, ey );
+          if ( orth_axis_coor[ i ] <= bb.min.y - 32 )
+            continue;
+          if ( orth_axis_coor[ i ] >= bb.max.y + 32 )
+            continue;
+          if (
+            at_orth_min && px == Pos::Left && py == Pos::Top &&
+            style == AxisStyle::Arrow
+          )
+            continue;
+        }
+        collision = true;
+      }
+      return collision;
+    };
+
+    bool automatic =
+      unit_pos != Pos::Bottom && unit_pos != Pos::Top &&
+      unit_pos != Pos::Left && unit_pos != Pos::Right;
+
+    if ( angle == 0 ) {
+      if ( automatic ) {
+        unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
+      }
+      if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
+        if ( orth_dual ) {
+          place( Pos::Center, unit_pos );
+        } else {
+          if ( style == AxisStyle::Arrow ) {
+            place( Pos::Right, unit_pos    ) &&
+            place( Pos::Right, Pos::Center );
+          } else {
+            place( Pos::Right , unit_pos ) &&
+            place( Pos::Left  , unit_pos ) &&
+            place( Pos::Center, unit_pos );
+          }
         }
       }
-    } else {
-      if (
-        unit_pos != Pos::Below && unit_pos != Pos::Above &&
-        unit_pos != Pos::Left && unit_pos != Pos::Right
-      ) {
-        unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
-        if (
-          style == AxisStyle::Arrow ||
-          !CoorNear( orth_axis_coor[ 0 ], length )
-        ) {
-          unit_pos = Pos::Above;
-        }
-        automatic = true;
+      if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
+        place( unit_pos, Pos::Center );
       }
-      if ( unit_pos == Pos::Left ) {
-        x -= tick_major_len + num_space_x;
-        ax = AnchorX::Max;
-        ay = AnchorY::Max;
-        if (
-          style != AxisStyle::Arrow &&
-          CoorNear( orth_axis_coor[ 0 ], length )
-        ) {
-          y = sy;
-          ay = AnchorY::Min;
-        }
+      if ( collision ) {
+        place( Pos::Right, Pos::Center );
       }
-      if ( unit_pos == Pos::Right ) {
-        x += tick_major_len + num_space_x;
-        ax = AnchorX::Min;
-        ay = AnchorY::Max;
-        if (
-          style != AxisStyle::Arrow &&
-          CoorNear( orth_axis_coor[ 0 ], length )
-        ) {
-          y = sy;
-          ay = AnchorY::Min;
-        }
-      }
-      if ( unit_pos == Pos::Below ) {
-        y = sy;
-        ax = AnchorX::Mid;
-        ay = AnchorY::Max;
-      }
-      if ( unit_pos == Pos::Above ) {
-        y = ey;
-        ax = AnchorX::Mid;
-        ay = AnchorY::Min;
-      }
-      obj->MoveTo( ax, ay, x, y );
     }
+
+    if ( angle != 0 ) {
+      if ( automatic ) {
+        unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
+      }
+      if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
+        if ( orth_dual ) {
+          place( unit_pos, Pos::Center );
+        } else {
+          if ( style == AxisStyle::Arrow ) {
+            place( unit_pos   , Pos::Top ) &&
+            place( Pos::Center, Pos::Top );
+          } else {
+            place( unit_pos, Pos::Top    ) &&
+            place( unit_pos, Pos::Bottom ) &&
+            place( unit_pos, Pos::Center );
+          }
+        }
+      }
+      if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
+        place( Pos::Center, unit_pos );
+      }
+      if ( collision ) {
+        place( Pos::Center, Pos::Top );
+      }
+    }
+
     axis_objects.push_back( obj );
   }
 
@@ -1324,6 +1325,11 @@ void Axis::BuildLabel(
   if ( lab0 == nullptr && lab1 == nullptr ) return;
 
   Dir dir = Dir::Down;
+  if ( angle == 0 ) {
+    if ( y_dual && at_orth_max ) {
+      dir = Dir::Up;
+    }
+  }
   if ( angle != 0 ) {
     if ( at_orth_max || (number_pos == Pos::Right && !at_orth_min) ) {
       dir = Dir::Right;
@@ -1338,24 +1344,35 @@ void Axis::BuildLabel(
 
   if ( dir == Dir::Down ) {
     U y = 0 - space_y;
-    if ( lab0 != nullptr ) {
+    if ( lab0 ) {
       lab0->MoveTo( AnchorX::Mid, AnchorY::Max, length / 2, y );
       BoundaryBox bb = lab0->GetBB();
       y -= bb.max.y - bb.min.y + 3;
     }
-    if ( lab1 != nullptr ) {
+    if ( lab1 ) {
       lab1->MoveTo( AnchorX::Mid, AnchorY::Max, length / 2, y );
+    }
+  } else
+  if ( dir == Dir::Up ) {
+    U y = orth_length + space_y;
+    if ( lab1 ) {
+      lab1->MoveTo( AnchorX::Mid, AnchorY::Min, length / 2, y );
+      BoundaryBox bb = lab1->GetBB();
+      y += bb.max.y - bb.min.y + 3;
+    }
+    if ( lab0 ) {
+      lab0->MoveTo( AnchorX::Mid, AnchorY::Min, length / 2, y );
     }
   } else {
     U x        = (dir == Dir::Left) ? (0 - space_x) : (orth_length + space_x);
     AnchorX ax = (dir == Dir::Left) ? AnchorX::Max : AnchorX::Min;
     double vx  = (dir == Dir::Left) ? -1 : 1;
-    if ( lab1 != nullptr ) {
+    if ( lab1 ) {
       lab1->MoveTo( ax, AnchorY::Mid, x, length / 2 );
       BoundaryBox bb = lab1->GetBB();
       x += (bb.max.x - bb.min.x + 3) * vx;
     }
-    if ( lab0 != nullptr ) {
+    if ( lab0 ) {
       lab0->MoveTo( ax, AnchorY::Mid, x, length / 2 );
     }
   }

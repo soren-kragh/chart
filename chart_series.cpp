@@ -403,8 +403,13 @@ void Series::Build(
 
   // Define clip-box.
   SVG::BoundaryBox box;
-  box.Update( 0, y_axis->length );
-  box.Update( x_axis->length, 0 );
+  if ( x_axis->angle == 0 ) {
+    box.Update( x_axis->length, 0 );
+    box.Update( 0, y_axis->length );
+  } else {
+    box.Update( 0, x_axis->length );
+    box.Update( y_axis->length, 0 );
+  }
 
   // Used for extra margin in comparisons to account for precision issues. This
   // may cause an unintended extra clip-detection near the corners, but the
@@ -457,8 +462,13 @@ void Series::Build(
   Point old;
   for ( Datum& datum : datum_list ) {
     old = cur;
-    cur.x = x_axis->Coor( datum.x );
-    cur.y = y_axis->Coor( datum.y );
+    if ( x_axis->angle == 0 ) {
+      cur.x = x_axis->Coor( datum.x );
+      cur.y = y_axis->Coor( datum.y );
+    } else {
+      cur.y = x_axis->Coor( datum.x );
+      cur.x = y_axis->Coor( datum.y );
+    }
     bool valid = x_axis->Valid( datum.x ) && y_axis->Valid( datum.y );
     bool inside =
       cur.x >= box.min.x && cur.x <= box.max.x &&

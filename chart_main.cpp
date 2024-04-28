@@ -22,9 +22,9 @@ Main::Main( void )
 {
   SetLegendPos( Pos::Auto );
   SetFootnotePos( Pos::Auto );
-  axis_x = new Axis( 0 );
-  axis_y[ 0 ] = new Axis( 90 );
-  axis_y[ 1 ] = new Axis( 90 );
+  axis_x = new Axis( true );
+  axis_y[ 0 ] = new Axis( false );
+  axis_y[ 1 ] = new Axis( false );
 }
 
 Main::~Main( void )
@@ -503,6 +503,16 @@ void Main::PlaceLegend(
 
 void Main::AxisPrepare( void )
 {
+  if ( axis_x->angle == 0 ) {
+    axis_x->angle = 0;
+    axis_y[ 0 ]->angle = 90;
+    axis_y[ 1 ]->angle = 90;
+  } else {
+    axis_x->angle = 90;
+    axis_y[ 0 ]->angle = 0;
+    axis_y[ 1 ]->angle = 0;
+  }
+
   axis_x->data_def = false;
   axis_x->data_min = axis_x->log_scale ? 10 : 0;
   axis_x->data_max = axis_x->log_scale ? 10 : 0;
@@ -542,6 +552,10 @@ void Main::AxisPrepare( void )
 
   bool dual_y = axis_y[ 0 ]->show && axis_y[ 1 ]->show;
 
+  axis_x->orth_dual = dual_y;
+  axis_y[ 0 ]->y_dual = dual_y;
+  axis_y[ 1 ]->y_dual = dual_y;
+
   for ( int i : { 0, 1 } ) {
     axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
     axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
@@ -564,16 +578,33 @@ void Main::AxisPrepare( void )
       ? axis_x->min
       : axis_x->max;
   }
-  if ( axis_x->pos == Pos::Bottom ) {
+
+  if (
+    (axis_x->angle == 0)
+    ? (axis_x->pos == Pos::Bottom)
+    : (axis_x->pos == Pos::Left)
+  ) {
     axis_y[ 0 ]->orth_axis_cross = axis_y[ 0 ]->min;
   }
-  if ( axis_x->pos == Pos::Top ) {
+  if (
+    (axis_x->angle == 0)
+    ? (axis_x->pos == Pos::Top)
+    : (axis_x->pos == Pos::Right)
+  ) {
     axis_y[ 0 ]->orth_axis_cross = axis_y[ 0 ]->max;
   }
-  if ( axis_y[ 0 ]->pos == Pos::Left ) {
+  if (
+    (axis_y[ 0 ]->angle == 0)
+    ? (axis_y[ 0 ]->pos == Pos::Bottom)
+    : (axis_y[ 0 ]->pos == Pos::Left)
+  ) {
     axis_x->orth_axis_cross = axis_x->min;
   }
-  if ( axis_y[ 0 ]->pos == Pos::Right ) {
+  if (
+    (axis_y[ 0 ]->angle == 0)
+    ? (axis_y[ 0 ]->pos == Pos::Top)
+    : (axis_y[ 0 ]->pos == Pos::Right)
+  ) {
     axis_x->orth_axis_cross = axis_x->max;
   }
 
@@ -714,11 +745,11 @@ Canvas* Main::Build( void )
 
   std::vector< SVG::Object* > axis_objects;
 
-  axis_x->length = chart_w;
-  axis_x->orth_length = chart_h;
+  axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
+  axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
   for ( auto a : axis_y ) {
-    a->length = chart_h;
-    a->orth_length = chart_w;
+    a->length      = (a->angle == 0) ? chart_w : chart_h;
+    a->orth_length = (a->angle == 0) ? chart_h : chart_w;
   }
 
   AxisPrepare();

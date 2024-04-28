@@ -24,10 +24,11 @@ class Axis
 
 public:
 
-  Axis( int angle );
+  Axis( bool x_axis );
 
-  // For AxisStyle::Edge, the edge is determined by SetNumberPos() and the
-  // orth_axis_cross is ignored.
+  // The angle may be 0 or 90 and the X- and Y-axes must be orthogonal.
+  void SetAngle( int angle );
+
   void SetStyle( AxisStyle style );
 
   // Position of axis, will override orth_axis_cross.
@@ -54,10 +55,17 @@ public:
 
 private:
 
-  int angle;
-
   // Should axis be shown.
   bool show;
+
+  bool x_axis;
+  int  angle;
+
+  // Axis is one axis of a dual Y-axis.
+  bool y_dual;
+
+  // Orthogonal axis is dual, implies that this axis is the X-axis.
+  bool orth_dual;
 
   const double num_lo = 1e-300;
   const double num_hi = 1e+300;
