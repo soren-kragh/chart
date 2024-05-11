@@ -773,6 +773,16 @@ Canvas* Main::Build( void )
       y += bb.max.y - bb.min.y;
     }
     MoveObjs( Dir::Up, title_objs, axis_objects, space_x, space_y );
+    y = 0;
+    for ( auto obj : title_objs ) {
+      y = std::max( y, obj->GetBB().max.y );
+    }
+    y = chart_g->GetBB().max.y - y;
+    if ( y > 0 ) {
+      for ( auto obj : title_objs ) {
+        obj->Move( 0, y );
+      }
+    }
   }
 
 /*
