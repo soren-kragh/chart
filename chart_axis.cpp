@@ -1201,8 +1201,12 @@ void Axis::Build(
   num_g  = num_g->AddNewGroup();
 
   if ( style != AxisStyle::None ) {
-    line_g->Add( new Line( sx, sy, ex, ey ) );
     if ( style == AxisStyle::Arrow ) {
+      if ( angle == 0 ) {
+        line_g->Add( new Line( sx, sy, ex - arrow_length/2, ey ) );
+      } else {
+        line_g->Add( new Line( sx, sy, ex, ey - arrow_length/2 ) );
+      }
       Poly* poly =
         new Poly(
           { ex, ey,
@@ -1214,6 +1218,8 @@ void Axis::Build(
       poly->Close();
       poly->Attr()->FillColor()->Set( ColorName::Black );
       poly->Rotate( angle, ex, ey );
+    } else {
+      line_g->Add( new Line( sx, sy, ex, ey ) );
     }
   }
 
