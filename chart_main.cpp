@@ -279,11 +279,20 @@ void Main::CalcLegendBoxes(
   AnchorX ax2 = AnchorX::Min;
   AnchorY ay1 = AnchorY::Max;
   AnchorY ay2 = AnchorY::Min;
-  if ( axis_y[ 0 ]->at_orth_max ) std::swap( ax1, ax2 );
-  if ( axis_x->at_orth_max ) std::swap( ay1, ay2 );
+  if ( axis_x->angle == 0 ) {
+    if ( axis_y[ 0 ]->at_orth_max ) std::swap( ax1, ax2 );
+    if ( axis_x->at_orth_max ) std::swap( ay1, ay2 );
+  } else {
+    if ( axis_x->at_orth_max ) std::swap( ax1, ax2 );
+    if ( axis_y[ 0 ]->at_orth_max ) std::swap( ay1, ay2 );
+  }
 
   for ( bool can_move : { false, true } ) {
     if ( !dual_y ) add_lbs( ax1, ay1, can_move, can_move );
+    if ( dual_y && axis_x->angle != 0 ) {
+      add_lbs( ax1, AnchorY::Mid, can_move, can_move );
+      add_lbs( ax2, AnchorY::Mid, can_move, can_move );
+    }
     add_lbs( AnchorX::Mid, ay1, can_move, can_move );
     add_lbs( AnchorX::Mid, ay2, can_move, can_move );
     if ( dual_y ) add_lbs( ax1, ay1, can_move, can_move );
