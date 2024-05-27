@@ -29,6 +29,9 @@ public:
   // The angle may be 0 or 90 and the X- and Y-axes must be orthogonal.
   void SetAngle( int angle );
 
+  // Reverse the axis direction.
+  void SetReverse( bool reverse = true );
+
   void SetStyle( AxisStyle style );
 
   // Position of axis, will override orth_axis_cross.
@@ -60,6 +63,7 @@ private:
 
   bool x_axis;
   int  angle;
+  bool reverse;
 
   // Axis is one axis of a dual Y-axis.
   bool y_dual;
@@ -109,20 +113,17 @@ private:
     std::vector< SVG::Object* >& axis_objects,
     std::vector< SVG::Object* >& num_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-    SVG::Group* line_g, SVG::Group* num_g,
-    SVG::U sx, SVG::U sy
+    SVG::Group* line_g, SVG::Group* num_g
   );
   void BuildTicksNumsLinear(
     std::vector< SVG::Object* >& axis_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-    SVG::Group* line_g, SVG::Group* num_g,
-    SVG::U sx, SVG::U sy
+    SVG::Group* line_g, SVG::Group* num_g
   );
   void BuildTicksNumsLogarithmic(
     std::vector< SVG::Object* >& axis_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-    SVG::Group* line_g, SVG::Group* num_g,
-    SVG::U sx, SVG::U sy
+    SVG::Group* line_g, SVG::Group* num_g
   );
 
   void Build(
@@ -180,14 +181,18 @@ private:
   std::string unit;
   Pos unit_pos;
 
-  SVG::U orth_length;
-  SVG::U orth_length_ext[ 2 ];
+  SVG::U    orth_length;
   AxisStyle orth_style[ 2 ];
-  SVG::U orth_axis_coor[ 2 ];
+  SVG::U    orth_axis_coor[ 2 ];        // Coordinates where orthogonal axes
+                                        // cross this axis.
+  bool      orth_reverse[ 2 ];
 
-  bool   at_orth_min;
-  bool   at_orth_max;
-  SVG::U at_orth_coor;
+  SVG::U orth_coor;         // Coordinate of where this axis crosses the
+                            // orthogonal axis.
+  bool   orth_coor_is_min;  // This axis placed at min orthogonal
+                            // coordinate (0).
+  bool   orth_coor_is_max;  // This axis placed at max orthogonal
+                            // coordinate (orth_length).
 };
 
 }

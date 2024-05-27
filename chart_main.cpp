@@ -280,11 +280,11 @@ void Main::CalcLegendBoxes(
   AnchorY ay1 = AnchorY::Max;
   AnchorY ay2 = AnchorY::Min;
   if ( axis_x->angle == 0 ) {
-    if ( axis_y[ 0 ]->at_orth_max ) std::swap( ax1, ax2 );
-    if ( axis_x->at_orth_max ) std::swap( ay1, ay2 );
+    if ( axis_y[ 0 ]->orth_coor_is_max ) std::swap( ax1, ax2 );
+    if ( axis_x->orth_coor_is_max ) std::swap( ay1, ay2 );
   } else {
-    if ( axis_x->at_orth_max ) std::swap( ax1, ax2 );
-    if ( axis_y[ 0 ]->at_orth_max ) std::swap( ay1, ay2 );
+    if ( axis_x->orth_coor_is_max ) std::swap( ax1, ax2 );
+    if ( axis_y[ 0 ]->orth_coor_is_max ) std::swap( ay1, ay2 );
   }
 
   for ( bool can_move : { false, true } ) {
@@ -566,9 +566,15 @@ void Main::AxisPrepare( void )
   axis_y[ 1 ]->y_dual = dual_y;
 
   for ( int i : { 0, 1 } ) {
+    axis_x->orth_style[ i ] = axis_y[ dual_y ? i : 0 ]->style;
     axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
     axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
-    axis_x->orth_style[ i ] = axis_y[ dual_y ? i : 0 ]->style;
+  }
+
+  for ( int i : { 0, 1 } ) {
+    axis_x->orth_reverse[ i ] = axis_y[ dual_y ? i : 0 ]->reverse;
+    axis_y[ i ]->orth_reverse[ 0 ] = axis_x->reverse;
+    axis_y[ i ]->orth_reverse[ 1 ] = axis_x->reverse;
   }
 
   axis_x->LegalizeMinMax();
@@ -593,28 +599,30 @@ void Main::AxisPrepare( void )
     ? (axis_x->pos == Pos::Bottom)
     : (axis_x->pos == Pos::Left)
   ) {
-    axis_y[ 0 ]->orth_axis_cross = axis_y[ 0 ]->min;
+    axis_y[ 0 ]->orth_axis_cross =
+      axis_y[ 0 ]->reverse ? axis_y[ 0 ]->max : axis_y[ 0 ]->min;
   }
   if (
     (axis_x->angle == 0)
     ? (axis_x->pos == Pos::Top)
     : (axis_x->pos == Pos::Right)
   ) {
-    axis_y[ 0 ]->orth_axis_cross = axis_y[ 0 ]->max;
+    axis_y[ 0 ]->orth_axis_cross =
+      axis_y[ 0 ]->reverse ? axis_y[ 0 ]->min : axis_y[ 0 ]->max;
   }
   if (
     (axis_y[ 0 ]->angle == 0)
     ? (axis_y[ 0 ]->pos == Pos::Bottom)
     : (axis_y[ 0 ]->pos == Pos::Left)
   ) {
-    axis_x->orth_axis_cross = axis_x->min;
+    axis_x->orth_axis_cross = axis_x->reverse ? axis_x->max : axis_x->min;
   }
   if (
     (axis_y[ 0 ]->angle == 0)
     ? (axis_y[ 0 ]->pos == Pos::Top)
     : (axis_y[ 0 ]->pos == Pos::Right)
   ) {
-    axis_x->orth_axis_cross = axis_x->max;
+    axis_x->orth_axis_cross = axis_x->reverse ? axis_x->min : axis_x->max;
   }
 
   axis_x->orth_axis_coor[ 0 ] =
@@ -646,39 +654,23 @@ void Main::AxisPrepare( void )
     }
   }
 
-  for ( auto a : axis_y ) {
-    a->orth_length_ext[ 0 ] =
-    a->orth_length_ext[ 1 ] =
-      axis_x->length +
-      ((axis_x->style == AxisStyle::Arrow) ? +axis_x->overhang : 0);
-  }
-  for ( int i : { 0, 1 } ) {
-    Axis* a = dual_y ? axis_y[ i ] : axis_y[ 0 ];
-    axis_x->orth_length_ext[ i ] =
-      a->length + ((a->style == AxisStyle::Arrow) ? +a->overhang : 0);
-  }
-
   for ( int i : { 0, 1 } ) {
     axis_y[ i ]->orth_style[ 0 ] = axis_x->style;
     axis_y[ i ]->orth_style[ 1 ] = axis_x->style;
     axis_x->orth_style[ i ] = axis_y[ dual_y ? i : 0 ]->style;
   }
 
-  axis_x->at_orth_min =
-    axis_y[ 0 ]->CoorNear(
-      axis_y[ 0 ]->orth_axis_coor[ 0 ], 0
-    );
-  axis_x->at_orth_max =
-    axis_y[ 0 ]->CoorNear(
-      axis_y[ 0 ]->orth_axis_coor[ 0 ], axis_y[ 0 ]->length
-    );
-  axis_x->at_orth_coor = axis_y[ 0 ]->orth_axis_coor[ 0 ];
+  axis_x->orth_coor = axis_y[ 0 ]->orth_axis_coor[ 0 ];
+  axis_x->orth_coor_is_min =
+    axis_y[ 0 ]->CoorNear( axis_x->orth_coor, 0 );
+  axis_x->orth_coor_is_max =
+    axis_y[ 0 ]->CoorNear( axis_x->orth_coor, axis_y[ 0 ]->length );
   for ( int i : { 0, 1 } ) {
-    axis_y[ i ]->at_orth_min =
-      axis_x->CoorNear( axis_x->orth_axis_coor[ i ], 0 );
-    axis_y[ i ]->at_orth_max =
-      axis_x->CoorNear( axis_x->orth_axis_coor[ i ], axis_x->length );
-    axis_y[ i ]->at_orth_coor = axis_x->orth_axis_coor[ i ];
+    axis_y[ i ]->orth_coor = axis_x->orth_axis_coor[ i ];
+    axis_y[ i ]->orth_coor_is_min =
+      axis_x->CoorNear( axis_y[ i ]->orth_coor, 0 );
+    axis_y[ i ]->orth_coor_is_max =
+      axis_x->CoorNear( axis_y[ i ]->orth_coor, axis_x->length );
   }
 
   if ( dual_y ) {

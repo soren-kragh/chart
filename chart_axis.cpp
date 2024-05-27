@@ -24,10 +24,12 @@ Axis::Axis( bool x_axis )
   show = false;
   this->x_axis = x_axis;
   angle = x_axis ? 0 : 90;
+  reverse = false;
   y_dual = false;
   orth_dual = false;
   length = 0;
   style = AxisStyle::Auto;
+  pos = Pos::Auto;
   digits = 0;
   decimals = 0;
   num_max_len = 0;
@@ -52,16 +54,16 @@ Axis::Axis( bool x_axis )
   unit_pos = Pos::Auto;
 
   orth_length = 0;
-  orth_length_ext[ 0 ] = 0;
-  orth_length_ext[ 1 ] = 0;
   orth_style[ 0 ] = AxisStyle::Auto;
   orth_style[ 1 ] = AxisStyle::Auto;
   orth_axis_coor[ 0 ] = 0;
   orth_axis_coor[ 1 ] = 0;
+  orth_reverse[ 0 ] = false;
+  orth_reverse[ 1 ] = false;
 
-  at_orth_min = false;
-  at_orth_max = false;
-  at_orth_coor = 0;
+  orth_coor_is_min = false;
+  orth_coor_is_max = false;
+  orth_coor = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,6 +71,11 @@ Axis::Axis( bool x_axis )
 void Axis::SetAngle( int angle )
 {
   this->angle = angle;
+}
+
+void Axis::SetReverse( bool reverse )
+{
+  this->reverse = reverse;
 }
 
 void Axis::SetStyle( AxisStyle style )
@@ -80,7 +87,6 @@ void Axis::SetStyle( AxisStyle style )
 void Axis::SetPos( Pos pos )
 {
   this->pos = pos;
-  show = true;
 }
 
 void Axis::SetLogScale( bool log_scale )
@@ -146,7 +152,6 @@ void Axis::SetGrid( bool major_enable, bool minor_enable )
 void Axis::SetNumberPos( Pos pos )
 {
   this->number_pos = pos;
-  show = true;
 }
 
 void Axis::SetLabel( const std::string& txt )
@@ -170,7 +175,6 @@ void Axis::SetUnit( const std::string& txt )
 void Axis::SetUnitPos( Pos pos )
 {
   this->unit_pos = pos;
-  show = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -189,13 +193,13 @@ void Axis::LegalizeMinor( void ) {
       sub_divs = 10;
       while ( true ) {
         U coor = Coor( max - max / sub_divs );
-        if ( max_coor - coor <= 32 ) break;
+        if ( std::abs( max_coor - coor ) <= 32 ) break;
         if ( sub_divs == 100 ) break;
         do sub_divs++; while ( 100 % sub_divs );
       }
       while ( true ) {
         U coor = Coor( max - max / sub_divs );
-        if ( max_coor - coor >= 8 ) break;
+        if ( std::abs( max_coor - coor ) >= 8 ) break;
         if ( sub_divs == 1 ) break;
         do sub_divs--; while ( 100 % sub_divs );
       }
@@ -203,14 +207,14 @@ void Axis::LegalizeMinor( void ) {
     if ( sub_divs > 100 ) sub_divs = 100;
     while ( sub_divs > 1 ) {
       U coor = Coor( max - max / sub_divs );
-      if ( max_coor - coor >= 4 ) break;
+      if ( std::abs( max_coor - coor ) >= 4 ) break;
       do sub_divs--; while ( 100 % sub_divs );
     }
   } else {
     if ( sub_divs < 1 ) sub_divs = 1;
     while ( sub_divs > 1 ) {
       U coor = Coor( max - major / sub_divs );
-      if ( max_coor - coor >= 10 ) break;
+      if ( std::abs( max_coor - coor ) >= 10 ) break;
       do sub_divs--; while ( 1000 % sub_divs );
     }
   }
@@ -269,7 +273,7 @@ void Axis::LegalizeMajor( void ) {
         );
       while ( true ) {
         U coor = Coor( max / major );
-        if ( max_coor - coor >= (auto_major ? 40 : 20) ) break;
+        if ( std::abs( max_coor - coor ) >= (auto_major ? 40 : 20) ) break;
         if ( number_format == NumberFormat::Magnitude ) {
           major = major * ((major > 10) ? 1000 : 100);
         } else {
@@ -396,17 +400,17 @@ void Axis::LegalizeMinMax( void )
 
 U Axis::Coor( double v )
 {
+  double c = -1e20;
   if ( log_scale ) {
     if ( v > 0 ) {
       double a = std::log10( min );
       double b = std::log10( max );
-      return (std::log10( v ) - a) * length / (b - a);
-    } else {
-      return -1e20;
+      c = (std::log10( v ) - a) * length / (b - a);
     }
   } else {
-    return (v - min) * length / (max - min);
+    c = (v - min) * length / (max - min);
   }
+  return reverse ? (length - c) : c;
 }
 
 bool Axis::CoorNear( SVG::U c1, SVG::U c2 )
@@ -719,8 +723,7 @@ void Axis::BuildTicksHelper(
   std::vector< SVG::Object* >& axis_objects,
   std::vector< SVG::Object* >& num_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-  SVG::Group* line_g, SVG::Group* num_g,
-  SVG::U sx, SVG::U sy
+  SVG::Group* line_g, SVG::Group* num_g
 )
 {
   if ( v_coor < min_coor - eps_coor ) return;
@@ -740,26 +743,27 @@ void Axis::BuildTicksHelper(
   bool collision = false;
   for ( int i : { 0, 1 } ) {
     if ( !near_crossing_axis[ i ] ) continue;
-    if ( angle == 0 ) {
-      if ( at_orth_min && number_pos == Pos::Bottom ) continue;
-      if ( at_orth_min && style == AxisStyle::Arrow ) continue;
-      if ( orth_length_ext[ i ] == orth_length ) {
-        if ( at_orth_max && number_pos == Pos::Top    ) continue;
-        if ( at_orth_max && style == AxisStyle::Arrow ) continue;
-      }
-    } else {
-      if ( at_orth_min && number_pos == Pos::Left   ) continue;
-      if ( at_orth_min && style == AxisStyle::Arrow ) continue;
-      if ( orth_length_ext[ i ] == orth_length ) {
-        if ( at_orth_max && number_pos == Pos::Right  ) continue;
-        if ( at_orth_max && style == AxisStyle::Arrow ) continue;
+    bool at_orth_arrow =
+      orth_style[ i ] == AxisStyle::Arrow &&
+      (orth_reverse[ i ] ? orth_coor_is_min : orth_coor_is_max);
+    if ( !at_orth_arrow ) {
+      if ( angle == 0 ) {
+        if ( orth_coor_is_min && number_pos == Pos::Bottom ) continue;
+        if ( orth_coor_is_min && style == AxisStyle::Arrow ) continue;
+        if ( orth_coor_is_max && number_pos == Pos::Top    ) continue;
+        if ( orth_coor_is_max && style == AxisStyle::Arrow ) continue;
+      } else {
+        if ( orth_coor_is_min && number_pos == Pos::Left   ) continue;
+        if ( orth_coor_is_min && style == AxisStyle::Arrow ) continue;
+        if ( orth_coor_is_max && number_pos == Pos::Right  ) continue;
+        if ( orth_coor_is_max && style == AxisStyle::Arrow ) continue;
       }
     }
     collision = true;
   }
 
-  U x = (angle == 0) ? v_coor : sx;
-  U y = (angle == 0) ? sy : v_coor;
+  U x = (angle == 0) ? v_coor : orth_coor;
+  U y = (angle == 0) ? orth_coor : v_coor;
 
   U d = (sn == 0) ? tick_major_len : tick_minor_len;
   U gx1 = 0;
@@ -771,8 +775,8 @@ void Axis::BuildTicksHelper(
     U y1 = y - d;
     U y2 = y + d;
     if ( !not_near_crossing_axis && style == AxisStyle::Arrow ) {
-      if ( at_orth_max ) y1 = y;
-      if ( at_orth_min ) y2 = y;
+      if ( orth_coor_is_max ) y1 = y;
+      if ( orth_coor_is_min ) y2 = y;
     }
     if ( style == AxisStyle::Edge ) {
       if ( number_pos == Pos::Top    ) y1 = y;
@@ -786,8 +790,8 @@ void Axis::BuildTicksHelper(
     U x1 = x - d;
     U x2 = x + d;
     if ( !not_near_crossing_axis && style == AxisStyle::Arrow ) {
-      if ( at_orth_max ) x1 = x;
-      if ( at_orth_min ) x2 = x;
+      if ( orth_coor_is_max ) x1 = x;
+      if ( orth_coor_is_min ) x2 = x;
     }
     if ( style == AxisStyle::Edge ) {
       if ( number_pos == Pos::Right ) x1 = x;
@@ -853,8 +857,7 @@ void Axis::BuildTicksHelper(
 void Axis::BuildTicksNumsLinear(
   std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-  SVG::Group* line_g, SVG::Group* num_g,
-  SVG::U sx, SVG::U sy
+  SVG::Group* line_g, SVG::Group* num_g
 )
 {
   std::vector< int64_t > mn_list;
@@ -924,8 +927,7 @@ void Axis::BuildTicksNumsLinear(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
         axis_objects, num_objects,
-        minor_g, major_g, zero_g, line_g, num_g,
-        sx, sy
+        minor_g, major_g, zero_g, line_g, num_g
       );
     }
   }
@@ -938,8 +940,7 @@ void Axis::BuildTicksNumsLinear(
 void Axis::BuildTicksNumsLogarithmic(
   std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-  SVG::Group* line_g, SVG::Group* num_g,
-  SVG::U sx, SVG::U sy
+  SVG::Group* line_g, SVG::Group* num_g
 )
 {
   if ( major <= 0 ) return;
@@ -1018,14 +1019,17 @@ void Axis::BuildTicksNumsLogarithmic(
       if ( sn == 0 ) v = m0;
       U v_coor = Coor( v );
       U m0_coor = Coor( m0 );
-      if ( sn > 0 && v_coor <= m0_coor ) continue;
+      if ( reverse ) {
+        if ( sn > 0 && v_coor >= m0_coor ) continue;
+      } else {
+        if ( sn > 0 && v_coor <= m0_coor ) continue;
+      }
       bool at_zero = CoorNear( v_coor, one_coor );
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
         axis_objects, num_objects,
-        minor_g, major_g, zero_g, line_g, num_g,
-        sx, sy
+        minor_g, major_g, zero_g, line_g, num_g
       );
     }
   }
@@ -1050,27 +1054,40 @@ void Axis::Build(
   if ( angle == 0 ) {
     if ( number_pos != Pos::Bottom && number_pos != Pos::Top ) {
       number_pos =
-        (at_orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
+        (orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
     }
   } else {
     if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
       number_pos =
-        (at_orth_coor > (orth_length * (1 - near))) ? Pos::Right : Pos::Left;
+        (orth_coor > (orth_length * (1 - near))) ? Pos::Right : Pos::Left;
     }
   }
 
   U as = 0;
-  U ae = length + ((style == AxisStyle::Arrow) ? overhang : U( 0 ));
+  U ae = length;
+  if ( reverse ) {
+    std::swap( as, ae );
+    if ( style == AxisStyle::Arrow ) ae -= overhang;
+  } else {
+    if ( style == AxisStyle::Arrow ) ae += overhang;
+  }
   if ( phase == 0 ) {
-    as -= tick_major_len + ((angle == 0) ? num_space_x : num_space_y);
-    ae +=
+    U ds = tick_major_len + ((angle == 0) ? num_space_x : num_space_y);
+    U de =
       ((style == AxisStyle::Arrow) ? U( 0 ) : tick_major_len) +
       ((angle == 0) ? num_space_x : num_space_y);
+    if ( reverse ) {
+      as += ds;
+      ae -= de;
+    } else {
+      as -= ds;
+      ae += de;
+    }
   }
-  U sx = (angle == 0) ? as : at_orth_coor;
-  U sy = (angle == 0) ? at_orth_coor : as;
-  U ex = (angle == 0) ? ae : sx;
-  U ey = (angle == 0) ? sy : ae;
+  U sx = (angle == 0) ? as : orth_coor;
+  U sy = (angle == 0) ? orth_coor : as;
+  U ex = (angle == 0) ? ae : orth_coor;
+  U ey = (angle == 0) ? orth_coor : ae;
 
   if ( phase == 0 && unit != "" ) {
     Object* obj = Label( label_g, unit, 16 );
@@ -1084,11 +1101,11 @@ void Axis::Build(
       U x = length / 2;
       U y = length / 2;
       if ( px == Pos::Left ) {
-        x = sx - ((angle == 0) ? 0 : (tick_major_len + num_space_x));
+        x = (reverse ? ex : sx) - ((angle == 0) ? 0 : (tick_major_len + num_space_x));
         ax = (angle == 0 && py != Pos::Center) ? AnchorX::Min : AnchorX::Max;
       }
       if ( px == Pos::Right ) {
-        x = ex + ((angle == 0) ? 0 : (tick_major_len + num_space_x));
+        x = (reverse ? sx : ex) + ((angle == 0) ? 0 : (tick_major_len + num_space_x));
         ax = (angle == 0 && py != Pos::Center) ? AnchorX::Max : AnchorX::Min;
       }
       if ( px == Pos::Center ) {
@@ -1096,11 +1113,11 @@ void Axis::Build(
         ax = AnchorX::Mid;
       }
       if ( py == Pos::Bottom ) {
-        y = sy - ((angle != 0) ? 0 : (tick_major_len + num_space_y));
+        y = (reverse ? ey : sy) - ((angle != 0) ? 0 : (tick_major_len + num_space_y));
         ay = (angle != 0 && px != Pos::Center) ? AnchorY::Min : AnchorY::Max;
       }
       if ( py == Pos::Top ) {
-        y = ey + ((angle != 0) ? 0 : (tick_major_len + num_space_y));
+        y = (reverse ? sy : ey) + ((angle != 0) ? 0 : (tick_major_len + num_space_y));
         ay = (angle != 0 && px != Pos::Center) ? AnchorY::Max : AnchorY::Min;
       }
       if ( py == Pos::Center ) {
@@ -1117,7 +1134,11 @@ void Axis::Build(
           if ( orth_axis_coor[ i ] >= bb.max.x + 48 )
             continue;
           if (
-            at_orth_min && py == Pos::Bottom && px == Pos::Right &&
+            ( orth_reverse[ i ]
+              ? (orth_coor_is_max && py == Pos::Top   )
+              : (orth_coor_is_min && py == Pos::Bottom)
+            ) &&
+            px == (reverse ? Pos::Left : Pos::Right) &&
             style == AxisStyle::Arrow
           )
             continue;
@@ -1127,7 +1148,11 @@ void Axis::Build(
           if ( orth_axis_coor[ i ] >= bb.max.y + 32 )
             continue;
           if (
-            at_orth_min && px == Pos::Left && py == Pos::Top &&
+            ( orth_reverse[ i ]
+              ? (orth_coor_is_max && px == Pos::Right)
+              : (orth_coor_is_min && px == Pos::Left )
+            ) &&
+            py == (reverse ? Pos::Bottom : Pos::Top) &&
             style == AxisStyle::Arrow
           )
             continue;
@@ -1144,52 +1169,60 @@ void Axis::Build(
     if ( angle == 0 ) {
       if ( automatic ) {
         unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
+        if ( orth_dual && style == AxisStyle::Arrow ) {
+          unit_pos = reverse ? Pos::Left : Pos::Right;
+        }
       }
       if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
         if ( orth_dual ) {
           place( Pos::Center, unit_pos );
         } else {
           if ( style == AxisStyle::Arrow ) {
-            place( Pos::Right, unit_pos    ) &&
-            place( Pos::Right, Pos::Center );
+            place( reverse ? Pos::Left : Pos::Right, unit_pos    ) &&
+            place( reverse ? Pos::Left : Pos::Right, Pos::Center );
           } else {
-            place( Pos::Right , unit_pos ) &&
-            place( Pos::Left  , unit_pos ) &&
+            place( reverse ? Pos::Left  : Pos::Right, unit_pos ) &&
+            place( reverse ? Pos::Right : Pos::Left , unit_pos ) &&
             place( Pos::Center, unit_pos );
           }
         }
       }
       if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
         place( unit_pos, Pos::Center );
+        collision = false;
       }
       if ( collision ) {
-        place( Pos::Right, Pos::Center );
+        place( reverse ? Pos::Left : Pos::Right, Pos::Center );
       }
     }
 
     if ( angle != 0 ) {
       if ( automatic ) {
         unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
+        if ( orth_dual && style == AxisStyle::Arrow ) {
+          unit_pos = reverse ? Pos::Bottom : Pos::Top;
+        }
       }
       if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
         if ( orth_dual ) {
           place( unit_pos, Pos::Center );
         } else {
           if ( style == AxisStyle::Arrow ) {
-            place( unit_pos   , Pos::Top ) &&
-            place( Pos::Center, Pos::Top );
+            place( unit_pos   , reverse ? Pos::Bottom : Pos::Top ) &&
+            place( Pos::Center, reverse ? Pos::Bottom : Pos::Top );
           } else {
-            place( unit_pos, Pos::Top    ) &&
-            place( unit_pos, Pos::Bottom ) &&
+            place( unit_pos, reverse ? Pos::Bottom : Pos::Top    ) &&
+            place( unit_pos, reverse ? Pos::Top    : Pos::Bottom ) &&
             place( unit_pos, Pos::Center );
           }
         }
       }
       if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
         place( Pos::Center, unit_pos );
+        collision = false;
       }
       if ( collision ) {
-        place( Pos::Center, Pos::Top );
+        place( Pos::Center, reverse ? Pos::Bottom : Pos::Top );
       }
     }
 
@@ -1203,16 +1236,15 @@ void Axis::Build(
 
   if ( style != AxisStyle::None ) {
     if ( style == AxisStyle::Arrow ) {
-      if ( angle == 0 ) {
-        line_g->Add( new Line( sx, sy, ex - arrow_length/2, ey ) );
-      } else {
-        line_g->Add( new Line( sx, sy, ex, ey - arrow_length/2 ) );
-      }
+      U sv = reverse ? -1 : +1;
+      U dx = (angle == 0) ? (sv * arrow_length/2) : 0;
+      U dy = (angle != 0) ? (sv * arrow_length/2) : 0;
+      line_g->Add( new Line( sx, sy, ex - dx, ey - dy) );
       Poly* poly =
         new Poly(
           { ex, ey,
-            ex - arrow_length, ey + arrow_width/2,
-            ex - arrow_length, ey - arrow_width/2
+            ex - sv * arrow_length, ey + sv * arrow_width/2,
+            ex - sv * arrow_length, ey - sv * arrow_width/2
           }
         );
       line_g->Add( poly );
@@ -1230,14 +1262,19 @@ void Axis::Build(
     if ( orth_style[ i ] == AxisStyle::None ) continue;
     U oc = orth_axis_coor[ i ];
     U zc = 2 * tick_major_len;
+    U os = 0;
+    U oe = orth_length;
+    if ( orth_style[ i ] == AxisStyle::Arrow ) {
+      if ( orth_reverse[ i ] ) {
+        os -= overhang;
+      } else {
+        oe += overhang;
+      }
+    }
     if ( angle == 0 ) {
-      axis_objects.push_back(
-        new Rect( oc - zc, 0, oc + zc, orth_length_ext[ i ] )
-      );
+      axis_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
     } else {
-      axis_objects.push_back(
-        new Rect( 0, oc - zc, orth_length_ext[ i ], oc + zc )
-      );
+      axis_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
     }
   }
 
@@ -1274,14 +1311,12 @@ void Axis::Build(
   if ( log_scale ) {
     BuildTicksNumsLogarithmic(
       axis_objects,
-      minor_g, major_g, zero_g, line_g, num_g,
-      sx, sy
+      minor_g, major_g, zero_g, line_g, num_g
     );
   } else {
     BuildTicksNumsLinear(
       axis_objects,
-      minor_g, major_g, zero_g, line_g, num_g,
-      sx, sy
+      minor_g, major_g, zero_g, line_g, num_g
     );
   }
 
@@ -1326,12 +1361,12 @@ void Axis::BuildLabel(
 
   Dir dir = Dir::Down;
   if ( angle == 0 ) {
-    if ( y_dual && at_orth_max ) {
+    if ( y_dual && orth_coor_is_max ) {
       dir = Dir::Up;
     }
   }
   if ( angle != 0 ) {
-    if ( at_orth_max || (number_pos == Pos::Right && !at_orth_min) ) {
+    if ( orth_coor_is_max || (number_pos == Pos::Right && !orth_coor_is_min) ) {
       dir = Dir::Right;
       if ( lab0 ) lab0->Rotate( -90 );
       if ( lab1 ) lab1->Rotate( -90 );
