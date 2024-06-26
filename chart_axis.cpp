@@ -24,6 +24,7 @@ Axis::Axis( bool x_axis )
   show = false;
   this->x_axis = x_axis;
   angle = x_axis ? 0 : 90;
+  category_axis = false;
   reverse = false;
   y_dual = false;
   orth_dual = false;
@@ -180,7 +181,7 @@ void Axis::SetUnitPos( Pos pos )
 ////////////////////////////////////////////////////////////////////////////////
 
 void Axis::LegalizeMinor( void ) {
-  if ( major <= 0 ) {
+  if ( category_axis || major <= 0 ) {
     sub_divs = 0;
     return;
   }
@@ -226,6 +227,13 @@ void Axis::LegalizeMajor( void ) {
   double mag = std::max( std::abs( min ), std::abs( max ) );
 
   while ( true ) {
+
+    if ( category_axis ) {
+      number_format = NumberFormat::None;
+      major = 1;
+      sub_divs = 0;
+      break;
+    }
 
     if (
       mag < num_lo || mag > num_hi || (max - min) < num_lo ||
@@ -1039,7 +1047,111 @@ void Axis::BuildTicksNumsLogarithmic(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Axis::BuildCategories(
+  const std::vector< std::string >& categoty_list,
+  std::vector< SVG::Object* >& axis_objects,
+  SVG::Group* cat_g
+)
+{
+  size_t max_width = 0;
+
+  for ( auto cat : categoty_list ) {
+    max_width = std::max( max_width, cat.size() );
+  }
+//  cat_g->Attr()->TextFont()->SetBold();
+  U cw;
+  U ch;
+  {
+    cat_g->Add( new Text( "X" ) );
+    BoundaryBox bb = cat_g->Last()->GetBB();
+    cat_g->DeleteFront();
+    cw = bb.max.x - bb.min.x;
+    ch = bb.max.y - bb.min.y;
+  }
+
+  int text_angle = 45;
+  AnchorX ax = AnchorX::Mid;
+  AnchorY ay = AnchorY::Mid;
+  U dx = 0;
+  U dy = 0;
+  if ( angle == 0 ) {
+    if ( number_pos == Pos::Top ) {
+      ay = AnchorY::Min;
+      dy = 0 + tick_major_len + num_space_y;
+    } else {
+      ay = AnchorY::Max;
+      dy = 0 - tick_major_len - num_space_y;
+    }
+    if ( length < categoty_list.size() * ch * 2 ) {
+      text_angle = 90;
+    }
+  } else {
+    if ( number_pos == Pos::Right ) {
+      ax = AnchorX::Min;
+      dx = 0 + tick_major_len + num_space_x;
+    } else {
+      ax = AnchorX::Max;
+      dx = 0 - tick_major_len - num_space_x;
+    }
+  }
+
+  std::vector< SVG::Object* > cat_objects;
+
+  uint32_t trial = 0;
+  for ( bool commit : { false, true } ) {
+    while ( true ) {
+      bool collision = false;
+      uint32_t n = 0;
+      for ( auto cat : categoty_list ) {
+        Object* obj = cat_g->Add( new Text( cat ) );
+        U x = (angle == 0) ? Coor( n ) : orth_coor;
+        U y = (angle != 0) ? Coor( n ) : orth_coor;
+        if ( trial == 0 ) {
+          obj->MoveTo( ax, ay, x + dx, y + dy );
+        }
+        if ( trial == 1 ) {
+          U sy = (n % 2) ? (ch + num_space_y) : 0;
+          if ( dy < 0 ) sy = -sy;
+          obj->MoveTo( ax, ay, x + dx, y + dy + sy );
+        }
+        if ( trial == 2 ) {
+          ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
+          ay = AnchorY::Mid;
+          obj->MoveTo( ax, ay, x + dx, y + dy );
+          obj->Rotate( text_angle, ax, ay );
+        }
+        if (
+          (trial < 2 || (text_angle % 90 == 0)) &&
+          Chart::Collides(
+            obj, cat_objects, ((trial < 2) ? (1.5 * cw) : 0), 0
+          )
+        ) {
+          collision = true;
+          cat_g->DeleteFront();
+        } else {
+          cat_objects.push_back( obj );
+        }
+        n++;
+      }
+      if ( commit ) break;
+      while ( cat_objects.size() > 0 ) {
+        cat_g->DeleteFront();
+        cat_objects.pop_back();
+      }
+      if ( !collision ) break;
+      if ( angle != 0 ) break;
+      if ( trial == 2 ) break;
+      trial++;
+    }
+  }
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Axis::Build(
+  const std::vector< std::string >& categoty_list,
   uint32_t phase,
   std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
@@ -1278,8 +1390,6 @@ void Axis::Build(
     }
   }
 
-  ComputeNumFormat();
-
   minor_g = minor_g->AddNewGroup();
   major_g = major_g->AddNewGroup();
   zero_g  = zero_g->AddNewGroup();
@@ -1308,16 +1418,21 @@ void Axis::Build(
       ->LineColor()->Set( ColorName::Black );
   }
 
-  if ( log_scale ) {
-    BuildTicksNumsLogarithmic(
-      axis_objects,
-      minor_g, major_g, zero_g, line_g, num_g
-    );
+  if ( category_axis ) {
+    BuildCategories( categoty_list, axis_objects, num_g );
   } else {
-    BuildTicksNumsLinear(
-      axis_objects,
-      minor_g, major_g, zero_g, line_g, num_g
-    );
+    ComputeNumFormat();
+    if ( log_scale ) {
+      BuildTicksNumsLogarithmic(
+        axis_objects,
+        minor_g, major_g, zero_g, line_g, num_g
+      );
+    } else {
+      BuildTicksNumsLinear(
+        axis_objects,
+        minor_g, major_g, zero_g, line_g, num_g
+      );
+    }
   }
 
   // Remove DMZ rectangle.

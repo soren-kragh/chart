@@ -30,7 +30,7 @@ namespace Chart {
 
   enum class GridStyle { Auto, Dash, Solid };
 
-  enum class SeriesType { XY, Scatter };
+  enum class SeriesType { XY, Scatter, Line, Lollipop, Bar };
 
   enum class MarkerShape { Circle, Square, Triangle, Diamond };
 

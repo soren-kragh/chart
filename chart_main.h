@@ -48,7 +48,10 @@ public:
   Axis* AxisX( void ) { return axis_x; }
   Axis* AxisY( int n = 0 ) { return axis_y[ n ]; }
 
-  Series* AddSeries( std::string name );
+  Series* AddSeries( const std::string name );
+
+  // Add categories for string based X-values.
+  void AddCategory( const std::string category );
 
   SVG::Canvas* Build( void );
 
@@ -56,12 +59,13 @@ private:
 
   typedef struct {
     SVG::U ch;  // Height of characters.
-    SVG::U ti;  // Text indentation (to make room for marker).
+    SVG::U mw;  // Max outline width.
+    SVG::U ti;  // Additional text indentation (to make room for marker).
+    SVG::U mx;  // Additional X-margin caused by marker.
     SVG::U w;   // Width of a single legend.
     SVG::U h;   // Height of a single legend.
     SVG::U gx;  // X-gap between legends.
     SVG::U gy;  // Y-gap between legends.
-    SVG::U mx;  // X-margin caused by marker.
   } LegendDims;
 
   void AxisPrepare( void );
@@ -79,6 +83,11 @@ private:
     SVG::Group* legend_g
   );
 
+  void BuildSeries(
+    SVG::Group* chartbox_g,
+    std::vector< LegendBox >& lb_list
+  );
+
   std::string title;
   std::string sub_title;
   std::string sub_sub_title;
@@ -92,15 +101,17 @@ private:
   SVG::U chart_h = 800;
   bool bw        = false;
 
-  std::list< Series* > series_list;
+  std::vector< Series* > series_list;
+
+  std::vector< std::string > categoty_list;
 
   Axis* axis_x;
   Axis* axis_y[ 2 ];
 
   SVG::U legend_bx  = 6;        // X-border around text in series legends.
-  SVG::U legend_by  = 4;        // Y-border around text in series legends.
-  SVG::U legend_gx  = 10;       // X-gap between series legends.
-  SVG::U legend_gy  = 10;       // Y-gap between series legends.
+  SVG::U legend_by  = 3;        // Y-border around text in series legends.
+  SVG::U legend_gx  = 8;        // X-gap between series legends.
+  SVG::U legend_gy  = 8;        // Y-gap between series legends.
   SVG::U legend_sx  = 16;       // X-space around legend box.
   SVG::U legend_sy  = 16;       // Y-space around legend box.
 

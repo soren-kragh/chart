@@ -63,6 +63,7 @@ private:
 
   bool x_axis;
   int  angle;
+  bool category_axis;
   bool reverse;
 
   // Axis is one axis of a dual Y-axis.
@@ -126,7 +127,14 @@ private:
     SVG::Group* line_g, SVG::Group* num_g
   );
 
+  void BuildCategories(
+    const std::vector< std::string >& categoty_list,
+    std::vector< SVG::Object* >& axis_objects,
+    SVG::Group* cat_g
+  );
+
   void Build(
+    const std::vector< std::string >& categoty_list,
     uint32_t phase,
     std::vector< SVG::Object* >& axis_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,

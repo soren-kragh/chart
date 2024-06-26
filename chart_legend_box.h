@@ -29,7 +29,8 @@ private:
   uint32_t nx = 1;      // Number of columns.
   uint32_t sp = 0;      // Spare in last row.
 
-  double collision_weight = 0;
+  double weight1 = 0;   // 1st priority weight cost.
+  double weight2 = 0;   // 2nd priority weight cost.
 
 };
 

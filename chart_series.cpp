@@ -31,7 +31,7 @@ Series::Series( std::string name )
   SetMarkerShape( MarkerShape::Circle );
 
   color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.1 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Red );
+  color_list.emplace_back(); color_list.back().Set( ColorName::Red, 0.2 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Green, 0.3 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Cyan, 0, 0.2 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Purple, 0.1 );
@@ -126,13 +126,30 @@ void Series::SetMarkerShape( MarkerShape marker_shape )
   this->marker_shape = marker_shape;
 }
 
-void Series::ApplyStyle( SVG::Object* obj )
+void Series::ApplyLineStyle( SVG::Object* obj )
 {
   obj->Attr()->SetLineWidth( width );
-  if ( dash > 0 ) {
-    obj->Attr()->SetLineDash( dash, (hole > 0) ? hole : dash );
+  if ( width > 0 ) {
+    if ( dash > 0 ) {
+      obj->Attr()->SetLineDash( dash, (hole > 0) ? hole : dash );
+    }
+    obj->Attr()->LineColor()->Set( &color );
+  } else {
+    obj->Attr()->LineColor()->Clear();
   }
-  obj->Attr()->LineColor()->Set( &color );
+  obj->Attr()->FillColor()->Clear();
+}
+
+void Series::ApplyFillStyle( SVG::Object* obj )
+{
+  obj->Attr()->LineColor()->Clear();
+  obj->Attr()->FillColor()->Set( &color );
+}
+
+void Series::ApplyHoleStyle( SVG::Object* obj )
+{
+  ApplyFillStyle( obj );
+  obj->Attr()->FillColor()->Lighten( 0.5 );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -144,13 +161,24 @@ void Series::Add( double x, double y )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+bool Series::Inside(
+  const SVG::Point p, const SVG::BoundaryBox& clip_box
+)
+{
+  return
+    p.x >= clip_box.min.x && p.x <= clip_box.max.x &&
+    p.y >= clip_box.min.y && p.y <= clip_box.max.y;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 // Returns:
 //   0 : No intersection.
 //   1 : One intersection; c1 is the point.
 //   2 : Two intersections; c1 and c2 are the points.
 int Series::ClipLine(
   SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
-  BoundaryBox& box
+  const BoundaryBox& clip_box
 )
 {
   auto intersect_x = []( U x, Point p1, Point p2 )
@@ -184,31 +212,31 @@ int Series::ClipLine(
 
   // Detect bottom and top clippings.
   if ( p1.y > p2.y ) std::swap( p1, p2 );
-  if ( p1.y < box.min.y && p2.y >= box.min.y ) {
-    bot_x = intersect_y( box.min.y, p1, p2 );
-    bot_v = bot_x > (box.min.x - e2) && bot_x < (box.max.x + e2);
+  if ( p1.y < clip_box.min.y && p2.y >= clip_box.min.y ) {
+    bot_x = intersect_y( clip_box.min.y, p1, p2 );
+    bot_v = bot_x > (clip_box.min.x - e2) && bot_x < (clip_box.max.x + e2);
   }
-  if ( p1.y <= box.max.y && p2.y > box.max.y ) {
-    top_x = intersect_y( box.max.y, p1, p2 );
-    top_v = top_x > (box.min.x - e2) && top_x < (box.max.x + e2);
+  if ( p1.y <= clip_box.max.y && p2.y > clip_box.max.y ) {
+    top_x = intersect_y( clip_box.max.y, p1, p2 );
+    top_v = top_x > (clip_box.min.x - e2) && top_x < (clip_box.max.x + e2);
   }
 
   // Detect left and right clippings.
   if ( p1.x > p2.x ) std::swap( p1, p2 );
-  if ( p1.x < box.min.x && p2.x >= box.min.x ) {
-    lft_y = intersect_x( box.min.x, p1, p2 );
-    lft_v = lft_y > (box.min.y - e2) && lft_y < (box.max.y + e2);
+  if ( p1.x < clip_box.min.x && p2.x >= clip_box.min.x ) {
+    lft_y = intersect_x( clip_box.min.x, p1, p2 );
+    lft_v = lft_y > (clip_box.min.y - e2) && lft_y < (clip_box.max.y + e2);
   }
-  if ( p1.x < box.max.x && p2.x >= box.max.x ) {
-    rgt_y = intersect_x( box.max.x, p1, p2 );
-    rgt_v = rgt_y > (box.min.y - e2) && rgt_y < (box.max.y + e2);
+  if ( p1.x <= clip_box.max.x && p2.x > clip_box.max.x ) {
+    rgt_y = intersect_x( clip_box.max.x, p1, p2 );
+    rgt_v = rgt_y > (clip_box.min.y - e2) && rgt_y < (clip_box.max.y + e2);
   }
 
   // The four potential clip points.
-  Point bot_c{ bot_x, box.min.y };
-  Point top_c{ top_x, box.max.y };
-  Point lft_c{ box.min.x, lft_y };
-  Point rgt_c{ box.max.x, rgt_y };
+  Point bot_c{ bot_x, clip_box.min.y };
+  Point top_c{ top_x, clip_box.max.y };
+  Point lft_c{ clip_box.min.x, lft_y };
+  Point rgt_c{ clip_box.max.x, rgt_y };
 
   // Prune very close clip-detections in the corners.
   if ( bot_v && lft_v && near( bot_c, lft_c ) ) lft_v = false;
@@ -239,12 +267,10 @@ void Series::UpdateLegendBoxes(
     if ( p1.x > lb.bb.max.x && p2.x > lb.bb.max.x ) continue;
     if ( p1.y < lb.bb.min.y && p2.y < lb.bb.min.y ) continue;
     if ( p1.y > lb.bb.max.y && p2.y > lb.bb.max.y ) continue;
-    bool p1_inside =
-      p1.x >= lb.bb.min.x && p1.x <= lb.bb.max.x &&
-      p1.y >= lb.bb.min.y && p1.y <= lb.bb.max.y;
-    bool p2_inside =
-      p2.x >= lb.bb.min.x && p2.x <= lb.bb.max.x &&
-      p2.y >= lb.bb.min.y && p2.y <= lb.bb.max.y;
+    bool p1_inside = Inside( p1, lb.bb );
+    bool p2_inside = Inside( p2, lb.bb );
+    if ( p1_inside ) lb.weight1 += 1;
+    if ( p2_inside ) lb.weight1 += 1;
     if ( p1_inside && p2_inside ) {
       c1 = p1;
       c2 = p2;
@@ -259,7 +285,7 @@ void Series::UpdateLegendBoxes(
     }
     double dx = c1.x - c2.x;
     double dy = c1.y - c2.y;
-    lb.collision_weight += std::sqrt( dx*dx + dy*dy ) + 1;
+    lb.weight2 += std::sqrt( dx*dx + dy*dy );
   }
 }
 
@@ -267,6 +293,18 @@ void Series::UpdateLegendBoxes(
 
 void Series::ComputeMarker( SVG::U rim )
 {
+  marker_show = false;
+  marker_diameter = 0;
+
+  if (
+    type != SeriesType::XY &&
+    type != SeriesType::Scatter &&
+    type != SeriesType::Line &&
+    type != SeriesType::Lollipop
+  ) {
+    return;
+  }
+
   auto compute = [&]( MarkerDims& m, U delta )
   {
     switch ( marker_shape ) {
@@ -298,10 +336,12 @@ void Series::ComputeMarker( SVG::U rim )
     return;
   };
 
-  marker_show = false;
-  marker_diameter = 0;
   if ( marker_size < 0 ) {
-    if ( type == SeriesType::Scatter ) marker_diameter = 3 * width;
+    if (
+      type == SeriesType::Scatter ||
+      type == SeriesType::Lollipop
+    )
+      marker_diameter = 3 * width;
   } else {
     marker_diameter = marker_size;
   }
@@ -310,7 +350,7 @@ void Series::ComputeMarker( SVG::U rim )
     (type == SeriesType::XY)
     ? (marker_diameter > width)
     : (marker_diameter > 0);
-  marker_hollow = marker_diameter >= 4 * width;
+  marker_hollow = marker_diameter >= 3 * width;
 
   compute( marker_int, -width );
   compute( marker_out, 0 );
@@ -367,74 +407,24 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::Build(
-  SVG::Group* g,
+void Series::BuildLine(
+  const SVG::BoundaryBox& clip_box,
+  Group* line_g,
+  Group* mark_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list
 )
 {
-  ComputeMarker();
-
-  ApplyStyle( g );
-  Group* lg = nullptr;
-  Group* pg = nullptr;
-  Group* fg = nullptr;
-  if ( marker_show ) {
-    if ( type == SeriesType::XY ) {
-      lg = g->AddNewGroup();
-      lg->Attr()->SetLineJoin( LineJoin::Round );
-    }
-    pg = g->AddNewGroup();
-    pg->Attr()->SetLineDash( 0 );
-    pg->Attr()->LineColor()->Clear();
-    pg->Attr()->FillColor()->Set( &color );
-    if ( marker_hollow ) {
-      fg = g->AddNewGroup();
-      fg->Attr()->SetLineDash( 0 );
-      fg->Attr()->LineColor()->Clear();
-      SVG::Color color_light{ color };
-      color_light.Lighten( 0.5 );
-      fg->Attr()->FillColor()->Set( &color_light );
-    }
-  } else {
-    lg = g;
-  }
-
-  // Define clip-box.
-  SVG::BoundaryBox box;
-  if ( x_axis->angle == 0 ) {
-    box.Update( x_axis->length, 0 );
-    box.Update( 0, y_axis->length );
-  } else {
-    box.Update( 0, x_axis->length );
-    box.Update( y_axis->length, 0 );
-  }
-
-  // Used for extra margin in comparisons to account for precision issues. This
-  // may cause an unintended extra clip-detection near the corners, but the
-  // points will in that case be very near each other and will thus be detected
-  // by near(). Use different epsilons for near-detection and clip-detection in
-  // order to ensure that any spurious clip-detection will be caught by the
-  // more inclusive near-detection.
-  e1 = std::max( box.max.x - box.min.x, box.max.y - box.min.y ) * epsilon;
-  e2 = e1 * 0.1;
-
-  // Enlarge the clip-box a little bit to ensure that points lying exactly at
-  // the boundary are not excluded due to precision issues.
-  box.min.x -= e1;
-  box.min.y -= e1;
-  box.max.x += e1;
-  box.max.y += e1;
-
   Poly* poly = nullptr;
   bool adding_segments = false;
 
   Point prv;
   auto add_point = [&]( Point p, bool clipped = false )
   {
-    if ( type == SeriesType::XY ) {
-      if ( !adding_segments ) lg->Add( poly = new Poly() );
+    if ( type == SeriesType::XY || type == SeriesType::Line ) {
+      if ( !adding_segments ) line_g->Add( poly = new Poly() );
       poly->Add( p );
       if ( adding_segments ) {
         UpdateLegendBoxes( lb_list, prv, p );
@@ -443,9 +433,9 @@ void Series::Build(
       UpdateLegendBoxes( lb_list, p, p );
     }
     if ( !clipped && marker_show ) {
-      BuildMarker( pg, marker_out, p );
+      BuildMarker( mark_g, marker_out, p );
       if ( marker_hollow ) {
-        BuildMarker( fg, marker_int, p );
+        BuildMarker( hole_g, marker_int, p );
       }
     }
     prv = p;
@@ -470,9 +460,7 @@ void Series::Build(
       cur.x = y_axis->Coor( datum.y );
     }
     bool valid = x_axis->Valid( datum.x ) && y_axis->Valid( datum.y );
-    bool inside =
-      cur.x >= box.min.x && cur.x <= box.max.x &&
-      cur.y >= box.min.y && cur.y <= box.max.y;
+    bool inside = Inside( cur, clip_box );
     if ( !valid ) {
       end_point();
       first = true;
@@ -489,7 +477,7 @@ void Series::Build(
       } else {
         // Handle clipping in and out of the chart area.
         Point c1, c2;
-        int n = ClipLine( c1, c2, old, cur, box );
+        int n = ClipLine( c1, c2, old, cur, clip_box );
         if ( !adding_segments ) {
           // We were outside.
           if ( inside ) {
@@ -514,6 +502,277 @@ void Series::Build(
     }
   }
   end_point();
+}
+
+//------------------------------------------------------------------------------
+
+void Series::BuildBar(
+  const SVG::BoundaryBox& clip_box,
+  Group* line_g,
+  Group* mark_g,
+  Group* hole_g,
+  Axis* x_axis,
+  Axis* y_axis,
+  std::vector< LegendBox >& lb_list,
+  uint32_t bar_num,
+  uint32_t bar_tot
+)
+{
+  double tx = (bar_tot == 1) ? 1.0 : bar_cluster_width;
+  double wx = tx / bar_tot;
+  double cx = (1 - tx + wx) / 2 + bar_num * wx;
+  cx = cx - 0.5;
+  wx = wx * bar_width;
+  Point p1;
+  Point p2;
+
+  for ( Datum& datum : datum_list ) {
+    double x = datum.x + cx;
+    bool valid = x_axis->Valid( x ) && y_axis->Valid( datum.y );
+    if ( !valid || datum.y == 0 ) continue;
+
+    p1.x = x_axis->Coor( x );
+    p1.y = y_axis->Coor( 0 );
+    p2.x = p1.x;
+    p2.y = y_axis->Coor( datum.y );
+    if ( x_axis->angle != 0 ) {
+      std::swap( p1.x, p1.y );
+      std::swap( p2.x, p2.y );
+    }
+
+    bool p1_inside = Inside( p1, clip_box );
+    bool p2_inside = Inside( p2, clip_box );
+    if ( !p1_inside || !p2_inside ) {
+      Point c1, c2;
+      int n = ClipLine( c1, c2, p1, p2, clip_box );
+      if ( p1_inside ) {
+        if ( n != 1 ) continue;
+        p2 = c1;
+      } else
+      if ( p2_inside ) {
+        if ( n != 1 ) continue;
+        p1 = c1;
+      } else
+      {
+        if ( n != 2 ) continue;
+        p1 = c1;
+        p2 = c2;
+      }
+    }
+
+    if ( type == SeriesType::Lollipop ) {
+      line_g->Add( new Line( p1, p2 ) );
+      if ( p2_inside && marker_show ) {
+        BuildMarker( mark_g, marker_out, p2 );
+        if ( marker_hollow ) {
+          BuildMarker( hole_g, marker_int, p2 );
+        }
+      }
+      UpdateLegendBoxes( lb_list, p1, p2 );
+    }
+
+    if ( type == SeriesType::Bar ) {
+      U d = std::abs( x_axis->Coor( wx / 2 ) - x_axis->Coor( 0 ) );
+      bool cut_bot = false;
+      bool cut_top = false;
+      bool cut_lft = false;
+      bool cut_rgt = false;
+      if ( x_axis->angle == 0 ) {
+        p1.x -= d;
+        p2.x += d;
+        if ( p1.y < p2.y ) {
+          if ( !p1_inside ) cut_bot = true;
+          if ( !p2_inside ) cut_top = true;
+        }
+        if ( p1.y > p2.y ) {
+          if ( !p1_inside ) cut_top = true;
+          if ( !p2_inside ) cut_bot = true;
+        }
+      } else {
+        p1.y -= d;
+        p2.y += d;
+        if ( p1.x < p2.x ) {
+          if ( !p1_inside ) cut_lft = true;
+          if ( !p2_inside ) cut_rgt = true;
+        }
+        if ( p1.x > p2.x ) {
+          if ( !p1_inside ) cut_rgt = true;
+          if ( !p2_inside ) cut_lft = true;
+        }
+
+      }
+      if ( p1.x > p2.x ) std::swap( p1.x, p2.x );
+      if ( p1.y > p2.y ) std::swap( p1.y, p2.y );
+      UpdateLegendBoxes( lb_list, Point( p1.x, p1.y ), Point( p1.x, p2.y ) );
+      UpdateLegendBoxes( lb_list, Point( p1.x, p1.y ), Point( p2.x, p1.y ) );
+      UpdateLegendBoxes( lb_list, Point( p2.x, p1.y ), Point( p2.x, p2.y ) );
+      UpdateLegendBoxes( lb_list, Point( p1.x, p2.y ), Point( p2.x, p2.y ) );
+      bool has_interior =
+        p2.x - p1.x > width &&
+        p2.y - p1.y > width;
+      if ( has_interior ) {
+        hole_g->Add( new Rect( p1, p2 ) );
+        if ( width > 0 ) {
+          U d = width / 2;
+          if ( cut_bot && cut_top ) {
+            line_g->Add( new Line( p1.x + d, p1.y, p1.x + d, p2.y ) );
+            line_g->Add( new Line( p2.x - d, p1.y, p2.x - d, p2.y ) );
+            continue;
+          }
+          if ( cut_lft && cut_rgt ) {
+            line_g->Add( new Line( p1.x, p1.y + d, p2.x, p1.y + d ) );
+            line_g->Add( new Line( p1.x, p2.y - d, p2.x, p2.y - d ) );
+            continue;
+          }
+          if ( cut_bot ) {
+            line_g->Add( new Poly(
+              { p1.x + d, p1.y, p1.x + d, p2.y - d,
+                p2.x - d, p2.y - d, p2.x - d, p1.y
+              }
+            ) );
+            continue;
+          }
+          if ( cut_top ) {
+            line_g->Add( new Poly(
+              { p1.x + d, p2.y, p1.x + d, p1.y + d,
+                p2.x - d, p1.y + d, p2.x - d, p2.y
+              }
+            ) );
+            continue;
+          }
+          if ( cut_lft ) {
+            line_g->Add( new Poly(
+              { p1.x, p1.y + d, p2.x - d, p1.y + d,
+                p2.x - d, p2.y - d, p1.x, p2.y - d
+              }
+            ) );
+            continue;
+          }
+          if ( cut_rgt ) {
+            line_g->Add( new Poly(
+              { p2.x, p1.y + d, p1.x + d, p1.y + d,
+                p1.x + d, p2.y - d, p2.x, p2.y - d
+              }
+            ) );
+            continue;
+          }
+          line_g->Add( new Rect( p1.x + d, p1.y + d, p2.x - d, p2.y - d ) );
+        }
+      } else {
+        mark_g->Add( new Rect( p1, p2 ) );
+      }
+    }
+
+  }
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
+void Series::Build(
+  SVG::Group* g,
+  Axis* x_axis,
+  Axis* y_axis,
+  std::vector< LegendBox >& lb_list,
+  uint32_t bar_num,
+  uint32_t bar_tot
+)
+{
+  ComputeMarker();
+
+  // Define clip-box.
+  SVG::BoundaryBox clip_box;
+  if ( x_axis->angle == 0 ) {
+    clip_box.Update( x_axis->length, 0 );
+    clip_box.Update( 0, y_axis->length );
+  } else {
+    clip_box.Update( 0, x_axis->length );
+    clip_box.Update( y_axis->length, 0 );
+  }
+
+  // Used for extra margin in comparisons to account for precision issues. This
+  // may cause an unintended extra clip-detection near the corners, but the
+  // points will in that case be very near each other and will thus be detected
+  // by near(). Use different epsilons for near-detection and clip-detection in
+  // order to ensure that any spurious clip-detection will be caught by the
+  // more inclusive near-detection.
+  e1 =
+    std::max(
+      clip_box.max.x - clip_box.min.x,
+      clip_box.max.y - clip_box.min.y
+    ) * epsilon;
+  e2 = e1 * 0.1;
+
+  // Enlarge the clip-box a little bit to ensure that points lying exactly at
+  // the boundary are not excluded due to precision issues.
+  clip_box.min.x -= e1;
+  clip_box.min.y -= e1;
+  clip_box.max.x += e1;
+  clip_box.max.y += e1;
+
+  Group* line_g = nullptr;
+  Group* mark_g = nullptr;
+  Group* hole_g = nullptr;
+
+  if (
+    type == SeriesType::XY ||
+    type == SeriesType::Line ||
+    type == SeriesType::Scatter ||
+    type == SeriesType::Lollipop
+  ) {
+    if ( type != SeriesType::Scatter ) {
+      line_g = g->AddNewGroup();
+      ApplyLineStyle( line_g );
+    }
+    if ( marker_show ) {
+      mark_g = g->AddNewGroup();
+      ApplyFillStyle( mark_g );
+      if ( marker_hollow ) {
+        hole_g = g->AddNewGroup();
+        ApplyHoleStyle( hole_g );
+      }
+    }
+  }
+
+  if (
+    type == SeriesType::Bar
+  ) {
+    hole_g = g->AddNewGroup();
+    ApplyHoleStyle( hole_g );
+    mark_g = g->AddNewGroup();
+    ApplyFillStyle( mark_g );
+    line_g = g->AddNewGroup();
+    ApplyLineStyle( line_g );
+  }
+
+  if (
+    type == SeriesType::XY ||
+    type == SeriesType::Line ||
+    type == SeriesType::Scatter
+  ) {
+    BuildLine(
+      clip_box,
+      line_g, mark_g, hole_g,
+      x_axis, y_axis,
+      lb_list
+    );
+  }
+
+  if (
+    type == SeriesType::Lollipop ||
+    type == SeriesType::Bar
+  ) {
+    BuildBar(
+      clip_box,
+      line_g, mark_g, hole_g,
+      x_axis, y_axis,
+      lb_list,
+      bar_num, bar_tot
+    );
+  }
+
+  return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
