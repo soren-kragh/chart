@@ -67,7 +67,9 @@ private:
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
     uint32_t bar_num,
-    uint32_t bar_tot
+    uint32_t bar_tot,
+    std::vector< double >* ofs_pos = nullptr,
+    std::vector< double >* ofs_neg = nullptr
   );
   void BuildLine(
     const SVG::BoundaryBox& clip_box,
@@ -87,7 +89,9 @@ private:
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
     uint32_t bar_num,
-    uint32_t bar_tot
+    uint32_t bar_tot,
+    std::vector< double >* ofs_pos,
+    std::vector< double >* ofs_neg
   );
 
   bool Inside(

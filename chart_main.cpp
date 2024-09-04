@@ -128,7 +128,10 @@ void Main::CalcLegendSize( Group* g, LegendDims& legend_dims )
       series->type == SeriesType::XY ||
       series->type == SeriesType::Line ||
       series->type == SeriesType::Lollipop;
-    if ( series->type == SeriesType::Bar ) {
+    if (
+      series->type == SeriesType::Bar ||
+      series->type == SeriesType::StackedBar
+    ) {
       area_id = true;
     }
     series->ComputeMarker();
@@ -414,7 +417,10 @@ void Main::BuildLegend( Group* g, int nx )
       }
     }
 
-    if ( series->type == SeriesType::Bar ) {
+    if (
+      series->type == SeriesType::Bar ||
+      series->type == SeriesType::StackedBar
+    ) {
       U area_id_size = legend_dims.ch * 1.2;
       bool has_interior = area_id_size > series->width;
       Point p1{ marker_p.x - area_id_size/2, marker_p.y - area_id_size/2 };
@@ -604,18 +610,43 @@ void Main::AxisPrepare( void )
     a->data_min = a->log_scale ? 10 : 0;
     a->data_max = a->log_scale ? 10 : 0;
   }
-  for ( Series* series : series_list ) {
-    Axis* ax = axis_x;
-    Axis* ay = axis_y[ series->axis_y_n ];
-    for ( auto& datum : series->datum_list ) {
-      if ( !ax->Valid( datum.x ) ) continue;
-      if ( !ay->Valid( datum.y ) ) continue;
-      if ( !ax->data_def || ax->data_min > datum.x ) ax->data_min = datum.x;
-      if ( !ax->data_def || ax->data_max < datum.x ) ax->data_max = datum.x;
-      if ( !ay->data_def || ay->data_min > datum.y ) ay->data_min = datum.y;
-      if ( !ay->data_def || ay->data_max < datum.y ) ay->data_max = datum.y;
-      ax->data_def = true;
-      ay->data_def = true;
+  {
+    std::vector< double > ofs_pos;
+    std::vector< double > ofs_neg;
+    bool first = true;
+    for ( Series* series : series_list ) {
+      if ( first || series->type == SeriesType::Bar ) {
+        ofs_pos.assign( categoty_list.size(), 0.0 );
+        ofs_neg.assign( categoty_list.size(), 0.0 );
+      }
+      Axis* ax = axis_x;
+      Axis* ay = axis_y[ series->axis_y_n ];
+      for ( auto& datum : series->datum_list ) {
+        double x = datum.x;
+        double y = datum.y;
+        if (
+          series->type == SeriesType::Bar ||
+          series->type == SeriesType::StackedBar
+        ) {
+          size_t i = x;
+          if ( y < 0 ) {
+            y += ofs_neg.at( i );
+            ofs_neg[ i ] = y;
+          } else {
+            y += ofs_pos.at( i );
+            ofs_pos[ i ] = y;
+          }
+        }
+        if ( !ax->Valid( x ) ) continue;
+        if ( !ay->Valid( y ) ) continue;
+        if ( !ax->data_def || ax->data_min > x ) ax->data_min = x;
+        if ( !ax->data_def || ax->data_max < x ) ax->data_max = x;
+        if ( !ay->data_def || ay->data_min > y ) ay->data_min = y;
+        if ( !ay->data_def || ay->data_max < y ) ay->data_max = y;
+        ax->data_def = true;
+        ay->data_def = true;
+      }
+      first = false;
     }
   }
 
@@ -816,28 +847,59 @@ void Main::BuildSeries(
 )
 {
   uint32_t bar_tot = 0;
-//  bool stacked_bar_num = 0;
+  uint32_t lol_tot = 0;
 
   for ( Series* series : series_list ) {
-    if (
-      series->type == SeriesType::Lollipop ||
-      series->type == SeriesType::Bar
-    ) {
+    if ( series->type == SeriesType::Lollipop ) {
+      lol_tot++;
+    }
+    if ( series->type == SeriesType::Bar ) {
       bar_tot++;
+    }
+    if ( series->type == SeriesType::StackedBar ) {
+      if ( bar_tot == 0 ) bar_tot++;
     }
   }
 
-  uint32_t bar_num = 0;
-  for ( Series* series : series_list ) {
-    if (
-      series->type == SeriesType::Lollipop ||
-      series->type == SeriesType::Bar
-    ) {
-      Group* series_g = chartbox_g->AddNewGroup();
-      series->Build(
-        series_g, axis_x, axis_y[ series->axis_y_n ], lb_list, bar_num, bar_tot
-      );
-      bar_num++;
+  {
+    std::vector< double > ofs_pos;
+    std::vector< double > ofs_neg;
+    uint32_t bar_num = 0;
+    bool first = true;
+    for ( Series* series : series_list ) {
+      if (
+        series->type == SeriesType::Bar ||
+        series->type == SeriesType::StackedBar
+      ) {
+        if ( first || series->type == SeriesType::Bar ) {
+          ofs_pos.assign( categoty_list.size(), 0.0 );
+          ofs_neg.assign( categoty_list.size(), 0.0 );
+        }
+        if ( series->type == SeriesType::Bar ) {
+          if ( !first ) bar_num++;
+        }
+        Group* series_g = chartbox_g->AddNewGroup();
+        series->Build(
+          series_g, axis_x, axis_y[ series->axis_y_n ], lb_list,
+          bar_num, bar_tot,
+          &ofs_pos, &ofs_neg
+        );
+        first = false;
+      }
+    }
+  }
+
+  {
+    uint32_t lol_num = 0;
+    for ( Series* series : series_list ) {
+      if ( series->type == SeriesType::Lollipop ) {
+        Group* series_g = chartbox_g->AddNewGroup();
+        series->Build(
+          series_g, axis_x, axis_y[ series->axis_y_n ], lb_list,
+          lol_num, lol_tot
+        );
+        lol_num++;
+      }
     }
   }
 

@@ -515,7 +515,9 @@ void Series::BuildBar(
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
   uint32_t bar_num,
-  uint32_t bar_tot
+  uint32_t bar_tot,
+  std::vector< double >* ofs_pos,
+  std::vector< double >* ofs_neg
 )
 {
   double tx = (bar_tot == 1) ? 1.0 : bar_cluster_width;
@@ -527,14 +529,27 @@ void Series::BuildBar(
   Point p2;
 
   for ( Datum& datum : datum_list ) {
+    size_t i = datum.x;
     double x = datum.x + cx;
     bool valid = x_axis->Valid( x ) && y_axis->Valid( datum.y );
     if ( !valid || datum.y == 0 ) continue;
 
     p1.x = x_axis->Coor( x );
-    p1.y = y_axis->Coor( 0 );
     p2.x = p1.x;
-    p2.y = y_axis->Coor( datum.y );
+    if ( type == SeriesType::Lollipop ) {
+      p1.y = y_axis->Coor( 0 );
+      p2.y = y_axis->Coor( datum.y );
+    } else {
+      if ( datum.y < 0 ) {
+        p1.y = y_axis->Coor( ofs_neg->at( i ) );
+        ofs_neg->at( i ) += datum.y;
+        p2.y = y_axis->Coor( ofs_neg->at( i ) );
+      } else {
+        p1.y = y_axis->Coor( ofs_pos->at( i ) );
+        ofs_pos->at( i ) += datum.y;
+        p2.y = y_axis->Coor( ofs_pos->at( i ) );
+      }
+    }
     if ( x_axis->angle != 0 ) {
       std::swap( p1.x, p1.y );
       std::swap( p2.x, p2.y );
@@ -571,7 +586,7 @@ void Series::BuildBar(
       UpdateLegendBoxes( lb_list, p1, p2 );
     }
 
-    if ( type == SeriesType::Bar ) {
+    if ( type == SeriesType::Bar || type == SeriesType::StackedBar ) {
       U d = std::abs( x_axis->Coor( wx / 2 ) - x_axis->Coor( 0 ) );
       bool cut_bot = false;
       bool cut_top = false;
@@ -676,7 +691,9 @@ void Series::Build(
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
   uint32_t bar_num,
-  uint32_t bar_tot
+  uint32_t bar_tot,
+  std::vector< double >* ofs_pos,
+  std::vector< double >* ofs_neg
 )
 {
   ComputeMarker();
@@ -736,7 +753,8 @@ void Series::Build(
   }
 
   if (
-    type == SeriesType::Bar
+    type == SeriesType::Bar ||
+    type == SeriesType::StackedBar
   ) {
     hole_g = g->AddNewGroup();
     ApplyHoleStyle( hole_g );
@@ -761,14 +779,16 @@ void Series::Build(
 
   if (
     type == SeriesType::Lollipop ||
-    type == SeriesType::Bar
+    type == SeriesType::Bar ||
+    type == SeriesType::StackedBar
   ) {
     BuildBar(
       clip_box,
       line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list,
-      bar_num, bar_tot
+      bar_num, bar_tot,
+      ofs_pos, ofs_neg
     );
   }
 
