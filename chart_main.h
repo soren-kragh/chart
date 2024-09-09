@@ -84,7 +84,8 @@ private:
   );
 
   void BuildSeries(
-    SVG::Group* chartbox_g,
+    SVG::Group* chartbox_g1,
+    SVG::Group* chartbox_g2,
     std::vector< LegendBox >& lb_list
   );
 
@@ -103,7 +104,7 @@ private:
 
   std::vector< Series* > series_list;
 
-  std::vector< std::string > categoty_list;
+  std::vector< std::string > category_list;
 
   Axis* axis_x;
   Axis* axis_y[ 2 ];

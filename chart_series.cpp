@@ -181,6 +181,9 @@ int Series::ClipLine(
   const BoundaryBox& clip_box
 )
 {
+  // Record original p1.
+  Point o1 = p1;
+
   auto intersect_x = []( U x, Point p1, Point p2 )
   {
     U dx = p1.x - p2.x;
@@ -251,6 +254,20 @@ int Series::ClipLine(
   if ( top_v ) { *c = top_c; c = &c2; n++; }
   if ( lft_v ) { *c = lft_c; c = &c2; n++; }
   if ( rgt_v ) { *c = rgt_c; c = &c2; n++; }
+
+  // When we have two clip points, we must make sure that the order of points on
+  // line is p1:c1:c2:p2, where p1 and p2 are the original arguments.
+  if ( n == 2 ) {
+    p1 = o1;    // Restore original argument.
+    double dx1 = c1.x - p1.x;
+    double dy1 = c1.y - p1.y;
+    double dx2 = c2.x - p1.x;
+    double dy2 = c2.y - p1.y;
+    if ( dx1*dx1 + dy1*dy1 > dx2*dx2 + dy2*dy2 ) {
+      std::swap( c1, c2 );
+    }
+  }
+
   return n;
 }
 
@@ -300,7 +317,8 @@ void Series::ComputeMarker( SVG::U rim )
     type != SeriesType::XY &&
     type != SeriesType::Scatter &&
     type != SeriesType::Line &&
-    type != SeriesType::Lollipop
+    type != SeriesType::Lollipop &&
+    type != SeriesType::Area
   ) {
     return;
   }
@@ -347,9 +365,9 @@ void Series::ComputeMarker( SVG::U rim )
   }
   marker_radius = marker_diameter / 2;
   marker_show =
-    (type == SeriesType::XY)
-    ? (marker_diameter > width)
-    : (marker_diameter > 0);
+    (type == SeriesType::Scatter)
+    ? (marker_diameter > 0)
+    : (marker_diameter > width);
   marker_hollow = marker_diameter >= 3 * width;
 
   compute( marker_int, -width );
@@ -407,101 +425,168 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::BuildLine(
+void Series::BuildArea(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
   Group* mark_g,
   Group* hole_g,
+  Group* area_g,
   Axis* x_axis,
   Axis* y_axis,
-  std::vector< LegendBox >& lb_list
+  std::vector< LegendBox >& lb_list,
+  uint32_t bar_num,
+  uint32_t bar_tot,
+  std::vector< double >* ofs_pos,
+  std::vector< double >* ofs_neg
 )
 {
-  Poly* poly = nullptr;
-  bool adding_segments = false;
-
-  Point prv;
-  auto add_point = [&]( Point p, bool clipped = false )
+  U clamp_coor = y_axis->Coor( 0 );
+  auto clamp = [&]( Point& p )
   {
-    if ( type == SeriesType::XY || type == SeriesType::Line ) {
-      if ( !adding_segments ) line_g->Add( poly = new Poly() );
-      poly->Add( p );
-      if ( adding_segments ) {
-        UpdateLegendBoxes( lb_list, prv, p );
+    if ( x_axis->angle == 0 ) {
+      p.y = clamp_coor;
+    } else {
+      p.x = clamp_coor;
+    }
+  };
+
+  Poly* area_obj = nullptr;
+  Poly* line_obj = nullptr;
+  Point prv;
+  auto add_point = [&]( Point p, bool clipped, bool part_of_line )
+  {
+    if ( area_obj ) {
+      UpdateLegendBoxes( lb_list, prv, p );
+    } else {
+      area_g->Add( area_obj = new Poly() );
+    }
+    area_obj->Add( p );
+    if ( part_of_line ) {
+      if ( line_obj ) {
+        line_obj->Add( p );
+        if ( clipped ) line_obj = nullptr;
+      } else {
+        line_g->Add( line_obj = new Poly() );
+        line_obj->Add( p );
+      }
+      if ( !clipped && marker_show ) {
+        BuildMarker( mark_g, marker_out, p );
+        if ( marker_hollow ) {
+          BuildMarker( hole_g, marker_int, p );
+        }
       }
     } else {
-      UpdateLegendBoxes( lb_list, p, p );
-    }
-    if ( !clipped && marker_show ) {
-      BuildMarker( mark_g, marker_out, p );
-      if ( marker_hollow ) {
-        BuildMarker( hole_g, marker_int, p );
-      }
+      line_obj = nullptr;
     }
     prv = p;
-    adding_segments = true;
   };
   auto end_point = [&]( void )
   {
-    poly = nullptr;
-    adding_segments = false;
+    area_obj = nullptr;
+    line_obj = nullptr;
   };
 
+  double sum = 0;
+  for ( const Datum& datum : datum_list ) {
+    sum += datum.y;
+  }
   bool first = true;
   Point cur;
   Point old;
-  for ( Datum& datum : datum_list ) {
+  bool cur_valid;
+  bool cur_inside;
+  bool old_inside;
+  size_t n = datum_list.size();
+  for ( const Datum& datum : datum_list ) {
+    bool rtz = (--n == 0);
     old = cur;
-    if ( x_axis->angle == 0 ) {
-      cur.x = x_axis->Coor( datum.x );
-      cur.y = y_axis->Coor( datum.y );
+    old_inside = cur_inside;
+    size_t i = datum.x;
+    double y = datum.y;
+    if ( y < 0 || (y == 0 && sum < 0) ) {
+      y += ofs_neg->at( i );
+      ofs_neg->at( i ) = y;
     } else {
-      cur.y = x_axis->Coor( datum.x );
-      cur.x = y_axis->Coor( datum.y );
+      y += ofs_pos->at( i );
+      ofs_pos->at( i ) = y;
     }
-    bool valid = x_axis->Valid( datum.x ) && y_axis->Valid( datum.y );
-    bool inside = Inside( cur, clip_box );
-    if ( !valid ) {
-      end_point();
-      first = true;
-    } else
+
+    cur.x = x_axis->Coor( datum.x );
+    cur.y = y_axis->Coor( y );
+    if ( x_axis->angle != 0 ) std::swap( cur.x, cur.y );
+    cur_inside = Inside( cur, clip_box );
+    cur_valid = y_axis->Valid( y );
+
+    bool old_part_of_line = true;
+    bool cur_part_of_line = true;
+
     if ( first ) {
-      if ( inside ) {
-        add_point( cur );
+      if ( !cur_valid ) continue;
+      old = cur;
+      clamp( old );
+      old_inside = Inside( old, clip_box );
+      if ( old_inside ) {
+        add_point( old, false, false );
       }
+      old_part_of_line = false;
       first = false;
-    } else {
-      if ( adding_segments && inside ) {
-        // Common case when we stay inside the chart area.
-        add_point( cur );
-      } else {
-        // Handle clipping in and out of the chart area.
-        Point c1, c2;
-        int n = ClipLine( c1, c2, old, cur, clip_box );
-        if ( !adding_segments ) {
-          // We were outside.
-          if ( inside ) {
+    }
+
+    while ( true ) {
+      if ( cur_valid ) {
+        if ( old_inside && cur_inside ) {
+          // Common case when we stay inside the chart area.
+          add_point( cur, false, cur_part_of_line );
+        } else {
+          // Handle clipping in and out of the chart area.
+          Point c1, c2;
+          int n = ClipLine( c1, c2, old, cur, clip_box );
+          if ( old_inside ) {
+            // We went from inside to now outside.
+            if ( n == 1 ) add_point( c1, true, old_part_of_line );
+          } else
+          if ( cur_inside ) {
             // We went from outside to now inside.
-            if ( n == 1 ) add_point( c1, true );
-            add_point( cur );
+            if ( n == 1 ) add_point( c1, true, old_part_of_line );
+            add_point( cur, false, cur_part_of_line );
           } else {
             if ( n == 2 ) {
               // We are still outside, but the line segment passes through the
               // chart area.
-              add_point( c1, true );
-              add_point( c2, true );
-              end_point();
+              add_point( c1, true, old_part_of_line && cur_part_of_line );
+              add_point( c2, true, old_part_of_line && cur_part_of_line );
             }
           }
-        } else {
-          // We went from inside to now outside.
-          if ( n == 1 ) add_point( c1, true );
-          end_point();
         }
+      } else {
+        cur = old;
+        cur_inside = old_inside;
+        cur_valid = true;
+        rtz = true;
       }
+      if ( rtz ) {
+        old = cur;
+        old_inside = cur_inside;
+        clamp( cur );
+        cur_inside = Inside( cur, clip_box );
+        rtz = false;
+        old_part_of_line = false;
+        cur_part_of_line = false;
+        continue;
+      }
+      break;
     }
+
+    if ( !cur_part_of_line ) {
+      end_point();
+      first = true;
+    }
+
   }
+
   end_point();
+
+  return;
 }
 
 //------------------------------------------------------------------------------
@@ -528,7 +613,7 @@ void Series::BuildBar(
   Point p1;
   Point p2;
 
-  for ( Datum& datum : datum_list ) {
+  for ( const Datum& datum : datum_list ) {
     size_t i = datum.x;
     double x = datum.x + cx;
     bool valid = x_axis->Valid( x ) && y_axis->Valid( datum.y );
@@ -685,8 +770,108 @@ void Series::BuildBar(
 
 //------------------------------------------------------------------------------
 
+void Series::BuildLine(
+  const SVG::BoundaryBox& clip_box,
+  Group* line_g,
+  Group* mark_g,
+  Group* hole_g,
+  Axis* x_axis,
+  Axis* y_axis,
+  std::vector< LegendBox >& lb_list
+)
+{
+  Poly* poly = nullptr;
+  bool adding_segments = false;
+
+  Point prv;
+  auto add_point = [&]( Point p, bool clipped = false )
+  {
+    if ( type == SeriesType::XY || type == SeriesType::Line ) {
+      if ( !adding_segments ) line_g->Add( poly = new Poly() );
+      poly->Add( p );
+      if ( adding_segments ) {
+        UpdateLegendBoxes( lb_list, prv, p );
+      }
+    } else {
+      UpdateLegendBoxes( lb_list, p, p );
+    }
+    if ( !clipped && marker_show ) {
+      BuildMarker( mark_g, marker_out, p );
+      if ( marker_hollow ) {
+        BuildMarker( hole_g, marker_int, p );
+      }
+    }
+    prv = p;
+    adding_segments = true;
+  };
+  auto end_point = [&]( void )
+  {
+    poly = nullptr;
+    adding_segments = false;
+  };
+
+  bool first = true;
+  Point cur;
+  Point old;
+  for ( const Datum& datum : datum_list ) {
+    old = cur;
+    if ( x_axis->angle == 0 ) {
+      cur.x = x_axis->Coor( datum.x );
+      cur.y = y_axis->Coor( datum.y );
+    } else {
+      cur.y = x_axis->Coor( datum.x );
+      cur.x = y_axis->Coor( datum.y );
+    }
+    bool valid = x_axis->Valid( datum.x ) && y_axis->Valid( datum.y );
+    bool inside = Inside( cur, clip_box );
+    if ( !valid ) {
+      end_point();
+      first = true;
+    } else
+    if ( first ) {
+      if ( inside ) {
+        add_point( cur );
+      }
+      first = false;
+    } else {
+      if ( adding_segments && inside ) {
+        // Common case when we stay inside the chart area.
+        add_point( cur );
+      } else {
+        // Handle clipping in and out of the chart area.
+        Point c1, c2;
+        int n = ClipLine( c1, c2, old, cur, clip_box );
+        if ( !adding_segments ) {
+          // We were outside.
+          if ( inside ) {
+            // We went from outside to now inside.
+            if ( n == 1 ) add_point( c1, true );
+            add_point( cur );
+          } else {
+            if ( n == 2 ) {
+              // We are still outside, but the line segment passes through the
+              // chart area.
+              add_point( c1, true );
+              add_point( c2, true );
+              end_point();
+            }
+          }
+        } else {
+          // We went from inside to now outside.
+          if ( n == 1 ) add_point( c1, true );
+          end_point();
+        }
+      }
+    }
+  }
+  end_point();
+}
+
+//------------------------------------------------------------------------------
+
 void Series::Build(
-  SVG::Group* g,
+  SVG::Group* g1,
+  SVG::Group* g2,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -739,42 +924,48 @@ void Series::Build(
     type == SeriesType::Lollipop
   ) {
     if ( type != SeriesType::Scatter ) {
-      line_g = g->AddNewGroup();
+      line_g = g1->AddNewGroup();
       ApplyLineStyle( line_g );
     }
     if ( marker_show ) {
-      mark_g = g->AddNewGroup();
+      mark_g = g1->AddNewGroup();
       ApplyFillStyle( mark_g );
       if ( marker_hollow ) {
-        hole_g = g->AddNewGroup();
+        hole_g = g1->AddNewGroup();
         ApplyHoleStyle( hole_g );
       }
     }
+  }
+
+  if ( type == SeriesType::Area ) {
+    line_g = g1->AddNewGroup();
+    ApplyLineStyle( line_g );
+    mark_g = g1->AddNewGroup();
+    ApplyFillStyle( mark_g );
+    hole_g = g1->AddNewGroup();
+    ApplyHoleStyle( hole_g );
+    Group* area_g = g2->AddNewGroup();
+    ApplyHoleStyle( area_g );
+    BuildArea(
+      clip_box,
+      line_g, mark_g, hole_g, area_g,
+      x_axis, y_axis,
+      lb_list,
+      bar_num, bar_tot,
+      ofs_pos, ofs_neg
+    );
   }
 
   if (
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar
   ) {
-    hole_g = g->AddNewGroup();
+    hole_g = g1->AddNewGroup();
     ApplyHoleStyle( hole_g );
-    mark_g = g->AddNewGroup();
+    mark_g = g1->AddNewGroup();
     ApplyFillStyle( mark_g );
-    line_g = g->AddNewGroup();
+    line_g = g1->AddNewGroup();
     ApplyLineStyle( line_g );
-  }
-
-  if (
-    type == SeriesType::XY ||
-    type == SeriesType::Line ||
-    type == SeriesType::Scatter
-  ) {
-    BuildLine(
-      clip_box,
-      line_g, mark_g, hole_g,
-      x_axis, y_axis,
-      lb_list
-    );
   }
 
   if (
@@ -789,6 +980,19 @@ void Series::Build(
       lb_list,
       bar_num, bar_tot,
       ofs_pos, ofs_neg
+    );
+  }
+
+  if (
+    type == SeriesType::XY ||
+    type == SeriesType::Line ||
+    type == SeriesType::Scatter
+  ) {
+    BuildLine(
+      clip_box,
+      line_g, mark_g, hole_g,
+      x_axis, y_axis,
+      lb_list
     );
   }
 

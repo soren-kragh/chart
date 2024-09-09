@@ -62,7 +62,8 @@ private:
   );
 
   void Build(
-    SVG::Group* g,
+    SVG::Group* g1,
+    SVG::Group* g2,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -71,14 +72,19 @@ private:
     std::vector< double >* ofs_pos = nullptr,
     std::vector< double >* ofs_neg = nullptr
   );
-  void BuildLine(
+  void BuildArea(
     const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
     SVG::Group* hole_g,
+    SVG::Group* area_g,
     Axis* x_axis,
     Axis* y_axis,
-    std::vector< LegendBox >& lb_list
+    std::vector< LegendBox >& lb_list,
+    uint32_t bar_num,
+    uint32_t bar_tot,
+    std::vector< double >* ofs_pos,
+    std::vector< double >* ofs_neg
   );
   void BuildBar(
     const SVG::BoundaryBox& clip_box,
@@ -92,6 +98,15 @@ private:
     uint32_t bar_tot,
     std::vector< double >* ofs_pos,
     std::vector< double >* ofs_neg
+  );
+  void BuildLine(
+    const SVG::BoundaryBox& clip_box,
+    SVG::Group* line_g,
+    SVG::Group* mark_g,
+    SVG::Group* hole_g,
+    Axis* x_axis,
+    Axis* y_axis,
+    std::vector< LegendBox >& lb_list
   );
 
   bool Inside(
