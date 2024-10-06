@@ -32,6 +32,8 @@ public:
 
   void SetChartArea( SVG::U width, SVG::U height );
   void SetMargin( SVG::U margin );
+
+  // Use only black default series styles.
   void SetBW( bool bw = true );
 
   void SetTitle( const std::string& txt );
@@ -48,7 +50,9 @@ public:
   Axis* AxisX( void ) { return axis_x; }
   Axis* AxisY( int n = 0 ) { return axis_y[ n ]; }
 
-  Series* AddSeries( const std::string name );
+  // A default style a automatically assigned new series, but style properties
+  // can subsequently be changed.
+  Series* AddSeries( SeriesType type );
 
   // Add categories for string based X-values.
   void AddCategory( const std::string category );
@@ -116,6 +120,9 @@ private:
   SVG::U legend_sx  = 16;       // X-space around legend box.
   SVG::U legend_sy  = 16;       // Y-space around legend box.
 
+  // When shoving the legend ID for a series having an area, this defines the
+  // size relative to the characters.
+  double legend_area_id_fact = 1.2;
 };
 
 }

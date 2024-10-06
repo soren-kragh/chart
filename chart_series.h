@@ -28,20 +28,25 @@ class Series
 
 public:
 
-  Series( std::string name );
+  Series( SeriesType type );
   ~Series( void );
 
-  void SetType( SeriesType type );
+  void SetName( const std::string name );
 
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
 
   void SetStyle( int style );
-  SVG::Color* Color( void ) { return &color; }
-  void SetWidth( SVG::U width );
-  void SetDash( SVG::U dash );
-  void SetDash( SVG::U dash, SVG::U hole );
 
+  // Line width also affects hollow markers, so defining a line width while line
+  // visibility is disabled can make sense.
+  void SetLineVisibility( bool visible );
+  SVG::Color* LineColor( void ) { return &line_color; }
+  void SetLineWidth( SVG::U width );
+  void SetLineDash( SVG::U dash );
+  void SetLineDash( SVG::U dash, SVG::U hole );
+
+  void SetMarkerVisibility( bool visible );
   void SetMarkerSize( SVG::U marker_size );
   void SetMarkerShape( MarkerShape marker_shape );
 
@@ -118,15 +123,16 @@ private:
     const SVG::BoundaryBox& clip_box
   );
 
-  std::string name;
   SeriesType type;
+  std::string name;
   int axis_y_n;
 
   std::vector< SVG::Color > color_list;
-  SVG::Color color;
-  SVG::U width;
-  SVG::U dash;
-  SVG::U hole;
+  SVG::Color line_color;
+  bool line_visible;
+  SVG::U line_width;
+  SVG::U line_dash;
+  SVG::U line_hole;
 
   // Used for floating point precision issues.
   double e1 = 0;
@@ -137,6 +143,10 @@ private:
 
   std::vector< Datum > datum_list;
 
+  bool        marker_visible;
+  SVG::U      marker_size;
+  MarkerShape marker_shape;
+
   typedef struct {
     SVG::U x1;
     SVG::U y1;
@@ -144,17 +154,16 @@ private:
     SVG::U y2;
   } MarkerDims;
 
-  SVG::U      marker_size;
-  MarkerShape marker_shape;
-  bool        marker_show;
-  bool        marker_hollow;
-  SVG::U      marker_diameter;
-  SVG::U      marker_radius;
-  MarkerDims  marker_int;       // Interior dimension for hollow marker.
-  MarkerDims  marker_out;       // Outer marker dimension.
-  MarkerDims  marker_rim;       // Dimension of rim around marker.
+  // Derived marker variables:
+  bool       marker_show;
+  bool       marker_hollow;
+  SVG::U     marker_diameter;
+  SVG::U     marker_radius;
+  MarkerDims marker_int;        // Interior dimension for hollow marker.
+  MarkerDims marker_out;        // Outer marker dimension.
+  MarkerDims marker_rim;        // Dimension of rim around marker.
 
-  // Compute marker_* variables.
+  // Compute derived marker_* variables.
   void ComputeMarker( SVG::U rim = 0 );
 
   // Build marker based on marker_* variables.

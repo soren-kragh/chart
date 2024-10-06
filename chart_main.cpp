@@ -85,9 +85,9 @@ void Main::SetLegendPos( Pos pos )
   legend_pos = pos;
 }
 
-Series* Main::AddSeries( const std::string name )
+Series* Main::AddSeries( SeriesType type )
 {
-  Series* series = new Series( name );
+  Series* series = new Series( type );
   int style = series_list.size() % 64;
   if ( bw ) style = (style % 8) + 64;
   series->SetStyle( style );
@@ -144,7 +144,9 @@ void Main::CalcLegendSize( Group* g, LegendDims& legend_dims )
       U h = mo.y2 - mo.y1;
       mh = std::max( mh, h );
     }
-    if ( outline ) mw = std::max( mw, series->width );
+    if ( outline && series->line_visible ) {
+      mw = std::max( mw, series->line_width );
+    }
     uint32_t cur_chars = 0;
     uint32_t cur_lines = 1;
     for ( char c : series->name ) {
@@ -166,7 +168,7 @@ void Main::CalcLegendSize( Group* g, LegendDims& legend_dims )
   g->DeleteFront();
   U ch = bb.max.y - bb.min.y;
   U corner_radius = ch / 2;
-  U area_id_size = ch * 1.2;
+  U area_id_size = ch * legend_area_id_fact;
   U by = (mw > 0) ? +legend_by : 0;
   legend_dims.ch = ch;
   legend_dims.mw = mw;
@@ -391,9 +393,11 @@ void Main::BuildLegend( Group* g, int nx )
     Point marker_p{ px + legend_dims.mw/2, py - legend_dims.h/2 };
 
     if (
-      series->type == SeriesType::XY ||
-      series->type == SeriesType::Line ||
-      series->type == SeriesType::Lollipop
+      series->line_visible &&
+      ( series->type == SeriesType::XY ||
+        series->type == SeriesType::Line ||
+        series->type == SeriesType::Lollipop
+      )
     ) {
       U corner_radius = legend_dims.ch / 2;
       g->Add(
@@ -423,19 +427,21 @@ void Main::BuildLegend( Group* g, int nx )
       series->type == SeriesType::StackedBar ||
       series->type == SeriesType::Area
     ) {
-      U area_id_size = legend_dims.ch * 1.2;
-      bool has_interior = area_id_size > series->width;
+      U area_id_size = legend_dims.ch * legend_area_id_fact;
+      bool has_interior = area_id_size > series->line_width;
       Point p1{ marker_p.x - area_id_size/2, marker_p.y - area_id_size/2 };
       Point p2{ marker_p.x + area_id_size/2, marker_p.y + area_id_size/2 };
       g->Add( new Rect( p1, p2 ) );
       if ( has_interior ) {
         series->ApplyHoleStyle( g->Last() );
-        p1.x += series->width / 2;
-        p1.y += series->width / 2;
-        p2.x -= series->width / 2;
-        p2.y -= series->width / 2;
-        g->Add( new Rect( p1, p2 ) );
-        series->ApplyLineStyle( g->Last() );
+        if ( series->line_visible ) {
+          p1.x += series->line_width / 2;
+          p1.y += series->line_width / 2;
+          p2.x -= series->line_width / 2;
+          p2.y -= series->line_width / 2;
+          g->Add( new Rect( p1, p2 ) );
+          series->ApplyLineStyle( g->Last() );
+        }
       } else {
         series->ApplyFillStyle( g->Last() );
       }
@@ -940,7 +946,8 @@ void Main::BuildSeries(
     if (
       series->type == SeriesType::XY ||
       series->type == SeriesType::Line ||
-      series->type == SeriesType::Scatter
+      series->type == SeriesType::Scatter ||
+      series->type == SeriesType::Point
     ) {
       Group* series_g = g1->AddNewGroup();
       series->Build(
