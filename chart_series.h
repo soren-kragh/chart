@@ -47,8 +47,8 @@ public:
   void SetLineDash( SVG::U dash, SVG::U hole );
 
   void SetMarkerVisibility( bool visible );
-  void SetMarkerSize( SVG::U marker_size );
-  void SetMarkerShape( MarkerShape marker_shape );
+  void SetMarkerSize( SVG::U size );
+  void SetMarkerShape( MarkerShape shape );
 
   // For series types where the X value is a string (all but XY and Scatter),
   // the x-value below is an index into Chart::Main::categoty_list.

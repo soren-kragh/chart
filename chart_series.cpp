@@ -50,7 +50,7 @@ Series::Series( SeriesType type )
     type == SeriesType::Point ||
     type == SeriesType::Lollipop
   );
-  SetMarkerSize( -1 );  // Negative means auto.
+  SetMarkerSize( 3 * line_width );
   SetMarkerShape( MarkerShape::Circle );
 }
 
@@ -111,13 +111,14 @@ void Series::SetStyle( int style )
     SetLineWidth( 2 );
     SetLineDash( 20, 12 );
   }
+  SetMarkerSize( line_width * 3 );
 }
 
 //------------------------------------------------------------------------------
 
 void Series::SetLineVisibility( bool visible )
 {
-  line_visible = visible && this->line_width > 0;
+  line_visible = visible && line_width > 0;
 }
 
 void Series::SetLineWidth( SVG::U width )
@@ -146,17 +147,22 @@ void Series::SetLineDash( SVG::U dash, SVG::U hole )
 
 void Series::SetMarkerVisibility( bool visible )
 {
-  this->marker_visible = visible;
+  marker_visible = visible && marker_size > 0;
 }
 
-void Series::SetMarkerSize( SVG::U marker_size )
+void Series::SetMarkerSize( SVG::U size )
 {
-  this->marker_size = marker_size;
+  if ( size > 0 ) {
+    marker_size = size;
+  } else {
+    marker_size = 0;
+    marker_visible = false;
+  }
 }
 
-void Series::SetMarkerShape( MarkerShape marker_shape )
+void Series::SetMarkerShape( MarkerShape shape )
 {
-  this->marker_shape = marker_shape;
+  marker_shape = shape;
 }
 
 //------------------------------------------------------------------------------
@@ -392,16 +398,7 @@ void Series::ComputeMarker( SVG::U rim )
     return;
   };
 
-  if ( marker_size < 0 ) {
-    if (
-      type == SeriesType::Scatter ||
-      type == SeriesType::Point ||
-      type == SeriesType::Lollipop
-    )
-      marker_diameter = 3 * line_width;
-  } else {
-    marker_diameter = marker_size;
-  }
+  marker_diameter = marker_size;
   marker_radius = marker_diameter / 2;
   marker_show =
     marker_visible &&
