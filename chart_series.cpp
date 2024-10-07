@@ -34,6 +34,7 @@ Series::Series( SeriesType type )
   SetName( "" );
   SetAxisY( 0 );
 
+  SetLineWidth( 1 );
   SetLineVisibility(
     type == SeriesType::XY ||
     type == SeriesType::Line ||
@@ -42,15 +43,16 @@ Series::Series( SeriesType type )
     type == SeriesType::StackedBar
   );
   line_color.Set( ColorName::Black );
-  SetLineWidth( 1 );
   SetLineDash( 0 );
 
-  SetMarkerVisibility(
-    type == SeriesType::Scatter ||
-    type == SeriesType::Point ||
-    type == SeriesType::Lollipop
+  SetMarkerSize(
+    ( type == SeriesType::Scatter ||
+      type == SeriesType::Point ||
+      type == SeriesType::Lollipop
+    )
+    ? 12
+    : 0
   );
-  SetMarkerSize( 3 * line_width );
   SetMarkerShape( MarkerShape::Circle );
 }
 
@@ -111,7 +113,14 @@ void Series::SetStyle( int style )
     SetLineWidth( 2 );
     SetLineDash( 20, 12 );
   }
-  SetMarkerSize( line_width * 3 );
+  SetMarkerSize(
+    ( type == SeriesType::Scatter ||
+      type == SeriesType::Point ||
+      type == SeriesType::Lollipop
+    )
+    ? 12
+    : 0
+  );
 }
 
 //------------------------------------------------------------------------------
@@ -154,6 +163,7 @@ void Series::SetMarkerSize( SVG::U size )
 {
   if ( size > 0 ) {
     marker_size = size;
+    marker_visible = true;
   } else {
     marker_size = 0;
     marker_visible = false;
@@ -957,11 +967,12 @@ void Series::Build(
 
   if (
     type == SeriesType::XY ||
-    type == SeriesType::Line ||
     type == SeriesType::Scatter ||
+    type == SeriesType::Line ||
+    type == SeriesType::Point ||
     type == SeriesType::Lollipop
   ) {
-    if ( type != SeriesType::Scatter ) {
+    if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
       line_g = g1->AddNewGroup();
       ApplyLineStyle( line_g );
     }
@@ -1023,8 +1034,9 @@ void Series::Build(
 
   if (
     type == SeriesType::XY ||
+    type == SeriesType::Scatter ||
     type == SeriesType::Line ||
-    type == SeriesType::Scatter
+    type == SeriesType::Point
   ) {
     BuildLine(
       clip_box,
