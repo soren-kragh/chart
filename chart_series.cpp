@@ -21,6 +21,9 @@ using namespace Chart;
 
 Series::Series( SeriesType type )
 {
+  axis_y_n = 0;
+  base = 0;
+
   color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.1 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Red, 0.2 );
   color_list.emplace_back(); color_list.back().Set( ColorName::Green, 0.3 );
@@ -70,6 +73,11 @@ void Series::SetName( const std::string name )
 void Series::SetAxisY( int axis_y_n )
 {
   this->axis_y_n = axis_y_n;
+}
+
+void Series::SetBase( double base )
+{
+  this->base = base;
 }
 
 void Series::SetStyle( int style )
@@ -372,7 +380,8 @@ void Series::ComputeMarker( SVG::U rim )
     type != SeriesType::Line &&
     type != SeriesType::Point &&
     type != SeriesType::Lollipop &&
-    type != SeriesType::Area
+    type != SeriesType::Area &&
+    type != SeriesType::StackedArea
   ) {
     return;
   }
@@ -488,7 +497,7 @@ void Series::BuildArea(
   std::vector< double >* ofs_neg
 )
 {
-  U clamp_coor = y_axis->Coor( 0 );
+  U clamp_coor = y_axis->Coor( base );
   auto clamp = [&]( Point& p )
   {
     if ( x_axis->angle == 0 ) {
@@ -536,7 +545,7 @@ void Series::BuildArea(
 
   double sum = 0;
   for ( const Datum& datum : datum_list ) {
-    sum += datum.y;
+    sum += datum.y - base;
   }
   bool first = true;
   Point cur;
@@ -551,6 +560,7 @@ void Series::BuildArea(
     old_inside = cur_inside;
     size_t i = datum.x;
     double y = datum.y;
+    y -= base;
     if ( y < 0 || (y == 0 && sum < 0) ) {
       y += ofs_neg->at( i );
       ofs_neg->at( i ) = y;
@@ -673,13 +683,14 @@ void Series::BuildBar(
       p1.y = y_axis->Coor( 0 );
       p2.y = y_axis->Coor( datum.y );
     } else {
-      if ( datum.y < 0 ) {
+      double y = datum.y - base;
+      if ( y < 0 ) {
         p1.y = y_axis->Coor( ofs_neg->at( i ) );
-        ofs_neg->at( i ) += datum.y;
+        ofs_neg->at( i ) += y;
         p2.y = y_axis->Coor( ofs_neg->at( i ) );
       } else {
         p1.y = y_axis->Coor( ofs_pos->at( i ) );
-        ofs_pos->at( i ) += datum.y;
+        ofs_pos->at( i ) += y;
         p2.y = y_axis->Coor( ofs_pos->at( i ) );
       }
     }
@@ -986,7 +997,10 @@ void Series::Build(
     }
   }
 
-  if ( type == SeriesType::Area ) {
+  if (
+    type == SeriesType::Area ||
+    type == SeriesType::StackedArea
+  ) {
     line_g = g1->AddNewGroup();
     ApplyLineStyle( line_g );
     mark_g = g1->AddNewGroup();

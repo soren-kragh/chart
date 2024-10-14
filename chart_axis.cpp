@@ -1103,33 +1103,35 @@ void Axis::BuildCategories(
       bool collision = false;
       uint32_t n = 0;
       for ( auto cat : categoty_list ) {
-        Object* obj = cat_g->Add( new Text( cat ) );
-        U x = (angle == 0) ? Coor( n ) : orth_coor;
-        U y = (angle != 0) ? Coor( n ) : orth_coor;
-        if ( trial == 0 ) {
-          obj->MoveTo( ax, ay, x + dx, y + dy );
-        }
-        if ( trial == 1 ) {
-          U sy = (n % 2) ? (ch + num_space_y) : 0;
-          if ( dy < 0 ) sy = -sy;
-          obj->MoveTo( ax, ay, x + dx, y + dy + sy );
-        }
-        if ( trial == 2 ) {
-          ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
-          ay = AnchorY::Mid;
-          obj->MoveTo( ax, ay, x + dx, y + dy );
-          obj->Rotate( text_angle, ax, ay );
-        }
-        if (
-          (trial < 2 || (text_angle % 90 == 0)) &&
-          Chart::Collides(
-            obj, cat_objects, ((trial < 2) ? (1.5 * cw) : 0), 0
-          )
-        ) {
-          collision = true;
-          cat_g->DeleteFront();
-        } else {
-          cat_objects.push_back( obj );
+        if ( cat != "" ) {
+          Object* obj = cat_g->Add( new Text( cat ) );
+          U x = (angle == 0) ? Coor( n ) : orth_coor;
+          U y = (angle != 0) ? Coor( n ) : orth_coor;
+          if ( trial == 0 ) {
+            obj->MoveTo( ax, ay, x + dx, y + dy );
+          }
+          if ( trial == 1 ) {
+            U sy = (n % 2) ? (ch + num_space_y) : 0;
+            if ( dy < 0 ) sy = -sy;
+            obj->MoveTo( ax, ay, x + dx, y + dy + sy );
+          }
+          if ( trial == 2 ) {
+            ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
+            ay = AnchorY::Mid;
+            obj->MoveTo( ax, ay, x + dx, y + dy );
+            obj->Rotate( text_angle, ax, ay );
+          }
+          if (
+            (trial < 2 || (text_angle % 90 == 0)) &&
+            Chart::Collides(
+              obj, cat_objects, ((trial < 2) ? (1.5 * cw) : 0), 0
+            )
+          ) {
+            collision = true;
+            cat_g->DeleteFront();
+          } else {
+            cat_objects.push_back( obj );
+          }
         }
         n++;
       }

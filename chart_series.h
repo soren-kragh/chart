@@ -36,6 +36,9 @@ public:
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
 
+  // Sets the base for area and bar type series.
+  void SetBase( double base );
+
   void SetStyle( int style );
 
   // Line width also affects hollow markers, so defining a line width while line
@@ -126,6 +129,7 @@ private:
   SeriesType type;
   std::string name;
   int axis_y_n;
+  double base;
 
   std::vector< SVG::Color > color_list;
   SVG::Color line_color;

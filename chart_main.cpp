@@ -131,12 +131,17 @@ void Main::CalcLegendSize( Group* g, LegendDims& legend_dims )
     if (
       series->type == SeriesType::Bar ||
       series->type == SeriesType::StackedBar ||
-      series->type == SeriesType::Area
+      series->type == SeriesType::Area ||
+      series->type == SeriesType::StackedArea
     ) {
       area_id = true;
     }
     series->ComputeMarker();
-    if ( series->marker_show && series->type != SeriesType::Area ) {
+    if (
+      series->marker_show &&
+      series->type != SeriesType::Area &&
+      series->type != SeriesType::StackedArea
+    ) {
       mo.x1 = std::min( mo.x1, series->marker_out.x1 );
       mo.y1 = std::min( mo.y1, series->marker_out.y1 );
       mo.x2 = std::max( mo.x2, series->marker_out.x2 );
@@ -412,7 +417,11 @@ void Main::BuildLegend( Group* g, int nx )
       series->ApplyLineStyle( g->Last() );
     }
 
-    if ( series->marker_show && series->type != SeriesType::Area ) {
+    if (
+      series->marker_show &&
+      series->type != SeriesType::Area &&
+      series->type != SeriesType::StackedArea
+    ) {
       marker_p.y -= (series->marker_out.y1 + series->marker_out.y2) / 2;
       series->BuildMarker( g, series->marker_out, marker_p );
       series->ApplyFillStyle( g->Last() );
@@ -425,7 +434,8 @@ void Main::BuildLegend( Group* g, int nx )
     if (
       series->type == SeriesType::Bar ||
       series->type == SeriesType::StackedBar ||
-      series->type == SeriesType::Area
+      series->type == SeriesType::Area ||
+      series->type == SeriesType::StackedArea
     ) {
       U area_id_size = legend_dims.ch * legend_area_id_fact;
       bool has_interior = area_id_size > series->line_width;
@@ -623,23 +633,43 @@ void Main::AxisPrepare( void )
     std::vector< double > ofs_neg[ 2 ][ 2 ];
     bool first[ 2 ][ 2 ] = { { true, true }, { true, true } };
     for ( Series* series : series_list ) {
-      int type_n = (series->type == SeriesType::Area) ? 1 : 0;
-      int axis_n = series->axis_y_n;
-      if ( first[ type_n ][ axis_n ] || series->type == SeriesType::Bar ) {
-        ofs_pos[ type_n ][ axis_n ].assign( category_list.size(), 0.0 );
-        ofs_neg[ type_n ][ axis_n ].assign( category_list.size(), 0.0 );
-      }
-      Axis* ax = axis_x;
-      Axis* ay = axis_y[ axis_n ];
       bool stackable =
         series->type == SeriesType::Bar ||
         series->type == SeriesType::StackedBar ||
-        series->type == SeriesType::Area;
+        series->type == SeriesType::Area ||
+        series->type == SeriesType::StackedArea;
+      int type_n =
+        ( series->type == SeriesType::Area ||
+          series->type == SeriesType::StackedArea
+        ) ? 1 : 0;
+      int axis_n = series->axis_y_n;
+      if ( stackable ) {
+        if (
+          first[ type_n ][ axis_n ] ||
+          series->type == SeriesType::Bar ||
+          series->type == SeriesType::Area
+        ) {
+          ofs_pos[ type_n ][ axis_n ].assign( category_list.size(), series->base );
+          ofs_neg[ type_n ][ axis_n ].assign( category_list.size(), series->base );
+        }
+        first[ type_n ][ axis_n ] = false;
+      }
+      Axis* ax = axis_x;
+      Axis* ay = axis_y[ axis_n ];
+      if ( stackable || series->type == SeriesType::Lollipop ) {
+        double y = series->base;
+        if ( ay->Valid( y ) ) {
+          if ( !ay->data_def || ay->data_min > y ) ay->data_min = y;
+          if ( !ay->data_def || ay->data_max < y ) ay->data_max = y;
+          ay->data_def = true;
+        }
+      }
       for ( auto& datum : series->datum_list ) {
         double x = datum.x;
         double y = datum.y;
         if ( stackable ) {
           size_t i = x;
+          y -= series->base;
           if ( y < 0 ) {
             y += ofs_neg[ type_n ][ axis_n ].at( i );
             ofs_neg[ type_n ][ axis_n ][ i ] = y;
@@ -657,7 +687,6 @@ void Main::AxisPrepare( void )
         ax->data_def = true;
         ay->data_def = true;
       }
-      first[ type_n ][ axis_n ] = false;
     }
   }
 
@@ -879,15 +908,22 @@ void Main::BuildSeries(
   {
     std::vector< double > ofs_pos[ 2 ];
     std::vector< double > ofs_neg[ 2 ];
-    for ( auto i : { 0, 1 } ) {
-      ofs_pos[ i ].assign( category_list.size(), 0.0 );
-      ofs_neg[ i ].assign( category_list.size(), 0.0 );
-    }
+    bool first[ 2 ] = { true, true };
     for ( Series* series : series_list ) {
-      if ( series->type == SeriesType::Area ) {
+      if (
+        series->type == SeriesType::Area ||
+        series->type == SeriesType::StackedArea
+      ) {
+        if ( first[ series->axis_y_n ] || series->type == SeriesType::Area ) {
+          ofs_pos[ series->axis_y_n ].assign( category_list.size(), series->base );
+          ofs_neg[ series->axis_y_n ].assign( category_list.size(), series->base );
+        }
+        first[ series->axis_y_n ] = false;
         Group* series_g1 = g1->AddNewGroup();
         Group* series_g2 = g2->AddNewGroup();
-        g2->FrontToBack();
+        if ( series->type == SeriesType::StackedArea ) {
+          g2->FrontToBack();
+        }
         series->Build(
           series_g1, series_g2,
           axis_x, axis_y[ series->axis_y_n ], lb_list,
