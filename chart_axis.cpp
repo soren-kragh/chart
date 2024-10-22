@@ -648,7 +648,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     SVG::Group* x_g = num_g->AddNewGroup();
     x_g->Attr()->SetLineWidth(
       cr * (bold ? 0.75 : 0.5)
-    )->LineColor()->Set( ColorName::Black );
+    )->LineColor()->Set( ColorName::black );
     x_g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
     x_g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
     bb = num_g->GetBB();
@@ -1363,7 +1363,7 @@ void Axis::Build(
         );
       line_g->Add( poly );
       poly->Close();
-      poly->Attr()->FillColor()->Set( ColorName::Black );
+      poly->Attr()->FillColor()->Set( ColorName::black );
       poly->Rotate( angle, ex, ey );
     } else {
       line_g->Add( new Line( sx, sy, ex, ey ) );
@@ -1398,26 +1398,26 @@ void Axis::Build(
   if ( grid_style == GridStyle::Solid ) {
     minor_g->Attr()
       ->SetLineWidth( 0.50 )
-      ->LineColor()->Set( ColorName::Black, 0.8 );
+      ->LineColor()->Set( ColorName::black, 0.8 );
     major_g->Attr()
       ->SetLineWidth( 1.00 )
-      ->LineColor()->Set( ColorName::Black, 0.7 );
+      ->LineColor()->Set( ColorName::black, 0.7 );
     zero_g->Attr()
       ->SetLineWidth( 1.00 )
-      ->LineColor()->Set( ColorName::Black, 0.5 );
+      ->LineColor()->Set( ColorName::black, 0.5 );
   } else {
     minor_g->Attr()
       ->SetLineWidth( 0.25 )
       ->SetLineDash( 2, 3 )
-      ->LineColor()->Set( ColorName::Black );
+      ->LineColor()->Set( ColorName::black );
     major_g->Attr()
       ->SetLineWidth( 0.50 )
       ->SetLineDash( 5, 3 )
-      ->LineColor()->Set( ColorName::Black );
+      ->LineColor()->Set( ColorName::black );
     zero_g->Attr()
       ->SetLineWidth( 1.00 )
       ->SetLineDash( 5, 3 )
-      ->LineColor()->Set( ColorName::Black );
+      ->LineColor()->Set( ColorName::black );
   }
 
   if ( category_axis ) {

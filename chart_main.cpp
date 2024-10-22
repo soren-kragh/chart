@@ -364,7 +364,7 @@ void Main::CalcLegendBoxes(
     g->Add( new Rect( lb.bb.min, lb.bb.max ) );
     g->Last()->Attr()->SetLineWidth( 0.5 );
     g->Last()->Attr()->FillColor()->Clear();
-    g->Last()->Attr()->LineColor()->Set( ColorName::Black );
+    g->Last()->Attr()->LineColor()->Set( ColorName::black );
   }
 */
 }
@@ -387,7 +387,7 @@ void Main::BuildLegend( Group* g, int nx )
     -(ny * legend_dims.h + (ny - 1) * legend_dims.gy + legend_sy / 2)
   };
   g->Add( new Rect( r1, r2, 4 ) );
-  g->Last()->Attr()->LineColor()->Set( ColorName::Black );
+  g->Last()->Attr()->LineColor()->Set( ColorName::black );
   g->Last()->Attr()->SetLineWidth( 1 );
 
   int n = 0;
@@ -636,19 +636,11 @@ void Main::AxisPrepare( void )
       bool stackable =
         series->type == SeriesType::Bar ||
         series->type == SeriesType::StackedBar ||
-        series->type == SeriesType::Area ||
         series->type == SeriesType::StackedArea;
-      int type_n =
-        ( series->type == SeriesType::Area ||
-          series->type == SeriesType::StackedArea
-        ) ? 1 : 0;
+      int type_n = (series->type == SeriesType::StackedArea) ? 1 : 0;
       int axis_n = series->axis_y_n;
       if ( stackable ) {
-        if (
-          first[ type_n ][ axis_n ] ||
-          series->type == SeriesType::Bar ||
-          series->type == SeriesType::Area
-        ) {
+        if ( first[ type_n ][ axis_n ] || series->type == SeriesType::Bar ) {
           ofs_pos[ type_n ][ axis_n ].assign( category_list.size(), series->base );
           ofs_neg[ type_n ][ axis_n ].assign( category_list.size(), series->base );
         }
@@ -656,7 +648,11 @@ void Main::AxisPrepare( void )
       }
       Axis* ax = axis_x;
       Axis* ay = axis_y[ axis_n ];
-      if ( stackable || series->type == SeriesType::Lollipop ) {
+      if (
+        stackable ||
+        series->type == SeriesType::Lollipop ||
+        series->type == SeriesType::Area
+      ) {
         double y = series->base;
         if ( ay->Valid( y ) ) {
           if ( !ay->data_def || ay->data_min > y ) ay->data_min = y;
@@ -909,27 +905,26 @@ void Main::BuildSeries(
     std::vector< double > ofs_pos[ 2 ];
     std::vector< double > ofs_neg[ 2 ];
     bool first[ 2 ] = { true, true };
-    for ( Series* series : series_list ) {
-      if (
-        series->type == SeriesType::Area ||
-        series->type == SeriesType::StackedArea
-      ) {
-        if ( first[ series->axis_y_n ] || series->type == SeriesType::Area ) {
-          ofs_pos[ series->axis_y_n ].assign( category_list.size(), series->base );
-          ofs_neg[ series->axis_y_n ].assign( category_list.size(), series->base );
+    for ( auto type : { SeriesType::StackedArea, SeriesType::Area } ) {
+      for ( Series* series : series_list ) {
+        if ( series->type == type ) {
+          if ( first[ series->axis_y_n ] || series->type == SeriesType::Area ) {
+            ofs_pos[ series->axis_y_n ].assign( category_list.size(), series->base );
+            ofs_neg[ series->axis_y_n ].assign( category_list.size(), series->base );
+          }
+          first[ series->axis_y_n ] = false;
+          Group* series_g1 = g1->AddNewGroup();
+          Group* series_g2 = g2->AddNewGroup();
+          if ( series->type == SeriesType::StackedArea ) {
+            g2->FrontToBack();
+          }
+          series->Build(
+            series_g1, series_g2,
+            axis_x, axis_y[ series->axis_y_n ], lb_list,
+            0, 1,
+            &ofs_pos[ series->axis_y_n ], &ofs_neg[ series->axis_y_n ]
+          );
         }
-        first[ series->axis_y_n ] = false;
-        Group* series_g1 = g1->AddNewGroup();
-        Group* series_g2 = g2->AddNewGroup();
-        if ( series->type == SeriesType::StackedArea ) {
-          g2->FrontToBack();
-        }
-        series->Build(
-          series_g1, series_g2,
-          axis_x, axis_y[ series->axis_y_n ], lb_list,
-          0, 1,
-          &ofs_pos[ series->axis_y_n ], &ofs_neg[ series->axis_y_n ]
-        );
       }
     }
   }
@@ -1006,7 +1001,7 @@ Canvas* Main::Build( void )
   chart_g->Attr()->TextFont()->SetFamily(
     "DejaVu Sans Mono,Consolas,Menlo,Courier New"
   );
-  chart_g->Attr()->FillColor()->Set( ColorName::White );
+  chart_g->Attr()->FillColor()->Set( ColorName::white );
   chart_g->Attr()->LineColor()->Clear();
   chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
 
@@ -1021,7 +1016,7 @@ Canvas* Main::Build( void )
   Group* axes_label_g = chart_g->AddNewGroup();
   Group* legend_g     = chart_g->AddNewGroup();
 
-  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::Black );
+  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::black );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
 
   chartbox_g1->Attr()->FillColor()->Clear();
@@ -1116,7 +1111,7 @@ Canvas* Main::Build( void )
       chart_g->Add( new Rect( bb.min, bb.max ) );
       chart_g->Last()->Attr()->FillColor()->Clear();
       chart_g->Last()->Attr()->SetLineWidth( 1 );
-      chart_g->Last()->Attr()->LineColor()->Set( ColorName::Blue );
+      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
     }
   }
 */

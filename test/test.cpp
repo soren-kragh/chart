@@ -52,7 +52,8 @@ int main()
   for ( int i = 0; i < 12; i++ ) {
     std::ostringstream oss;
     oss << "Series " << static_cast<char>('A' + i );
-    Chart::Series* series = chart.AddSeries( oss.str() );
+    Chart::Series* series = chart.AddSeries( Chart::SeriesType::XY );
+    series->SetName( oss.str() );
     for ( int p = 0; p <= 100; p++ ) {
       double x = 1.1214e-10 * p;
       double y = std::cos( p/10.0 + i / 5.0 ) + 1.4;
@@ -64,7 +65,7 @@ int main()
   chart.SetChartArea( 1600, 800 );
 
   SVG::Canvas* canvas = chart.Build();
-  canvas->Background()->Set( SVG::ColorName::Black, 0.5 );
+  canvas->Background()->Set( SVG::ColorName::black, 0.5 );
   std::cout << canvas->GenSVG( 2 );
   delete canvas;
 

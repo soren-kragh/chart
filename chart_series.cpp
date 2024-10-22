@@ -24,14 +24,14 @@ Series::Series( SeriesType type )
   axis_y_n = 0;
   base = 0;
 
-  color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.1 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Red, 0.2 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Green, 0.3 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Cyan, 0, 0.2 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Purple, 0.1 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.6 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Orange );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Brown, 0, 0.3 );
+  color_list.emplace_back(); color_list.back().Set( ColorName::royalblue );
+  color_list.emplace_back(); color_list.back().Set( ColorName::tomato );
+  color_list.emplace_back(); color_list.back().Set( ColorName::darkseagreen );
+  color_list.emplace_back(); color_list.back().Set( ColorName::darkturquoise );
+  color_list.emplace_back(); color_list.back().Set( ColorName::darkmagenta );
+  color_list.emplace_back(); color_list.back().Set( ColorName::deepskyblue );
+  color_list.emplace_back(); color_list.back().Set( ColorName::orange );
+  color_list.emplace_back(); color_list.back().Set( ColorName::brown );
 
   this->type = type;
   SetName( "" );
@@ -45,7 +45,7 @@ Series::Series( SeriesType type )
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar
   );
-  line_color.Set( ColorName::Black );
+  line_color.Set( ColorName::black );
   SetLineDash( 0 );
 
   SetMarkerSize(
@@ -86,7 +86,7 @@ void Series::SetStyle( int style )
     line_color.Set( &color_list[ style % color_list.size() ] );
     style = style / color_list.size();
   } else {
-    line_color.Set( ColorName::Black );
+    line_color.Set( ColorName::black );
   }
   style = style % 8;
   if ( style == 0 ) {
