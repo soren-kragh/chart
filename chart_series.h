@@ -28,22 +28,29 @@ class Series
 
 public:
 
-  Series( std::string name );
+  Series( SeriesType type );
   ~Series( void );
 
-  void SetType( SeriesType type );
+  void SetName( const std::string name );
 
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
 
-  void SetStyle( int style );
-  SVG::Color* Color( void ) { return &color; }
-  void SetWidth( SVG::U width );
-  void SetDash( SVG::U dash );
-  void SetDash( SVG::U dash, SVG::U hole );
+  // Sets the base for area and bar type series.
+  void SetBase( double base );
 
-  void SetMarkerSize( SVG::U marker_size );
-  void SetMarkerShape( MarkerShape marker_shape );
+  void SetStyle( int style );
+
+  // Line width also affects outline of hollow markers.
+  SVG::Color* LineColor( void ) { return &line_color; }
+  void SetLineWidth( SVG::U width );
+  void SetLineDash( SVG::U dash );
+  void SetLineDash( SVG::U dash, SVG::U hole );
+
+  SVG::Color* FillColor( void ) { return &fill_color; }
+
+  void SetMarkerSize( SVG::U size );
+  void SetMarkerShape( MarkerShape shape );
 
   // For series types where the X value is a string (all but XY and Scatter),
   // the x-value below is an index into Chart::Main::categoty_list.
@@ -54,8 +61,8 @@ public:
 private:
 
   void ApplyLineStyle( SVG::Object* obj );
+  void ApplyMarkStyle( SVG::Object* obj );
   void ApplyFillStyle( SVG::Object* obj );
-  void ApplyHoleStyle( SVG::Object* obj );
 
   void UpdateLegendBoxes(
     std::vector< LegendBox >& lb_list, SVG::Point p1, SVG::Point p2
@@ -76,8 +83,7 @@ private:
     const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* hole_g,
-    SVG::Group* area_g,
+    SVG::Group* fill_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -90,7 +96,7 @@ private:
     const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* hole_g,
+    SVG::Group* fill_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -103,7 +109,7 @@ private:
     const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* hole_g,
+    SVG::Group* fill_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list
@@ -118,24 +124,30 @@ private:
     const SVG::BoundaryBox& clip_box
   );
 
-  std::string name;
   SeriesType type;
+  std::string name;
   int axis_y_n;
+  double base;
 
   std::vector< SVG::Color > color_list;
-  SVG::Color color;
-  SVG::U width;
-  SVG::U dash;
-  SVG::U hole;
+  SVG::Color line_color;
+  SVG::U line_width;
+  SVG::U line_dash;
+  SVG::U line_hole;
+
+  SVG::Color fill_color;
 
   // Used for floating point precision issues.
   double e1 = 0;
   double e2 = 0;
 
-  double bar_width = 0.90;
+  double bar_width = 0.85;
   double bar_cluster_width = 0.85;
 
   std::vector< Datum > datum_list;
+
+  SVG::U      marker_size;
+  MarkerShape marker_shape;
 
   typedef struct {
     SVG::U x1;
@@ -144,17 +156,16 @@ private:
     SVG::U y2;
   } MarkerDims;
 
-  SVG::U      marker_size;
-  MarkerShape marker_shape;
-  bool        marker_show;
-  bool        marker_hollow;
-  SVG::U      marker_diameter;
-  SVG::U      marker_radius;
-  MarkerDims  marker_int;       // Interior dimension for hollow marker.
-  MarkerDims  marker_out;       // Outer marker dimension.
-  MarkerDims  marker_rim;       // Dimension of rim around marker.
+  // Derived marker variables:
+  bool       marker_show;
+  bool       marker_hollow;
+  SVG::U     marker_diameter;
+  SVG::U     marker_radius;
+  MarkerDims marker_int;        // Interior dimension for hollow marker.
+  MarkerDims marker_out;        // Outer marker dimension.
+  MarkerDims marker_rim;        // Dimension of rim around marker.
 
-  // Compute marker_* variables.
+  // Compute derived marker_* variables.
   void ComputeMarker( SVG::U rim = 0 );
 
   // Build marker based on marker_* variables.

@@ -19,25 +19,41 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Series::Series( std::string name )
+Series::Series( SeriesType type )
 {
-  this->name = name;
+  axis_y_n = 0;
+  base = 0;
 
-  SetType( SeriesType::XY );
+  color_list.emplace_back(); color_list.back().Set( ColorName::royalblue     );
+  color_list.emplace_back(); color_list.back().Set( ColorName::tomato        );
+  color_list.emplace_back(); color_list.back().Set( ColorName::darkseagreen  );
+  color_list.emplace_back(); color_list.back().Set( ColorName::darkturquoise );
+  color_list.emplace_back(); color_list.back().Set( ColorName::darkmagenta   );
+  color_list.emplace_back(); color_list.back().Set( ColorName::deepskyblue   );
+  color_list.emplace_back(); color_list.back().Set( ColorName::orange        );
+  color_list.emplace_back(); color_list.back().Set( ColorName::brown         );
+  color_list.emplace_back(); color_list.back().Set( ColorName::gold          );
+  color_list.emplace_back(); color_list.back().Set( ColorName::slategrey     );
+
+  this->type = type;
+  SetName( "" );
   SetAxisY( 0 );
-  SetWidth( 1 );
-  SetDash( 0 );
-  marker_size = -1;     // Negative means auto.
-  SetMarkerShape( MarkerShape::Circle );
 
-  color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.1 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Red, 0.2 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Green, 0.3 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Cyan, 0, 0.2 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Purple, 0.1 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Blue, 0.6 );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Orange );
-  color_list.emplace_back(); color_list.back().Set( ColorName::Brown, 0, 0.3 );
+  SetLineWidth(
+    (type == SeriesType::Area || type == SeriesType::StackedArea) ? 0 : 1
+  );
+  line_color.Set( ColorName::black );
+  SetLineDash( 0 );
+
+  SetMarkerSize(
+    ( type == SeriesType::Scatter ||
+      type == SeriesType::Point ||
+      type == SeriesType::Lollipop
+    )
+    ? 12
+    : 0
+  );
+  SetMarkerShape( MarkerShape::Circle );
 }
 
 Series::~Series( void )
@@ -46,9 +62,9 @@ Series::~Series( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::SetType( SeriesType type )
+void Series::SetName( const std::string name )
 {
-  this->type = type;
+  this->name = name;
 }
 
 void Series::SetAxisY( int axis_y_n )
@@ -56,100 +72,136 @@ void Series::SetAxisY( int axis_y_n )
   this->axis_y_n = axis_y_n;
 }
 
+void Series::SetBase( double base )
+{
+  this->base = base;
+}
+
 void Series::SetStyle( int style )
 {
-  if ( style < 64 ) {
-    color.Set( &color_list[ style % color_list.size() ] );
-    style = style / color_list.size();
-  } else {
-    color.Set( ColorName::Black );
-  }
+  line_color.Set( &color_list[ style % color_list.size() ] );
+  style = style / color_list.size();
   style = style % 8;
-  if ( style == 0 ) {
-    SetWidth( 4 );
-    SetDash( 0 );
+  if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
+    SetLineWidth( 0 );
+    SetLineDash( 0 );
+  } else {
+    if ( style == 0 ) {
+      SetLineWidth( 4 );
+      SetLineDash( 0 );
+    }
+    if ( style == 1 ) {
+      SetLineWidth( 4 );
+      SetLineDash( 5, 3 );
+    }
+    if ( style == 2 ) {
+      SetLineWidth( 4 );
+      SetLineDash( 10, 6 );
+    }
+    if ( style == 3 ) {
+      SetLineWidth( 4 );
+      SetLineDash( 20, 12 );
+    }
+    if ( style == 4 ) {
+      SetLineWidth( 2 );
+      SetLineDash( 0 );
+    }
+    if ( style == 5 ) {
+      SetLineWidth( 2 );
+      SetLineDash( 5, 3 );
+    }
+    if ( style == 6 ) {
+      SetLineWidth( 2 );
+      SetLineDash( 10, 6 );
+    }
+    if ( style == 7 ) {
+      SetLineWidth( 2 );
+      SetLineDash( 20, 12 );
+    }
   }
-  if ( style == 1 ) {
-    SetWidth( 4 );
-    SetDash( 5, 3 );
-  }
-  if ( style == 2 ) {
-    SetWidth( 4 );
-    SetDash( 10, 6 );
-  }
-  if ( style == 3 ) {
-    SetWidth( 4 );
-    SetDash( 20, 12 );
-  }
-  if ( style == 4 ) {
-    SetWidth( 2 );
-    SetDash( 0 );
-  }
-  if ( style == 5 ) {
-    SetWidth( 2 );
-    SetDash( 5, 3 );
-  }
-  if ( style == 6 ) {
-    SetWidth( 2 );
-    SetDash( 10, 6 );
-  }
-  if ( style == 7 ) {
-    SetWidth( 2 );
-    SetDash( 20, 12 );
+  SetMarkerSize(
+    ( type == SeriesType::Scatter ||
+      type == SeriesType::Point ||
+      type == SeriesType::Lollipop
+    )
+    ? 12
+    : 0
+  );
+}
+
+//------------------------------------------------------------------------------
+
+void Series::SetLineWidth( SVG::U width )
+{
+  if ( width > 0 ) {
+    line_width = width;
+  } else {
+    line_width = 0;
   }
 }
 
-void Series::SetWidth( SVG::U width )
+void Series::SetLineDash( SVG::U dash )
 {
-  this->width = width;
+  line_dash = dash;
+  line_hole = dash;
 }
 
-void Series::SetDash( SVG::U dash )
+void Series::SetLineDash( SVG::U dash, SVG::U hole )
 {
-  this->dash = dash;
-  this->hole = 0;
+  line_dash = dash;
+  line_hole = hole;
 }
 
-void Series::SetDash( SVG::U dash, SVG::U hole )
+//------------------------------------------------------------------------------
+
+void Series::SetMarkerSize( SVG::U size )
 {
-  this->dash = dash;
-  this->hole = hole;
+  if ( size > 0 ) {
+    marker_size = size;
+  } else {
+    marker_size = 0;
+  }
 }
 
-void Series::SetMarkerSize( SVG::U marker_size )
+void Series::SetMarkerShape( MarkerShape shape )
 {
-  this->marker_size = marker_size;
+  marker_shape = shape;
 }
 
-void Series::SetMarkerShape( MarkerShape marker_shape )
-{
-  this->marker_shape = marker_shape;
-}
+//------------------------------------------------------------------------------
 
 void Series::ApplyLineStyle( SVG::Object* obj )
 {
-  obj->Attr()->SetLineWidth( width );
-  if ( width > 0 ) {
-    if ( dash > 0 ) {
-      obj->Attr()->SetLineDash( dash, (hole > 0) ? hole : dash );
+  obj->Attr()->SetLineWidth( line_width );
+  if ( line_width > 0 ) {
+    if ( line_dash > 0 ) {
+      obj->Attr()->SetLineDash( line_dash, line_hole );
     }
-    obj->Attr()->LineColor()->Set( &color );
+    if ( marker_show ) {
+      obj->Attr()->SetLineJoin( LineJoin::Round );
+    }
+    obj->Attr()->LineColor()->Set( &line_color );
   } else {
     obj->Attr()->LineColor()->Clear();
   }
   obj->Attr()->FillColor()->Clear();
 }
 
+void Series::ApplyMarkStyle( SVG::Object* obj )
+{
+  obj->Attr()->LineColor()->Clear();
+  obj->Attr()->FillColor()->Set( &line_color );
+}
+
 void Series::ApplyFillStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
-  obj->Attr()->FillColor()->Set( &color );
-}
-
-void Series::ApplyHoleStyle( SVG::Object* obj )
-{
-  ApplyFillStyle( obj );
-  obj->Attr()->FillColor()->Lighten( 0.5 );
+  if ( fill_color.IsDefined() ) {
+    obj->Attr()->FillColor()->Set( &fill_color );
+  } else {
+    obj->Attr()->FillColor()->Set( &line_color );
+    obj->Attr()->FillColor()->Lighten( 0.5 );
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -317,8 +369,10 @@ void Series::ComputeMarker( SVG::U rim )
     type != SeriesType::XY &&
     type != SeriesType::Scatter &&
     type != SeriesType::Line &&
+    type != SeriesType::Point &&
     type != SeriesType::Lollipop &&
-    type != SeriesType::Area
+    type != SeriesType::Area &&
+    type != SeriesType::StackedArea
   ) {
     return;
   }
@@ -354,23 +408,22 @@ void Series::ComputeMarker( SVG::U rim )
     return;
   };
 
-  if ( marker_size < 0 ) {
-    if (
-      type == SeriesType::Scatter ||
-      type == SeriesType::Lollipop
-    )
-      marker_diameter = 3 * width;
-  } else {
-    marker_diameter = marker_size;
+  U line_w = 0;
+  if ( !line_color.IsClear() ) {
+    line_w = std::max( line_w, line_width );
   }
+
+  marker_diameter = marker_size;
   marker_radius = marker_diameter / 2;
   marker_show =
-    (type == SeriesType::Scatter)
-    ? (marker_diameter > 0)
-    : (marker_diameter > width);
-  marker_hollow = marker_diameter >= 3 * width;
+    marker_size > 0 &&
+    ( (type == SeriesType::Scatter || type == SeriesType::Point)
+      ? (marker_diameter > 0)
+      : (marker_diameter > line_w)
+    );
+  marker_hollow = marker_diameter >= 3 * line_w;
 
-  compute( marker_int, -width );
+  compute( marker_int, -line_w );
   compute( marker_out, 0 );
   compute( marker_rim, rim );
 
@@ -429,8 +482,7 @@ void Series::BuildArea(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
   Group* mark_g,
-  Group* hole_g,
-  Group* area_g,
+  Group* fill_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -440,7 +492,7 @@ void Series::BuildArea(
   std::vector< double >* ofs_neg
 )
 {
-  U clamp_coor = y_axis->Coor( 0 );
+  U clamp_coor = y_axis->Coor( base );
   auto clamp = [&]( Point& p )
   {
     if ( x_axis->angle == 0 ) {
@@ -450,18 +502,23 @@ void Series::BuildArea(
     }
   };
 
+  bool has_area = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_line = line_width > 0;
+
   Poly* area_obj = nullptr;
   Poly* line_obj = nullptr;
   Point prv;
   auto add_point = [&]( Point p, bool clipped, bool part_of_line )
   {
-    if ( area_obj ) {
-      UpdateLegendBoxes( lb_list, prv, p );
-    } else {
-      area_g->Add( area_obj = new Poly() );
+    if ( has_area ) {
+      if ( area_obj ) {
+        UpdateLegendBoxes( lb_list, prv, p );
+      } else {
+        fill_g->Add( area_obj = new Poly() );
+      }
+      area_obj->Add( p );
     }
-    area_obj->Add( p );
-    if ( part_of_line ) {
+    if ( has_line && part_of_line ) {
       if ( line_obj ) {
         line_obj->Add( p );
         if ( clipped ) line_obj = nullptr;
@@ -472,7 +529,7 @@ void Series::BuildArea(
       if ( !clipped && marker_show ) {
         BuildMarker( mark_g, marker_out, p );
         if ( marker_hollow ) {
-          BuildMarker( hole_g, marker_int, p );
+          BuildMarker( fill_g, marker_int, p );
         }
       }
     } else {
@@ -488,7 +545,7 @@ void Series::BuildArea(
 
   double sum = 0;
   for ( const Datum& datum : datum_list ) {
-    sum += datum.y;
+    sum += datum.y - base;
   }
   bool first = true;
   Point cur;
@@ -503,6 +560,7 @@ void Series::BuildArea(
     old_inside = cur_inside;
     size_t i = datum.x;
     double y = datum.y;
+    y -= base;
     if ( y < 0 || (y == 0 && sum < 0) ) {
       y += ofs_neg->at( i );
       ofs_neg->at( i ) = y;
@@ -595,7 +653,7 @@ void Series::BuildBar(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
   Group* mark_g,
-  Group* hole_g,
+  Group* fill_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -613,25 +671,29 @@ void Series::BuildBar(
   Point p1;
   Point p2;
 
+  bool has_area = !fill_g->Attr()->FillColor()->IsClear();
+  U db = std::min( 1.0, line_width / 2 );
+
   for ( const Datum& datum : datum_list ) {
     size_t i = datum.x;
     double x = datum.x + cx;
     bool valid = x_axis->Valid( x ) && y_axis->Valid( datum.y );
-    if ( !valid || datum.y == 0 ) continue;
+    if ( !valid || datum.y == base ) continue;
 
     p1.x = x_axis->Coor( x );
     p2.x = p1.x;
     if ( type == SeriesType::Lollipop ) {
-      p1.y = y_axis->Coor( 0 );
+      p1.y = y_axis->Coor( base );
       p2.y = y_axis->Coor( datum.y );
     } else {
-      if ( datum.y < 0 ) {
+      double y = datum.y - base;
+      if ( y < 0 ) {
         p1.y = y_axis->Coor( ofs_neg->at( i ) );
-        ofs_neg->at( i ) += datum.y;
+        ofs_neg->at( i ) += y;
         p2.y = y_axis->Coor( ofs_neg->at( i ) );
       } else {
         p1.y = y_axis->Coor( ofs_pos->at( i ) );
-        ofs_pos->at( i ) += datum.y;
+        ofs_pos->at( i ) += y;
         p2.y = y_axis->Coor( ofs_pos->at( i ) );
       }
     }
@@ -665,7 +727,7 @@ void Series::BuildBar(
       if ( p2_inside && marker_show ) {
         BuildMarker( mark_g, marker_out, p2 );
         if ( marker_hollow ) {
-          BuildMarker( hole_g, marker_int, p2 );
+          BuildMarker( fill_g, marker_int, p2 );
         }
       }
       UpdateLegendBoxes( lb_list, p1, p2 );
@@ -708,12 +770,20 @@ void Series::BuildBar(
       UpdateLegendBoxes( lb_list, Point( p2.x, p1.y ), Point( p2.x, p2.y ) );
       UpdateLegendBoxes( lb_list, Point( p1.x, p2.y ), Point( p2.x, p2.y ) );
       bool has_interior =
-        p2.x - p1.x > width &&
-        p2.y - p1.y > width;
+        p2.x - p1.x > line_width + 2 &&
+        p2.y - p1.y > line_width + 2;
       if ( has_interior ) {
-        hole_g->Add( new Rect( p1, p2 ) );
-        if ( width > 0 ) {
-          U d = width / 2;
+        if ( has_area ) {
+          Point c1{ p1 };
+          Point c2{ p2 };
+          if ( !cut_lft ) c1.x += db;
+          if ( !cut_rgt ) c2.x -= db;
+          if ( !cut_bot ) c1.y += db;
+          if ( !cut_bot ) c2.y -= db;
+          fill_g->Add( new Rect( c1, c2 ) );
+        }
+        if ( line_width > 0 ) {
+          U d = line_width / 2;
           if ( cut_bot && cut_top ) {
             line_g->Add( new Line( p1.x + d, p1.y, p1.x + d, p2.y ) );
             line_g->Add( new Line( p2.x - d, p1.y, p2.x - d, p2.y ) );
@@ -774,7 +844,7 @@ void Series::BuildLine(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
   Group* mark_g,
-  Group* hole_g,
+  Group* fill_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list
@@ -783,10 +853,14 @@ void Series::BuildLine(
   Poly* poly = nullptr;
   bool adding_segments = false;
 
+  bool has_line =
+    line_width > 0 &&
+    (type == SeriesType::XY || type == SeriesType::Line);
+
   Point prv;
   auto add_point = [&]( Point p, bool clipped = false )
   {
-    if ( type == SeriesType::XY || type == SeriesType::Line ) {
+    if ( has_line ) {
       if ( !adding_segments ) line_g->Add( poly = new Poly() );
       poly->Add( p );
       if ( adding_segments ) {
@@ -798,7 +872,7 @@ void Series::BuildLine(
     if ( !clipped && marker_show ) {
       BuildMarker( mark_g, marker_out, p );
       if ( marker_hollow ) {
-        BuildMarker( hole_g, marker_int, p );
+        BuildMarker( fill_g, marker_int, p );
       }
     }
     prv = p;
@@ -915,40 +989,42 @@ void Series::Build(
 
   Group* line_g = nullptr;
   Group* mark_g = nullptr;
-  Group* hole_g = nullptr;
+  Group* fill_g = nullptr;
 
   if (
     type == SeriesType::XY ||
-    type == SeriesType::Line ||
     type == SeriesType::Scatter ||
+    type == SeriesType::Line ||
+    type == SeriesType::Point ||
     type == SeriesType::Lollipop
   ) {
-    if ( type != SeriesType::Scatter ) {
+    if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
       line_g = g1->AddNewGroup();
       ApplyLineStyle( line_g );
     }
     if ( marker_show ) {
       mark_g = g1->AddNewGroup();
-      ApplyFillStyle( mark_g );
+      ApplyMarkStyle( mark_g );
       if ( marker_hollow ) {
-        hole_g = g1->AddNewGroup();
-        ApplyHoleStyle( hole_g );
+        fill_g = g1->AddNewGroup();
+        ApplyFillStyle( fill_g );
       }
     }
   }
 
-  if ( type == SeriesType::Area ) {
+  if (
+    type == SeriesType::Area ||
+    type == SeriesType::StackedArea
+  ) {
     line_g = g1->AddNewGroup();
     ApplyLineStyle( line_g );
     mark_g = g1->AddNewGroup();
-    ApplyFillStyle( mark_g );
-    hole_g = g1->AddNewGroup();
-    ApplyHoleStyle( hole_g );
-    Group* area_g = g2->AddNewGroup();
-    ApplyHoleStyle( area_g );
+    ApplyMarkStyle( mark_g );
+    Group* fill_g = g2->AddNewGroup();
+    ApplyFillStyle( fill_g );
     BuildArea(
       clip_box,
-      line_g, mark_g, hole_g, area_g,
+      line_g, mark_g, fill_g,
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
@@ -960,10 +1036,10 @@ void Series::Build(
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar
   ) {
-    hole_g = g1->AddNewGroup();
-    ApplyHoleStyle( hole_g );
+    fill_g = g1->AddNewGroup();
+    ApplyFillStyle( fill_g );
     mark_g = g1->AddNewGroup();
-    ApplyFillStyle( mark_g );
+    ApplyMarkStyle( mark_g );
     line_g = g1->AddNewGroup();
     ApplyLineStyle( line_g );
   }
@@ -975,7 +1051,7 @@ void Series::Build(
   ) {
     BuildBar(
       clip_box,
-      line_g, mark_g, hole_g,
+      line_g, mark_g, fill_g,
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
@@ -985,12 +1061,13 @@ void Series::Build(
 
   if (
     type == SeriesType::XY ||
+    type == SeriesType::Scatter ||
     type == SeriesType::Line ||
-    type == SeriesType::Scatter
+    type == SeriesType::Point
   ) {
     BuildLine(
       clip_box,
-      line_g, mark_g, hole_g,
+      line_g, mark_g, fill_g,
       x_axis, y_axis,
       lb_list
     );

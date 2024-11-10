@@ -648,7 +648,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     SVG::Group* x_g = num_g->AddNewGroup();
     x_g->Attr()->SetLineWidth(
       cr * (bold ? 0.75 : 0.5)
-    )->LineColor()->Set( ColorName::Black );
+    )->LineColor()->Set( ColorName::black );
     x_g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
     x_g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
     bb = num_g->GetBB();
@@ -1103,33 +1103,35 @@ void Axis::BuildCategories(
       bool collision = false;
       uint32_t n = 0;
       for ( auto cat : categoty_list ) {
-        Object* obj = cat_g->Add( new Text( cat ) );
-        U x = (angle == 0) ? Coor( n ) : orth_coor;
-        U y = (angle != 0) ? Coor( n ) : orth_coor;
-        if ( trial == 0 ) {
-          obj->MoveTo( ax, ay, x + dx, y + dy );
-        }
-        if ( trial == 1 ) {
-          U sy = (n % 2) ? (ch + num_space_y) : 0;
-          if ( dy < 0 ) sy = -sy;
-          obj->MoveTo( ax, ay, x + dx, y + dy + sy );
-        }
-        if ( trial == 2 ) {
-          ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
-          ay = AnchorY::Mid;
-          obj->MoveTo( ax, ay, x + dx, y + dy );
-          obj->Rotate( text_angle, ax, ay );
-        }
-        if (
-          (trial < 2 || (text_angle % 90 == 0)) &&
-          Chart::Collides(
-            obj, cat_objects, ((trial < 2) ? (1.5 * cw) : 0), 0
-          )
-        ) {
-          collision = true;
-          cat_g->DeleteFront();
-        } else {
-          cat_objects.push_back( obj );
+        if ( cat != "" ) {
+          Object* obj = cat_g->Add( new Text( cat ) );
+          U x = (angle == 0) ? Coor( n ) : orth_coor;
+          U y = (angle != 0) ? Coor( n ) : orth_coor;
+          if ( trial == 0 ) {
+            obj->MoveTo( ax, ay, x + dx, y + dy );
+          }
+          if ( trial == 1 ) {
+            U sy = (n % 2) ? (ch + num_space_y) : 0;
+            if ( dy < 0 ) sy = -sy;
+            obj->MoveTo( ax, ay, x + dx, y + dy + sy );
+          }
+          if ( trial == 2 ) {
+            ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
+            ay = AnchorY::Mid;
+            obj->MoveTo( ax, ay, x + dx, y + dy );
+            obj->Rotate( text_angle, ax, ay );
+          }
+          if (
+            (trial < 2 || (text_angle % 90 == 0)) &&
+            Chart::Collides(
+              obj, cat_objects, ((trial < 2) ? (1.5 * cw) : 0), 0
+            )
+          ) {
+            collision = true;
+            cat_g->DeleteFront();
+          } else {
+            cat_objects.push_back( obj );
+          }
         }
         n++;
       }
@@ -1361,7 +1363,7 @@ void Axis::Build(
         );
       line_g->Add( poly );
       poly->Close();
-      poly->Attr()->FillColor()->Set( ColorName::Black );
+      poly->Attr()->FillColor()->Set( ColorName::black );
       poly->Rotate( angle, ex, ey );
     } else {
       line_g->Add( new Line( sx, sy, ex, ey ) );
@@ -1396,26 +1398,26 @@ void Axis::Build(
   if ( grid_style == GridStyle::Solid ) {
     minor_g->Attr()
       ->SetLineWidth( 0.50 )
-      ->LineColor()->Set( ColorName::Black, 0.8 );
+      ->LineColor()->Set( ColorName::black, 0.8 );
     major_g->Attr()
       ->SetLineWidth( 1.00 )
-      ->LineColor()->Set( ColorName::Black, 0.7 );
+      ->LineColor()->Set( ColorName::black, 0.7 );
     zero_g->Attr()
       ->SetLineWidth( 1.00 )
-      ->LineColor()->Set( ColorName::Black, 0.5 );
+      ->LineColor()->Set( ColorName::black, 0.5 );
   } else {
     minor_g->Attr()
       ->SetLineWidth( 0.25 )
       ->SetLineDash( 2, 3 )
-      ->LineColor()->Set( ColorName::Black );
+      ->LineColor()->Set( ColorName::black );
     major_g->Attr()
       ->SetLineWidth( 0.50 )
       ->SetLineDash( 5, 3 )
-      ->LineColor()->Set( ColorName::Black );
+      ->LineColor()->Set( ColorName::black );
     zero_g->Attr()
       ->SetLineWidth( 1.00 )
       ->SetLineDash( 5, 3 )
-      ->LineColor()->Set( ColorName::Black );
+      ->LineColor()->Set( ColorName::black );
   }
 
   if ( category_axis ) {

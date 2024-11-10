@@ -32,7 +32,6 @@ public:
 
   void SetChartArea( SVG::U width, SVG::U height );
   void SetMargin( SVG::U margin );
-  void SetBW( bool bw = true );
 
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
@@ -48,7 +47,9 @@ public:
   Axis* AxisX( void ) { return axis_x; }
   Axis* AxisY( int n = 0 ) { return axis_y[ n ]; }
 
-  Series* AddSeries( const std::string name );
+  // A default style a automatically assigned new series, but style properties
+  // can subsequently be changed.
+  Series* AddSeries( SeriesType type );
 
   // Add categories for string based X-values.
   void AddCategory( const std::string category );
@@ -58,20 +59,24 @@ public:
 private:
 
   typedef struct {
-    SVG::U ch;  // Height of characters.
+    SVG::U ch;  // Character height.
     SVG::U mw;  // Max outline width.
-    SVG::U ti;  // Additional text indentation (to make room for marker).
-    SVG::U mx;  // Additional X-margin caused by marker.
-    SVG::U w;   // Width of a single legend.
-    SVG::U h;   // Height of a single legend.
-    SVG::U gx;  // X-gap between legends.
-    SVG::U gy;  // Y-gap between legends.
+    SVG::U cr;  // Outline corner radius.
+    SVG::U ss;  // Symbol size.
+    SVG::U ex;  // Extra X caused by symbol left overhang.
+    SVG::U tx;  // Text indentation relative to center of symbol/marker.
+    SVG::U dx;  // Delta between individual legends in X direction.
+    SVG::U dy;  // Delta between individual legends in Y direction.
+    SVG::U sx;  // Size in X direction.
+    SVG::U sy;  // Size in Y direction.
+    SVG::U mx;  // Legend box margin in X direction.
+    SVG::U my;  // Legend box margin in Y direction.
   } LegendDims;
 
   void AxisPrepare( void );
 
   uint32_t LegendCnt( void );
-  void CalcLegendSize( SVG::Group* g, LegendDims& legend_dims );
+  void CalcLegendDims( SVG::Group* g, LegendDims& legend_dims );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& axis_objects
@@ -98,9 +103,8 @@ private:
   Pos legend_pos;
 
   SVG::U margin  = 5;
-  SVG::U chart_w = 1200;
-  SVG::U chart_h = 800;
-  bool bw        = false;
+  SVG::U chart_w = 1000;
+  SVG::U chart_h = 700;
 
   std::vector< Series* > series_list;
 
@@ -109,13 +113,9 @@ private:
   Axis* axis_x;
   Axis* axis_y[ 2 ];
 
-  SVG::U legend_bx  = 6;        // X-border around text in series legends.
-  SVG::U legend_by  = 3;        // Y-border around text in series legends.
-  SVG::U legend_gx  = 8;        // X-gap between series legends.
-  SVG::U legend_gy  = 8;        // Y-gap between series legends.
-  SVG::U legend_sx  = 16;       // X-space around legend box.
-  SVG::U legend_sy  = 16;       // Y-space around legend box.
-
+  // When shoving the legend ID for a series having an area, this defines the
+  // size relative to the characters.
+  double legend_area_id_fact = 1.2;
 };
 
 }
