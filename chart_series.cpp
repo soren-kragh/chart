@@ -489,7 +489,9 @@ void Series::BuildArea(
   uint32_t bar_num,
   uint32_t bar_tot,
   std::vector< double >* ofs_pos,
-  std::vector< double >* ofs_neg
+  std::vector< double >* ofs_neg,
+  std::vector< SVG::Point >* pts_pos,
+  std::vector< SVG::Point >* pts_neg
 )
 {
   U clamp_coor = y_axis->Coor( base );
@@ -952,7 +954,9 @@ void Series::Build(
   uint32_t bar_num,
   uint32_t bar_tot,
   std::vector< double >* ofs_pos,
-  std::vector< double >* ofs_neg
+  std::vector< double >* ofs_neg,
+  std::vector< SVG::Point >* pts_pos,
+  std::vector< SVG::Point >* pts_neg
 )
 {
   ComputeMarker();
@@ -1028,7 +1032,8 @@ void Series::Build(
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
-      ofs_pos, ofs_neg
+      ofs_pos, ofs_neg,
+      pts_pos, pts_neg
     );
   }
 

@@ -963,6 +963,8 @@ void Main::BuildSeries(
   {
     std::vector< double > ofs_pos[ 2 ];
     std::vector< double > ofs_neg[ 2 ];
+    std::vector< Point > pts_pos[ 2 ];
+    std::vector< Point > pts_neg[ 2 ];
     bool first[ 2 ] = { true, true };
     for ( Series* series : series_list ) {
       if ( series->type != SeriesType::StackedArea ) continue;
@@ -979,7 +981,8 @@ void Main::BuildSeries(
         series_g1, series_g2,
         axis_x, axis_y[ y_n ], lb_list,
         0, 1,
-        &ofs_pos[ y_n ], &ofs_neg[ y_n ]
+        &ofs_pos[ y_n ], &ofs_neg[ y_n ],
+        &pts_pos[ y_n ], &pts_neg[ y_n ]
       );
     }
   }
@@ -996,13 +999,16 @@ void Main::BuildSeries(
       if ( series->type == SeriesType::Area ) {
         std::vector< double > ofs_pos( category_list.size(), series->base );
         std::vector< double > ofs_neg( category_list.size(), series->base );
+        std::vector< Point > pts_pos;
+        std::vector< Point > pts_neg;
         Group* series_g2 = g1->AddNewGroup();
         Group* series_g1 = g1->AddNewGroup();
         series->Build(
           series_g1, series_g2,
           axis_x, axis_y[ y_n ], lb_list,
           0, 1,
-          &ofs_pos, &ofs_neg
+          &ofs_pos, &ofs_neg,
+          &pts_pos, &pts_neg
         );
       }
       if (

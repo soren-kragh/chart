@@ -77,7 +77,9 @@ private:
     uint32_t bar_num,
     uint32_t bar_tot,
     std::vector< double >* ofs_pos = nullptr,
-    std::vector< double >* ofs_neg = nullptr
+    std::vector< double >* ofs_neg = nullptr,
+    std::vector< SVG::Point >* pts_pos = nullptr,
+    std::vector< SVG::Point >* pts_neg = nullptr
   );
   void BuildArea(
     const SVG::BoundaryBox& clip_box,
@@ -90,7 +92,9 @@ private:
     uint32_t bar_num,
     uint32_t bar_tot,
     std::vector< double >* ofs_pos,
-    std::vector< double >* ofs_neg
+    std::vector< double >* ofs_neg,
+    std::vector< SVG::Point >* pts_pos,
+    std::vector< SVG::Point >* pts_neg
   );
   void BuildBar(
     const SVG::BoundaryBox& clip_box,
