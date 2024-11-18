@@ -65,7 +65,9 @@ private:
   void ApplyFillStyle( SVG::Object* obj );
 
   void UpdateLegendBoxes(
-    std::vector< LegendBox >& lb_list, SVG::Point p1, SVG::Point p2
+    std::vector< LegendBox >& lb_list,
+    SVG::Point p1, SVG::Point p2,
+    bool p1_inc = true, bool p2_inc = true
   );
 
   void Build(

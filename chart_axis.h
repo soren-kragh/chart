@@ -72,9 +72,6 @@ private:
   // Orthogonal axis is dual, implies that this axis is the X-axis.
   bool orth_dual;
 
-  const double num_lo = 1e-300;
-  const double num_hi = 1e+300;
-
   // Maximum number of decimals to show.
   const int precision = 10;
 

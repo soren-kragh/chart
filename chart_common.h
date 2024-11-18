@@ -17,6 +17,10 @@
 
 namespace Chart {
 
+  const double num_lo      = 1e-300;
+  const double num_hi      = 1e+300;
+  const double num_invalid = 1e+301;
+
   // Correction factor for floating point precision issues in comparisons etc.
   const double epsilon = 1e-6;
 

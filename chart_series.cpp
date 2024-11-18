@@ -326,7 +326,9 @@ int Series::ClipLine(
 ////////////////////////////////////////////////////////////////////////////////
 
 void Series::UpdateLegendBoxes(
-  std::vector< LegendBox >& lb_list, Point p1, Point p2
+  std::vector< LegendBox >& lb_list,
+  Point p1, Point p2,
+  bool p1_inc, bool p2_inc
 )
 {
   Point c1;
@@ -338,8 +340,8 @@ void Series::UpdateLegendBoxes(
     if ( p1.y > lb.bb.max.y && p2.y > lb.bb.max.y ) continue;
     bool p1_inside = Inside( p1, lb.bb );
     bool p2_inside = Inside( p2, lb.bb );
-    if ( p1_inside ) lb.weight1 += 1;
-    if ( p2_inside ) lb.weight1 += 1;
+    if ( p1_inside && p1_inc ) lb.weight1 += 1;
+    if ( p2_inside && p2_inc ) lb.weight1 += 1;
     if ( p1_inside && p2_inside ) {
       c1 = p1;
       c2 = p2;
@@ -494,6 +496,123 @@ void Series::BuildArea(
   std::vector< SVG::Point >* pts_neg
 )
 {
+  double sum = 0;
+  for ( const Datum& datum : datum_list ) {
+    if ( y_axis->Valid( datum_y ) ) sum += datum.y - base;
+  }
+
+  // Normalize number of elements in datum_list by inserting invalid values
+  // before and after the defined values as needed.
+  {
+    if ( !datum_list.empty() ) {
+      size_t n = datum_list[ 0 ].x;
+      if ( n > 0 ) {
+        datum_list.resize( datum_list.size() + n );
+        std::move_backward(
+          datum_list.begin(),
+          datum_list.begin() + datum_list.size() - n,
+          datum_list.end()
+        );
+        for ( size_t i = 0; i < n; i++ ) {
+          datum_list[ i ] = Datum( i, num_invalid );
+        }
+      }
+    }
+    size_t n = ofs_pos.size();
+    for ( size_t i = datum_list.size(); i < n; i++ ) {
+      datum_list.emplace_back( i, num_invalid );
+    }
+  }
+
+  Poly* fill_obj = nullptr;
+  Poly* line_obj = nullptr;
+
+  bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
+
+  // Create base line.
+  {
+    Point p1;
+    p1.x = datum_list.size() - 1;
+    p1.y = y_axis->Coor( base );
+    p1.y = std::max( p1.y, U( 0 ) );
+    p1.y = std::min( p1.y, y_axis->length );
+    Point p2{ 0, p1.y };
+    if ( x_axis->angle != 0 ) {
+      std::swap( p1.x, p1.y );
+      std::swap( p2.x, p2.y );
+    }
+    if ( pts_pos->empty() && sum >= 0 ) {
+      pts_pos->push_back( p1 );
+      pts_pos->push_back( p2 );
+    }
+    if ( pts_neg->empty() && sum < 0 ) {
+      pts_neg->push_back( p1 );
+      pts_neg->push_back( p2 );
+    }
+  }
+
+  // Initialize the fill polygon with the points from the top of the previous
+  // polygon, which are contained in pts_pos/pts_neg.
+  if ( has_fill ) {
+    fill_g->Add( fill_obj = new Poly() );
+    if ( sum < 0 ) {
+      for ( auto it = pts_neg->rbegin(); it != pts_neg->rend(); ++it ) {
+        fill_obj->Add( *it );
+      }
+    } else {
+      for ( auto it = pts_pos->rbegin(); it != pts_pos->rend(); ++it ) {
+        fill_obj->Add( *it );
+      }
+    }
+  }
+  if ( sum < 0 ) {
+    pts_neg->clear();
+  } else {
+    pts_pos->clear();
+  }
+
+  Point prv;
+  size_t line_cnt = 0;
+  auto add_point = [&]( Point p, bool is_datum, bool on_line )
+  {
+    if ( line_cnt > 0 ) {
+      UpdateLegendBoxes(
+        lb_list, prv, on_line ? p : prv, line_cnt == 1, on_line
+      );
+    }
+    if ( sum < 0 ) {
+      pts_neg->push_back( p );
+    } else {
+      pts_pos->push_back( p );
+    }
+    if ( has_fill ) {
+      fill_obj->Add( p );
+    }
+    if ( has_line && on_line ) {
+      if ( line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
+      line_obj->Add( p );
+    }
+    if ( is_datum && marker_show ) {
+      BuildMarker( mark_g, marker_out, p );
+      if ( marker_hollow ) {
+        // TBD: Not fill_g, reintroduce hole_g?
+        BuildMarker( fill_g, marker_int, p );
+      }
+    }
+    if ( on_line && (is_datum || line_cnt == 0) ) {
+      line_cnt++;
+    } else {
+      line_cnt = 0;
+    }
+    prv = p;
+    return;
+  }
+
+
+
+
+/*
   U clamp_coor = y_axis->Coor( base );
   auto clamp = [&]( Point& p )
   {
@@ -645,6 +764,7 @@ void Series::BuildArea(
   }
 
   end_point();
+*/
 
   return;
 }
