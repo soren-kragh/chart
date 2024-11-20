@@ -641,21 +641,34 @@ void Series::BuildArea(
       y_axis->Coor( (sum < 0) ? ofs_neg->back() : ofs_pos->back() )
     };
     do_point( beg_p, false );
+    double prv_base;
+    bool prv_valid = false;
     for ( const Datum& datum : datum_list ) {
       size_t i = datum.x;
       double y = datum.y;
       bool valid = y_axis->Valid( y );
       y -= base;
+      if ( prv_valid && !valid ) {
+        Point p{ x_axis->Coor( datum.x - 1 ), y_axis->Coor( prv_base ) };
+        do_point( p, false );
+      }
       if ( !valid ) y = 0;
       if ( sum < 0 ) {
-        y += ofs_neg->at( i );
+        prv_base = ofs_neg->at( i );
+        y += prv_base;
         ofs_neg->at( i ) = y;
       } else {
-        y += ofs_pos->at( i );
+        prv_base = ofs_pos->at( i );
+        y += prv_base;
         ofs_pos->at( i ) = y;
       }
+      if ( !prv_valid && valid ) {
+        Point p{ x_axis->Coor( datum.x ), y_axis->Coor( prv_base ) };
+        do_point( p, false );
+      }
       Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
-      do_point( p );
+      do_point( p, valid );
+      prv_valid = valid;
     }
     do_point( end_p, false );
   }
