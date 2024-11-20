@@ -530,28 +530,6 @@ void Series::BuildArea(
   bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
   bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
 
-  // Create base line when we have the first area graph in the stack.
-  {
-    Point p1;
-    p1.x = x_axis->Coor( 0 );
-    p1.y = y_axis->Coor( base );
-    p1.y = std::max( p1.y, U( 0 ) );
-    p1.y = std::min( p1.y, y_axis->length );
-    Point p2{ x_axis->Coor( datum_list.size() - 1 ), p1.y };
-    if ( x_axis->angle != 0 ) {
-      std::swap( p1.x, p1.y );
-      std::swap( p2.x, p2.y );
-    }
-    if ( pts_pos->empty() && sum >= 0 ) {
-      pts_pos->push_back( p1 );
-      pts_pos->push_back( p2 );
-    }
-    if ( pts_neg->empty() && sum < 0 ) {
-      pts_neg->push_back( p1 );
-      pts_neg->push_back( p2 );
-    }
-  }
-
   // Initialize the fill polygon with the points from the top of the previous
   // polygon, which are contained in pts_pos/pts_neg.
   if ( has_fill ) {
@@ -615,6 +593,7 @@ void Series::BuildArea(
   bool dp_first = true;
   auto do_point = [&]( Point p, bool on_line = true )
   {
+    if ( x_axis->angle != 0 ) std::swap( p.x, p.y );
     bool inside = Inside( p, clip_box );
     if ( dp_first ) {
       if ( inside ) {
@@ -652,177 +631,34 @@ void Series::BuildArea(
     return;
   };
 
-  for ( const Datum& datum : datum_list ) {
-    size_t i = datum.x;
-    double y = datum.y;
-    bool valid = y_axis->Valid( y );
-    y -= base;
-    if ( !valid ) y = 0;
-    if ( sum < 0 ) {
-      y += ofs_neg->at( i );
-      ofs_neg->at( i ) = y;
-    } else {
-      y += ofs_pos->at( i );
-      ofs_pos->at( i ) = y;
-    }
-    Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
-    if ( x_axis->angle != 0 ) std::swap( p.x, p.y );
-    do_point( p );
-  }
-
-/*
-  U clamp_coor = y_axis->Coor( base );
-  auto clamp = [&]( Point& p )
-  {
-    if ( x_axis->angle == 0 ) {
-      p.y = clamp_coor;
-    } else {
-      p.x = clamp_coor;
-    }
-  };
-
-  bool has_area = !fill_g->Attr()->FillColor()->IsClear();
-  bool has_line = line_width > 0;
-
-  Poly* area_obj = nullptr;
-  Poly* line_obj = nullptr;
-  Point prv;
-  auto add_point = [&]( Point p, bool clipped, bool part_of_line )
-  {
-    if ( has_area ) {
-      if ( area_obj ) {
-        UpdateLegendBoxes( lb_list, prv, p );
+  if ( !datum_list.empty() ) {
+    Point beg_p{
+      x_axis->Coor( 0 ),
+      y_axis->Coor( (sum < 0) ? ofs_neg->front() : ofs_pos->front() )
+    };
+    Point end_p{
+      x_axis->Coor( ofs_pos->size() - 1 ),
+      y_axis->Coor( (sum < 0) ? ofs_neg->back() : ofs_pos->back() )
+    };
+    do_point( beg_p, false );
+    for ( const Datum& datum : datum_list ) {
+      size_t i = datum.x;
+      double y = datum.y;
+      bool valid = y_axis->Valid( y );
+      y -= base;
+      if ( !valid ) y = 0;
+      if ( sum < 0 ) {
+        y += ofs_neg->at( i );
+        ofs_neg->at( i ) = y;
       } else {
-        fill_g->Add( area_obj = new Poly() );
+        y += ofs_pos->at( i );
+        ofs_pos->at( i ) = y;
       }
-      area_obj->Add( p );
+      Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
+      do_point( p );
     }
-    if ( has_line && part_of_line ) {
-      if ( line_obj ) {
-        line_obj->Add( p );
-        if ( clipped ) line_obj = nullptr;
-      } else {
-        line_g->Add( line_obj = new Poly() );
-        line_obj->Add( p );
-      }
-      if ( !clipped && marker_show ) {
-        BuildMarker( mark_g, marker_out, p );
-        if ( marker_hollow ) {
-          BuildMarker( fill_g, marker_int, p );
-        }
-      }
-    } else {
-      line_obj = nullptr;
-    }
-    prv = p;
-  };
-  auto end_point = [&]( void )
-  {
-    area_obj = nullptr;
-    line_obj = nullptr;
-  };
-
-  double sum = 0;
-  for ( const Datum& datum : datum_list ) {
-    sum += datum.y - base;
+    do_point( end_p, false );
   }
-  bool first = true;
-  Point cur;
-  Point old;
-  bool cur_valid;
-  bool cur_inside;
-  bool old_inside;
-  size_t n = datum_list.size();
-  for ( const Datum& datum : datum_list ) {
-    bool rtz = (--n == 0);
-    old = cur;
-    old_inside = cur_inside;
-    size_t i = datum.x;
-    double y = datum.y;
-    y -= base;
-    if ( y < 0 || (y == 0 && sum < 0) ) {
-      y += ofs_neg->at( i );
-      ofs_neg->at( i ) = y;
-    } else {
-      y += ofs_pos->at( i );
-      ofs_pos->at( i ) = y;
-    }
-
-    cur.x = x_axis->Coor( datum.x );
-    cur.y = y_axis->Coor( y );
-    if ( x_axis->angle != 0 ) std::swap( cur.x, cur.y );
-    cur_inside = Inside( cur, clip_box );
-    cur_valid = y_axis->Valid( y );
-
-    bool old_part_of_line = true;
-    bool cur_part_of_line = true;
-
-    if ( first ) {
-      if ( !cur_valid ) continue;
-      old = cur;
-      clamp( old );
-      old_inside = Inside( old, clip_box );
-      if ( old_inside ) {
-        add_point( old, false, false );
-      }
-      old_part_of_line = false;
-      first = false;
-    }
-
-    while ( true ) {
-      if ( cur_valid ) {
-        if ( old_inside && cur_inside ) {
-          // Common case when we stay inside the chart area.
-          add_point( cur, false, cur_part_of_line );
-        } else {
-          // Handle clipping in and out of the chart area.
-          Point c1, c2;
-          int n = ClipLine( c1, c2, old, cur, clip_box );
-          if ( old_inside ) {
-            // We went from inside to now outside.
-            if ( n == 1 ) add_point( c1, true, old_part_of_line );
-          } else
-          if ( cur_inside ) {
-            // We went from outside to now inside.
-            if ( n == 1 ) add_point( c1, true, old_part_of_line );
-            add_point( cur, false, cur_part_of_line );
-          } else {
-            if ( n == 2 ) {
-              // We are still outside, but the line segment passes through the
-              // chart area.
-              add_point( c1, true, old_part_of_line && cur_part_of_line );
-              add_point( c2, true, old_part_of_line && cur_part_of_line );
-            }
-          }
-        }
-      } else {
-        cur = old;
-        cur_inside = old_inside;
-        cur_valid = true;
-        rtz = true;
-      }
-      if ( rtz ) {
-        old = cur;
-        old_inside = cur_inside;
-        clamp( cur );
-        cur_inside = Inside( cur, clip_box );
-        rtz = false;
-        old_part_of_line = false;
-        cur_part_of_line = false;
-        continue;
-      }
-      break;
-    }
-
-    if ( !cur_part_of_line ) {
-      end_point();
-      first = true;
-    }
-
-  }
-
-  end_point();
-*/
 
   return;
 }
