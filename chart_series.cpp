@@ -498,7 +498,7 @@ void Series::BuildArea(
 {
   double sum = 0;
   for ( const Datum& datum : datum_list ) {
-    if ( y_axis->Valid( datum_y ) ) sum += datum.y - base;
+    if ( y_axis->Valid( datum.y ) ) sum += datum.y - base;
   }
 
   // Normalize number of elements in datum_list by inserting invalid values
@@ -518,7 +518,7 @@ void Series::BuildArea(
         }
       }
     }
-    size_t n = ofs_pos.size();
+    size_t n = ofs_pos->size();
     for ( size_t i = datum_list.size(); i < n; i++ ) {
       datum_list.emplace_back( i, num_invalid );
     }
@@ -530,14 +530,14 @@ void Series::BuildArea(
   bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
   bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
 
-  // Create base line.
+  // Create base line when we have the first area graph in the stack.
   {
     Point p1;
-    p1.x = datum_list.size() - 1;
+    p1.x = x_axis->Coor( 0 );
     p1.y = y_axis->Coor( base );
     p1.y = std::max( p1.y, U( 0 ) );
     p1.y = std::min( p1.y, y_axis->length );
-    Point p2{ 0, p1.y };
+    Point p2{ x_axis->Coor( datum_list.size() - 1 ), p1.y };
     if ( x_axis->angle != 0 ) {
       std::swap( p1.x, p1.y );
       std::swap( p2.x, p2.y );
@@ -572,13 +572,13 @@ void Series::BuildArea(
     pts_pos->clear();
   }
 
-  Point prv;
-  size_t line_cnt = 0;
+  Point ap_prv_p;
+  size_t ap_line_cnt = 0;
   auto add_point = [&]( Point p, bool is_datum, bool on_line )
   {
-    if ( line_cnt > 0 ) {
+    if ( on_line ) {
       UpdateLegendBoxes(
-        lb_list, prv, on_line ? p : prv, line_cnt == 1, on_line
+        lb_list, (ap_line_cnt == 0) ? p : ap_prv_p, p, false, is_datum
       );
     }
     if ( sum < 0 ) {
@@ -590,7 +590,7 @@ void Series::BuildArea(
       fill_obj->Add( p );
     }
     if ( has_line && on_line ) {
-      if ( line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
+      if ( ap_line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
       line_obj->Add( p );
     }
     if ( is_datum && marker_show ) {
@@ -600,17 +600,75 @@ void Series::BuildArea(
         BuildMarker( fill_g, marker_int, p );
       }
     }
-    if ( on_line && (is_datum || line_cnt == 0) ) {
-      line_cnt++;
+    if ( on_line && (is_datum || ap_line_cnt == 0) ) {
+      ap_line_cnt++;
     } else {
-      line_cnt = 0;
+      ap_line_cnt = 0;
     }
-    prv = p;
+    ap_prv_p = p;
     return;
+  };
+
+  Point dp_prv_p;
+  bool dp_prv_on_line = false;
+  bool dp_prv_inside = false;
+  bool dp_first = true;
+  auto do_point = [&]( Point p, bool on_line = true )
+  {
+    bool inside = Inside( p, clip_box );
+    if ( dp_first ) {
+      if ( inside ) {
+        add_point( p, on_line, on_line );
+      }
+    } else {
+      if ( dp_prv_inside && inside ) {
+        // Common case when we stay inside the chart area.
+        add_point( p, on_line, on_line );
+      } else {
+        // Handle clipping in and out of the chart area.
+        Point c1, c2;
+        int n = ClipLine( c1, c2, dp_prv_p, p, clip_box );
+        if ( dp_prv_inside ) {
+          // We went from inside to now outside.
+          if ( n == 1 ) add_point( c1, false, on_line && dp_prv_on_line );
+        } else
+        if ( inside ) {
+          // We went from outside to now inside.
+          if ( n == 1 ) add_point( c1, false, on_line && dp_prv_on_line );
+          add_point( p, on_line, on_line );
+        } else
+        if ( n == 2 ) {
+          // We are still outside, but the line segment passes through the
+          // chart area.
+          add_point( c1, false, on_line && dp_prv_on_line );
+          add_point( c2, false, on_line && dp_prv_on_line );
+        }
+      }
+    }
+    dp_prv_p = p;
+    dp_prv_on_line = on_line;
+    dp_prv_inside = inside;
+    dp_first = false;
+    return;
+  };
+
+  for ( const Datum& datum : datum_list ) {
+    size_t i = datum.x;
+    double y = datum.y;
+    bool valid = y_axis->Valid( y );
+    y -= base;
+    if ( !valid ) y = 0;
+    if ( sum < 0 ) {
+      y += ofs_neg->at( i );
+      ofs_neg->at( i ) = y;
+    } else {
+      y += ofs_pos->at( i );
+      ofs_pos->at( i ) = y;
+    }
+    Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
+    if ( x_axis->angle != 0 ) std::swap( p.x, p.y );
+    do_point( p );
   }
-
-
-
 
 /*
   U clamp_coor = y_axis->Coor( base );
