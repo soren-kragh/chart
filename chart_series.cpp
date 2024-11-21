@@ -230,7 +230,7 @@ bool Series::Inside(
 //   2 : Two intersections; c1 and c2 are the points.
 int Series::ClipLine(
   SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
-  const BoundaryBox& clip_box
+  const SVG::BoundaryBox& clip_box
 )
 {
   // Record original p1.
@@ -321,6 +321,17 @@ int Series::ClipLine(
   }
 
   return n;
+}
+
+SVG::Point Series::MoveInside(
+  SVG::Point p, const BoundaryBox& clip_box
+)
+{
+  if ( p.x < clip_box.min.x ) p.x = clip_box.min.x;
+  if ( p.x > clip_box.max.x ) p.x = clip_box.max.x;
+  if ( p.y < clip_box.min.y ) p.y = clip_box.min.y;
+  if ( p.y > clip_box.max.y ) p.y = clip_box.max.y;
+  return p;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -624,6 +635,9 @@ void Series::BuildArea(
         }
       }
     }
+    if ( !inside ) {
+      add_point( MoveInside( p, clip_box ), false, false );
+    }
     dp_prv_p = p;
     dp_prv_on_line = on_line;
     dp_prv_inside = inside;
@@ -641,14 +655,15 @@ void Series::BuildArea(
       y_axis->Coor( (sum < 0) ? ofs_neg->back() : ofs_pos->back() )
     };
     do_point( beg_p, false );
-    double prv_base;
+    double prv_base = 0;
     bool prv_valid = false;
+    bool first = true;
     for ( const Datum& datum : datum_list ) {
       size_t i = datum.x;
       double y = datum.y;
       bool valid = y_axis->Valid( y );
       y -= base;
-      if ( prv_valid && !valid ) {
+      if ( !first && prv_valid && !valid ) {
         Point p{ x_axis->Coor( datum.x - 1 ), y_axis->Coor( prv_base ) };
         do_point( p, false );
       }
@@ -662,13 +677,14 @@ void Series::BuildArea(
         y += prv_base;
         ofs_pos->at( i ) = y;
       }
-      if ( !prv_valid && valid ) {
+      if ( !first && !prv_valid && valid ) {
         Point p{ x_axis->Coor( datum.x ), y_axis->Coor( prv_base ) };
         do_point( p, false );
       }
       Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
       do_point( p, valid );
       prv_valid = valid;
+      first = false;
     }
     do_point( end_p, false );
   }

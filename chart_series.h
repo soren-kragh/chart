@@ -130,6 +130,10 @@ private:
     const SVG::BoundaryBox& clip_box
   );
 
+  SVG::Point MoveInside(
+    SVG::Point p, const SVG::BoundaryBox& clip_box
+  );
+
   SeriesType type;
   std::string name;
   int axis_y_n;
