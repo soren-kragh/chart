@@ -541,6 +541,8 @@ void Series::BuildArea(
   bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
   bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
 
+  bool first_in_stack = (sum < 0) ? pts_neg->empty() : pts_pos->empty();
+
   // Initialize the fill polygon with the points from the top of the previous
   // polygon, which are contained in pts_pos/pts_neg.
   if ( has_fill ) {
@@ -654,7 +656,7 @@ void Series::BuildArea(
       x_axis->Coor( ofs_pos->size() - 1 ),
       y_axis->Coor( (sum < 0) ? ofs_neg->back() : ofs_pos->back() )
     };
-    do_point( beg_p, false );
+    if ( first_in_stack ) do_point( beg_p, false );
     double prv_base = 0;
     bool prv_valid = false;
     bool first = true;
@@ -686,7 +688,7 @@ void Series::BuildArea(
       prv_valid = valid;
       first = false;
     }
-    do_point( end_p, false );
+    if ( first_in_stack ) do_point( end_p, false );
   }
 
   return;
