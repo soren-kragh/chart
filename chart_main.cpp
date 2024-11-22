@@ -937,14 +937,10 @@ void Main::AxisPrepare( void )
 ///////////////////////////////////////////////////////////////////////////////
 
 void Main::BuildSeries(
-  SVG::Group* chartbox_above_grid,
-  SVG::Group* chartbox_below_grid,
+  SVG::Group* g,
   std::vector< LegendBox >& lb_list
 )
 {
-  Group* g2 = chartbox_below_grid->AddNewGroup();
-  Group* g1 = chartbox_below_grid->AddNewGroup();
-
   uint32_t bar_tmp[ 2 ] = { 0, 0 };
   uint32_t lol_tot = 0;
   for ( Series* series : series_list ) {
@@ -960,101 +956,95 @@ void Main::BuildSeries(
   }
   uint32_t bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
 
-  {
-    std::vector< double > ofs_pos[ 2 ];
-    std::vector< double > ofs_neg[ 2 ];
-    std::vector< Point > pts_pos[ 2 ];
-    std::vector< Point > pts_neg[ 2 ];
-    bool first[ 2 ] = { true, true };
-    for ( Series* series : series_list ) {
-      if ( series->type != SeriesType::StackedArea ) continue;
-      int y_n = series->axis_y_n;
-      if ( first[ y_n ] ) {
-        ofs_pos[ y_n ].assign( category_list.size(), series->base );
-        ofs_neg[ y_n ].assign( category_list.size(), series->base );
+  std::vector< double > sa_ofs_pos[ 2 ];
+  std::vector< double > sa_ofs_neg[ 2 ];
+  std::vector< Point > sa_pts_pos[ 2 ];
+  std::vector< Point > sa_pts_neg[ 2 ];
+  bool sa_first[ 2 ] = { true, true };
+
+  std::vector< double > bar_ofs_pos[ 2 ];
+  std::vector< double > bar_ofs_neg[ 2 ];
+  uint32_t bar_num[ 2 ] = { 0, 0 };
+  uint32_t bar_cur = 0;
+  bool bar_first[ 2 ] = { true, true };
+
+  uint32_t lol_num = 0;
+
+  Group* stacked_area_fill_g = g->AddNewGroup();
+  Group* stacked_area_line_g = g->AddNewGroup();
+  Group* series_g            = g->AddNewGroup();
+
+  for ( Series* series : series_list ) {
+    int y_n = series->axis_y_n;
+    if ( series->type == SeriesType::StackedArea ) {
+      if ( sa_first[ y_n ] ) {
+        sa_ofs_pos[ y_n ].assign( category_list.size(), series->base );
+        sa_ofs_neg[ y_n ].assign( category_list.size(), series->base );
       }
-      first[ y_n ] = false;
-      Group* series_g1 = g1->AddNewGroup();
-      Group* series_g2 = g2->AddNewGroup();
-      g2->FrontToBack();
+      sa_first[ y_n ] = false;
       series->Build(
-        series_g1, series_g2,
+        stacked_area_line_g, stacked_area_fill_g,
         axis_x, axis_y[ y_n ], lb_list,
         0, 1,
-        &ofs_pos[ y_n ], &ofs_neg[ y_n ],
-        &pts_pos[ y_n ], &pts_neg[ y_n ]
+        &sa_ofs_pos[ y_n ], &sa_ofs_neg[ y_n ],
+        &sa_pts_pos[ y_n ], &sa_pts_neg[ y_n ]
       );
     }
-  }
-
-  {
-    std::vector< double > bar_ofs_pos[ 2 ];
-    std::vector< double > bar_ofs_neg[ 2 ];
-    uint32_t bar_num[ 2 ] = { 0, 0 };
-    uint32_t bar_cur = 0;
-    bool bar_first[ 2 ] = { true, true };
-    uint32_t lol_num = 0;
-    for ( Series* series : series_list ) {
-      int y_n = series->axis_y_n;
-      if ( series->type == SeriesType::Area ) {
-        std::vector< double > ofs_pos( category_list.size(), series->base );
-        std::vector< double > ofs_neg( category_list.size(), series->base );
-        std::vector< Point > pts_pos;
-        std::vector< Point > pts_neg;
-        Group* series_g2 = g1->AddNewGroup();
-        Group* series_g1 = g1->AddNewGroup();
-        series->Build(
-          series_g1, series_g2,
-          axis_x, axis_y[ y_n ], lb_list,
-          0, 1,
-          &ofs_pos, &ofs_neg,
-          &pts_pos, &pts_neg
-        );
+    if ( series->type == SeriesType::Area ) {
+      std::vector< double > ofs_pos( category_list.size(), series->base );
+      std::vector< double > ofs_neg( category_list.size(), series->base );
+      std::vector< Point > pts_pos;
+      std::vector< Point > pts_neg;
+      Group* g2 = series_g->AddNewGroup();
+      Group* g1 = series_g->AddNewGroup();
+      series->Build(
+        g1, g2,
+        axis_x, axis_y[ y_n ], lb_list,
+        0, 1,
+        &ofs_pos, &ofs_neg,
+        &pts_pos, &pts_neg
+      );
+    }
+    if (
+      series->type == SeriesType::Bar ||
+      series->type == SeriesType::StackedBar
+    ) {
+      if ( bar_first[ y_n ] || series->type == SeriesType::Bar ) {
+        bar_ofs_pos[ y_n ].assign( category_list.size(), series->base );
+        bar_ofs_neg[ y_n ].assign( category_list.size(), series->base );
       }
-      if (
-        series->type == SeriesType::Bar ||
-        series->type == SeriesType::StackedBar
-      ) {
-        if ( bar_first[ y_n ] || series->type == SeriesType::Bar ) {
-          bar_ofs_pos[ y_n ].assign( category_list.size(), series->base );
-          bar_ofs_neg[ y_n ].assign( category_list.size(), series->base );
+      if ( series->type == SeriesType::Bar || bar_first[ y_n ] ) {
+        if ( !bar_first[ 0 ] || !bar_first[ 1 ] ) {
+          bar_cur++;
+          bar_num[ y_n ] = bar_cur;
         }
-        if ( series->type == SeriesType::Bar || bar_first[ y_n ] ) {
-          if ( !bar_first[ 0 ] || !bar_first[ 1 ] ) {
-            bar_cur++;
-            bar_num[ y_n ] = bar_cur;
-          }
-        }
-        Group* series_g = g1->AddNewGroup();
-        series->Build(
-          series_g, nullptr,
-          axis_x, axis_y[ y_n ], lb_list,
-          bar_num[ y_n ], bar_tot,
-          &bar_ofs_pos[ y_n ], &bar_ofs_neg[ y_n ]
-        );
-        bar_first[ y_n ] = false;
       }
-      if ( series->type == SeriesType::Lollipop ) {
-        Group* series_g = g1->AddNewGroup();
-        series->Build(
-          series_g, nullptr,
-          axis_x, axis_y[ series->axis_y_n ], lb_list,
-          lol_num, lol_tot
-        );
-        lol_num++;
-      }
-      if (
-        series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Scatter ||
-        series->type == SeriesType::Point
-      ) {
-        Group* series_g = g1->AddNewGroup();
-        series->Build(
-          series_g, nullptr,
-          axis_x, axis_y[ y_n ], lb_list, 0, 1
-        );
-      }
+      series->Build(
+        series_g, nullptr,
+        axis_x, axis_y[ y_n ], lb_list,
+        bar_num[ y_n ], bar_tot,
+        &bar_ofs_pos[ y_n ], &bar_ofs_neg[ y_n ]
+      );
+      bar_first[ y_n ] = false;
+    }
+    if ( series->type == SeriesType::Lollipop ) {
+      series->Build(
+        series_g, nullptr,
+        axis_x, axis_y[ series->axis_y_n ], lb_list,
+        lol_num, lol_tot
+      );
+      lol_num++;
+    }
+    if (
+      series->type == SeriesType::XY ||
+      series->type == SeriesType::Line ||
+      series->type == SeriesType::Scatter ||
+      series->type == SeriesType::Point
+    ) {
+      series->Build(
+        series_g, nullptr,
+        axis_x, axis_y[ y_n ], lb_list, 0, 1
+      );
     }
   }
 
@@ -1075,13 +1065,12 @@ Canvas* Main::Build( void )
   chart_g->Attr()->LineColor()->Clear();
   chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
 
-  Group* chartbox_g2  = chart_g->AddNewGroup();
   Group* grid_minor_g = chart_g->AddNewGroup();
   Group* grid_major_g = chart_g->AddNewGroup();
   Group* grid_zero_g  = chart_g->AddNewGroup();
 
   Group* axes_line_g  = chart_g->AddNewGroup();
-  Group* chartbox_g1  = chart_g->AddNewGroup();
+  Group* chartbox_g   = chart_g->AddNewGroup();
   Group* axes_num_g   = chart_g->AddNewGroup();
   Group* axes_label_g = chart_g->AddNewGroup();
   Group* legend_g     = chart_g->AddNewGroup();
@@ -1089,8 +1078,7 @@ Canvas* Main::Build( void )
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::black );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
 
-  chartbox_g1->Attr()->FillColor()->Clear();
-  chartbox_g2->Attr()->FillColor()->Clear();
+  chartbox_g->Attr()->FillColor()->Clear();
 
   axes_num_g->Attr()->TextFont()->SetSize( 14 );
   axes_num_g->Attr()->LineColor()->Clear();
@@ -1189,7 +1177,7 @@ Canvas* Main::Build( void )
   std::vector< LegendBox > lb_list;
   CalcLegendBoxes( legend_g, lb_list, axis_objects );
 
-  BuildSeries( chartbox_g1, chartbox_g2, lb_list );
+  BuildSeries( chartbox_g, lb_list );
 
   PlaceLegend( axis_objects, lb_list, legend_g );
 

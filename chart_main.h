@@ -89,8 +89,7 @@ private:
   );
 
   void BuildSeries(
-    SVG::Group* chartbox_above_grid,
-    SVG::Group* chartbox_below_grid,
+    SVG::Group* g,
     std::vector< LegendBox >& lb_list
   );
 
