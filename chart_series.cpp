@@ -45,6 +45,8 @@ Series::Series( SeriesType type )
   line_color.Set( ColorName::black );
   SetLineDash( 0 );
 
+  fill_color.Clear();
+
   SetMarkerSize(
     ( type == SeriesType::Scatter ||
       type == SeriesType::Point ||
@@ -80,12 +82,15 @@ void Series::SetBase( double base )
 void Series::SetStyle( int style )
 {
   line_color.Set( &color_list[ style % color_list.size() ] );
+  fill_color.Set( &line_color );
   style = style / color_list.size();
   style = style % 8;
   if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
+    fill_color.SetTransparency( 0.5 );
     SetLineWidth( 0 );
     SetLineDash( 0 );
   } else {
+    fill_color.Lighten( 0.5 );
     if ( style == 0 ) {
       SetLineWidth( 4 );
       SetLineDash( 0 );
@@ -196,12 +201,7 @@ void Series::ApplyMarkStyle( SVG::Object* obj )
 void Series::ApplyFillStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
-  if ( fill_color.IsDefined() ) {
-    obj->Attr()->FillColor()->Set( &fill_color );
-  } else {
-    obj->Attr()->FillColor()->Set( &line_color );
-    obj->Attr()->FillColor()->Lighten( 0.5 );
-  }
+  obj->Attr()->FillColor()->Set( &fill_color );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
