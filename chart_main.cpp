@@ -508,6 +508,7 @@ void Main::BuildLegend( Group* g, int nx )
           p2.y -= line_w / 2;
           g->Add( new Rect( p1, p2 ) );
           series->ApplyLineStyle( g->Last() );
+          g->Last()->Attr()->SetLineJoin( LineJoin::Sharp );
         }
       } else {
         series->ApplyMarkStyle( g->Last() );
