@@ -724,7 +724,7 @@ void Series::BuildBar(
   for ( const Datum& datum : datum_list ) {
     size_t i = datum.x;
     double x = datum.x + cx;
-    bool valid = x_axis->Valid( x ) && y_axis->Valid( datum.y );
+    bool valid = y_axis->Valid( datum.y );
     if ( !valid || datum.y == base ) continue;
 
     p1.x = x_axis->Coor( x );
