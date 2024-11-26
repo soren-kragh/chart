@@ -491,6 +491,20 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+int Series::GetStackDir( Axis* y_axis )
+{
+  if ( type != SeriesType::StackedArea ) {
+    return 0;
+  }
+  double sum = 0;
+  for ( const Datum& datum : datum_list ) {
+    if ( y_axis->Valid( datum.y ) ) sum += datum.y - base;
+  }
+  return (sum < 0) ? -1 : 1;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Series::BuildArea(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
@@ -507,10 +521,7 @@ void Series::BuildArea(
   std::vector< SVG::Point >* pts_neg
 )
 {
-  double sum = 0;
-  for ( const Datum& datum : datum_list ) {
-    if ( y_axis->Valid( datum.y ) ) sum += datum.y - base;
-  }
+  int stack_dir = GetStackDir( y_axis );
 
   // Normalize number of elements in datum_list by inserting invalid values
   // before and after the defined values as needed.
@@ -541,13 +552,13 @@ void Series::BuildArea(
   bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
   bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
 
-  bool first_in_stack = (sum < 0) ? pts_neg->empty() : pts_pos->empty();
+  bool first_in_stack = (stack_dir < 0) ? pts_neg->empty() : pts_pos->empty();
 
   // Initialize the fill polygon with the points from the top of the previous
   // polygon, which are contained in pts_pos/pts_neg.
   if ( has_fill ) {
     fill_g->Add( fill_obj = new Poly() );
-    if ( sum < 0 ) {
+    if ( stack_dir < 0 ) {
       for ( auto it = pts_neg->rbegin(); it != pts_neg->rend(); ++it ) {
         fill_obj->Add( *it );
       }
@@ -557,7 +568,7 @@ void Series::BuildArea(
       }
     }
   }
-  if ( sum < 0 ) {
+  if ( stack_dir < 0 ) {
     pts_neg->clear();
   } else {
     pts_pos->clear();
@@ -572,7 +583,7 @@ void Series::BuildArea(
         lb_list, (ap_line_cnt == 0) ? p : ap_prv_p, p, false, is_datum
       );
     }
-    if ( sum < 0 ) {
+    if ( stack_dir < 0 ) {
       pts_neg->push_back( p );
     } else {
       pts_pos->push_back( p );
@@ -650,11 +661,11 @@ void Series::BuildArea(
   if ( !datum_list.empty() ) {
     Point beg_p{
       x_axis->Coor( 0 ),
-      y_axis->Coor( (sum < 0) ? ofs_neg->front() : ofs_pos->front() )
+      y_axis->Coor( (stack_dir < 0) ? ofs_neg->front() : ofs_pos->front() )
     };
     Point end_p{
       x_axis->Coor( ofs_pos->size() - 1 ),
-      y_axis->Coor( (sum < 0) ? ofs_neg->back() : ofs_pos->back() )
+      y_axis->Coor( (stack_dir < 0) ? ofs_neg->back() : ofs_pos->back() )
     };
     if ( first_in_stack ) do_point( beg_p, false );
     double prv_base = 0;
@@ -670,7 +681,7 @@ void Series::BuildArea(
         do_point( p, false );
       }
       if ( !valid ) y = 0;
-      if ( sum < 0 ) {
+      if ( stack_dir < 0 ) {
         prv_base = ofs_neg->at( i );
         y += prv_base;
         ofs_neg->at( i ) = y;

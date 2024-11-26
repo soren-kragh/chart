@@ -64,11 +64,30 @@ private:
   void ApplyMarkStyle( SVG::Object* obj );
   void ApplyFillStyle( SVG::Object* obj );
 
+  bool Inside(
+    const SVG::Point p, const SVG::BoundaryBox& clip_box
+  );
+
+  int ClipLine(
+    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
+    const SVG::BoundaryBox& clip_box
+  );
+
+  SVG::Point MoveInside(
+    SVG::Point p, const SVG::BoundaryBox& clip_box
+  );
+
   void UpdateLegendBoxes(
     std::vector< LegendBox >& lb_list,
     SVG::Point p1, SVG::Point p2,
     bool p1_inc = true, bool p2_inc = true
   );
+
+  // Computes if the series must stack above base or below base:
+  //    +1 : Stack above base.
+  //    -1 : Stack below base.
+  //     0 : No preferred stack direction.
+  int GetStackDir( Axis* y_axis );
 
   void Build(
     SVG::Group* g1,
@@ -119,19 +138,6 @@ private:
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list
-  );
-
-  bool Inside(
-    const SVG::Point p, const SVG::BoundaryBox& clip_box
-  );
-
-  int ClipLine(
-    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
-    const SVG::BoundaryBox& clip_box
-  );
-
-  SVG::Point MoveInside(
-    SVG::Point p, const SVG::BoundaryBox& clip_box
   );
 
   SeriesType type;

@@ -708,6 +708,7 @@ void Main::AxisPrepare( void )
       }
       Axis* ax = axis_x;
       Axis* ay = axis_y[ axis_n ];
+      int stack_dir = series->GetStackDir( ay );
       if (
         stackable ||
         series->type == SeriesType::Lollipop ||
@@ -726,7 +727,7 @@ void Main::AxisPrepare( void )
         if ( stackable ) {
           size_t i = x;
           y -= series->base;
-          if ( y < 0 ) {
+          if ( stack_dir < 0 || (stack_dir == 0 && y < 0) ) {
             y += ofs_neg[ type_n ][ axis_n ].at( i );
             ofs_neg[ type_n ][ axis_n ][ i ] = y;
           } else {
