@@ -788,7 +788,7 @@ void Series::BuildBar(
           BuildMarker( fill_g, marker_int, p2 );
         }
       }
-      UpdateLegendBoxes( lb_list, p1, p2 );
+      UpdateLegendBoxes( lb_list, p1, p2, false, true );
     }
 
     if ( type == SeriesType::Bar || type == SeriesType::StackedBar ) {
@@ -925,7 +925,7 @@ void Series::BuildLine(
         UpdateLegendBoxes( lb_list, prv, p );
       }
     } else {
-      UpdateLegendBoxes( lb_list, p, p );
+      UpdateLegendBoxes( lb_list, p, p, true, false );
     }
     if ( !clipped && marker_show ) {
       BuildMarker( mark_g, marker_out, p );
