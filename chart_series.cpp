@@ -85,9 +85,18 @@ void Series::SetStyle( int style )
   fill_color.Set( &line_color );
   style = style / color_list.size();
   style = style % 8;
-  if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
-    fill_color.SetTransparency( 0.5 );
-    SetLineWidth( 0 );
+  if (
+    type == SeriesType::Bar ||
+    type == SeriesType::StackedBar ||
+    type == SeriesType::Area ||
+    type == SeriesType::StackedArea
+  ) {
+    if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
+      fill_color.SetTransparency( 0.5 );
+    } else {
+      fill_color.Lighten( 0.5 );
+    }
+    SetLineWidth( 1 );
     SetLineDash( 0 );
   } else {
     fill_color.Lighten( 0.5 );
