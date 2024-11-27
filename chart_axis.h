@@ -170,6 +170,8 @@ private:
   bool   data_def;
   double data_min;
   double data_max;
+  bool   data_min_is_base;
+  bool   data_max_is_base;
 
   double min;
   double max;

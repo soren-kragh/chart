@@ -42,6 +42,8 @@ Axis::Axis( bool x_axis )
   data_def = false;
   data_min = 0;
   data_max = 0;
+  data_min_is_base = false;
+  data_max_is_base = false;
   min = 0;
   max = 0;
   orth_axis_cross = 0;
@@ -340,6 +342,9 @@ void Axis::LegalizeMajor( void ) {
 
 void Axis::LegalizeMinMax( void )
 {
+  bool min_is_base = false;
+  bool max_is_base = false;
+
   if ( data_min == data_max ) {
     if ( log_scale ) {
       data_min = data_min / 10;
@@ -348,6 +353,8 @@ void Axis::LegalizeMinMax( void )
       data_min = data_min - 1;
       data_max = data_max + 1;
     }
+    data_min_is_base = false;
+    data_max_is_base = false;
   }
 
   bool automatic = false;
@@ -356,15 +363,21 @@ void Axis::LegalizeMinMax( void )
     automatic = true;
     min = data_min;
     max = data_max;
+    min_is_base = data_min_is_base;
+    max_is_base = data_max_is_base;
   }
   if ( log_scale && min <= 0 ) {
     min = data_min;
-    if ( max <= min ) max = 1000 * min;
+    min_is_base = data_min_is_base;
+    if ( max <= min ) {
+      max = 1000 * min;
+      max_is_base = false;
+    }
   }
 
   if ( automatic && !log_scale && !x_axis ) {
-    if ( min > 0 && (max - min) / max > 0.5 ) min = 0;
-    if ( max < 0 && (min - max) / min > 0.5 ) max = 0;
+    if ( min > 0 && (max - min) / max > 0.5 && !min_is_base ) min = 0;
+    if ( max < 0 && (min - max) / min > 0.5 && !max_is_base ) max = 0;
   }
 
   LegalizeMajor();
@@ -374,17 +387,25 @@ void Axis::LegalizeMinMax( void )
     if ( major > 0 ) {
       if ( log_scale ) {
         int32_t u = std::lround( std::log10( major ) );
-        p = std::log10( min ) / u + epsilon;
-        min = std::pow( std::pow( double( 10 ), u ), std::floor( p ) );
-        p = std::log10( max ) / u - epsilon;
-        max = std::pow( std::pow( double( 10 ), u ), std::ceil( p ) );
-        if ( max < 10 * min ) max = 10 * min;
+        if ( !min_is_base ) {
+          p = std::log10( min ) / u + epsilon;
+          min = std::pow( std::pow( double( 10 ), u ), std::floor( p ) );
+        }
+        if ( !max_is_base ) {
+          p = std::log10( max ) / u - epsilon;
+          max = std::pow( std::pow( double( 10 ), u ), std::ceil( p ) );
+          if ( max < 10 * min ) max = 10 * min;
+        }
       } else {
         double e = (max - min) * epsilon;
-        p = (min + e) / major;
-        min = std::floor( p ) * major;
-        p = (max - e) / major;
-        max = std::ceil( p ) * major;
+        if ( !min_is_base ) {
+          p = (min + e) / major;
+          min = std::floor( p ) * major;
+        }
+        if ( !max_is_base ) {
+          p = (max - e) / major;
+          max = std::ceil( p ) * major;
+        }
       }
     }
     if ( x_axis && orth_style[ 0 ] == AxisStyle::None ) {

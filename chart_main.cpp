@@ -716,8 +716,14 @@ void Main::AxisPrepare( void )
       ) {
         double y = series->base;
         if ( ay->Valid( y ) ) {
-          if ( !ay->data_def || ay->data_min > y ) ay->data_min = y;
-          if ( !ay->data_def || ay->data_max < y ) ay->data_max = y;
+          if ( !ay->data_def || ay->data_min > y ) {
+            ay->data_min = y;
+            ay->data_min_is_base = true;
+          }
+          if ( !ay->data_def || ay->data_max < y ) {
+            ay->data_max = y;
+            ay->data_max_is_base = true;
+          }
           ay->data_def = true;
         }
       }
@@ -739,8 +745,14 @@ void Main::AxisPrepare( void )
         if ( !ay->Valid( y ) ) continue;
         if ( !ax->data_def || ax->data_min > x ) ax->data_min = x;
         if ( !ax->data_def || ax->data_max < x ) ax->data_max = x;
-        if ( !ay->data_def || ay->data_min > y ) ay->data_min = y;
-        if ( !ay->data_def || ay->data_max < y ) ay->data_max = y;
+        if ( !ay->data_def || ay->data_min > y ) {
+          ay->data_min = y;
+          ay->data_min_is_base = false;
+        }
+        if ( !ay->data_def || ay->data_max < y ) {
+          ay->data_max = y;
+          ay->data_max_is_base = false;
+        }
         ax->data_def = true;
         ay->data_def = true;
       }
