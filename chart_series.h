@@ -60,9 +60,10 @@ public:
 
 private:
 
+  void ApplyFillStyle( SVG::Object* obj );
   void ApplyLineStyle( SVG::Object* obj );
   void ApplyMarkStyle( SVG::Object* obj );
-  void ApplyFillStyle( SVG::Object* obj );
+  void ApplyHoleStyle( SVG::Object* obj );
 
   bool Inside(
     const SVG::Point p, const SVG::BoundaryBox& clip_box
@@ -90,8 +91,8 @@ private:
   int GetStackDir( Axis* y_axis );
 
   void Build(
-    SVG::Group* g1,
-    SVG::Group* g2,
+    SVG::Group* main_g,
+    SVG::Group* stacked_area_fill_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -104,9 +105,10 @@ private:
   );
   void BuildArea(
     const SVG::BoundaryBox& clip_box,
+    SVG::Group* fill_g,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* fill_g,
+    SVG::Group* hole_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -119,9 +121,11 @@ private:
   );
   void BuildBar(
     const SVG::BoundaryBox& clip_box,
+    SVG::Group* fill_g,
+    SVG::Group* tbar_g,         // Used for thin bars
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* fill_g,
+    SVG::Group* hole_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -134,7 +138,7 @@ private:
     const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* fill_g,
+    SVG::Group* hole_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list

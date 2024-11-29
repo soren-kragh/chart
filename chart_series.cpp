@@ -184,6 +184,12 @@ void Series::SetMarkerShape( MarkerShape shape )
 
 //------------------------------------------------------------------------------
 
+void Series::ApplyFillStyle( SVG::Object* obj )
+{
+  obj->Attr()->LineColor()->Clear();
+  obj->Attr()->FillColor()->Set( &fill_color );
+}
+
 void Series::ApplyLineStyle( SVG::Object* obj )
 {
   obj->Attr()->SetLineWidth( line_width );
@@ -205,12 +211,18 @@ void Series::ApplyMarkStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
   obj->Attr()->FillColor()->Set( &line_color );
+  if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
+    obj->Attr()->FillColor()->SetOpacity( 1.0 );
+  }
 }
 
-void Series::ApplyFillStyle( SVG::Object* obj )
+void Series::ApplyHoleStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
   obj->Attr()->FillColor()->Set( &fill_color );
+  if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
+    obj->Attr()->FillColor()->SetOpacity( 1.0 );
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -443,7 +455,7 @@ void Series::ComputeMarker( SVG::U rim )
       ? (marker_diameter > 0)
       : (marker_diameter > line_w)
     );
-  marker_hollow = marker_diameter >= 3 * line_w;
+  marker_hollow = marker_diameter >= 3 * line_w && !fill_color.IsClear();
 
   compute( marker_int, -line_w );
   compute( marker_out, 0 );
@@ -516,9 +528,10 @@ int Series::GetStackDir( Axis* y_axis )
 
 void Series::BuildArea(
   const SVG::BoundaryBox& clip_box,
+  Group* fill_g,
   Group* line_g,
   Group* mark_g,
-  Group* fill_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -607,8 +620,7 @@ void Series::BuildArea(
     if ( is_datum && marker_show ) {
       BuildMarker( mark_g, marker_out, p );
       if ( marker_hollow ) {
-        // TBD: Not fill_g, reintroduce hole_g?
-        BuildMarker( fill_g, marker_int, p );
+        BuildMarker( hole_g, marker_int, p );
       }
     }
     if ( on_line && (is_datum || ap_line_cnt == 0) ) {
@@ -718,9 +730,11 @@ void Series::BuildArea(
 
 void Series::BuildBar(
   const SVG::BoundaryBox& clip_box,
+  Group* fill_g,
+  Group* tbar_g,
   Group* line_g,
   Group* mark_g,
-  Group* fill_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -738,7 +752,8 @@ void Series::BuildBar(
   Point p1;
   Point p2;
 
-  bool has_area = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
   U db = std::min( 1.0, line_width / 2 );
 
   for ( const Datum& datum : datum_list ) {
@@ -794,7 +809,7 @@ void Series::BuildBar(
       if ( p2_inside && marker_show ) {
         BuildMarker( mark_g, marker_out, p2 );
         if ( marker_hollow ) {
-          BuildMarker( fill_g, marker_int, p2 );
+          BuildMarker( hole_g, marker_int, p2 );
         }
       }
       UpdateLegendBoxes( lb_list, p1, p2, false, true );
@@ -840,7 +855,7 @@ void Series::BuildBar(
         p2.x - p1.x > line_width + 2 &&
         p2.y - p1.y > line_width + 2;
       if ( has_interior ) {
-        if ( has_area ) {
+        if ( has_fill ) {
           Point c1{ p1 };
           Point c2{ p2 };
           if ( !cut_lft ) c1.x += db;
@@ -849,7 +864,7 @@ void Series::BuildBar(
           if ( !cut_bot ) c2.y -= db;
           fill_g->Add( new Rect( c1, c2 ) );
         }
-        if ( line_width > 0 ) {
+        if ( has_line ) {
           U d = line_width / 2;
           if ( cut_bot && cut_top ) {
             line_g->Add( new Line( p1.x + d, p1.y, p1.x + d, p2.y ) );
@@ -896,7 +911,7 @@ void Series::BuildBar(
           line_g->Add( new Rect( p1.x + d, p1.y + d, p2.x - d, p2.y - d ) );
         }
       } else {
-        mark_g->Add( new Rect( p1, p2 ) );
+        tbar_g->Add( new Rect( p1, p2 ) );
       }
     }
 
@@ -911,7 +926,7 @@ void Series::BuildLine(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
   Group* mark_g,
-  Group* fill_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list
@@ -921,7 +936,7 @@ void Series::BuildLine(
   bool adding_segments = false;
 
   bool has_line =
-    line_width > 0 &&
+    !line_g->Attr()->LineColor()->IsClear() && line_width > 0 &&
     (type == SeriesType::XY || type == SeriesType::Line);
 
   Point prv;
@@ -939,7 +954,7 @@ void Series::BuildLine(
     if ( !clipped && marker_show ) {
       BuildMarker( mark_g, marker_out, p );
       if ( marker_hollow ) {
-        BuildMarker( fill_g, marker_int, p );
+        BuildMarker( hole_g, marker_int, p );
       }
     }
     prv = p;
@@ -1011,8 +1026,8 @@ void Series::BuildLine(
 //------------------------------------------------------------------------------
 
 void Series::Build(
-  SVG::Group* g1,
-  SVG::Group* g2,
+  SVG::Group* main_g,
+  SVG::Group* stacked_area_fill_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -1056,44 +1071,43 @@ void Series::Build(
   clip_box.max.x += e1;
   clip_box.max.y += e1;
 
+  Group* fill_g = nullptr;
+  Group* tbar_g = nullptr;
   Group* line_g = nullptr;
   Group* mark_g = nullptr;
-  Group* fill_g = nullptr;
+  Group* hole_g = nullptr;
 
-  if (
-    type == SeriesType::XY ||
-    type == SeriesType::Scatter ||
-    type == SeriesType::Line ||
-    type == SeriesType::Point ||
-    type == SeriesType::Lollipop
-  ) {
-    if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
-      line_g = g1->AddNewGroup();
-      ApplyLineStyle( line_g );
-    }
-    if ( marker_show ) {
-      mark_g = g1->AddNewGroup();
-      ApplyMarkStyle( mark_g );
-      if ( marker_hollow ) {
-        fill_g = g1->AddNewGroup();
-        ApplyFillStyle( fill_g );
-      }
-    }
+  if ( type == SeriesType::StackedArea ) {
+    fill_g = stacked_area_fill_g->AddNewGroup();
+  } else {
+    fill_g = main_g->AddNewGroup();
   }
+  ApplyFillStyle( fill_g );
+
+  tbar_g = main_g->AddNewGroup();
+  if ( !line_color.IsClear() && line_width > 0 ) {
+    tbar_g->Attr()->LineColor()->Clear();
+    tbar_g->Attr()->FillColor()->Set( &line_color );
+  } else {
+    ApplyFillStyle( tbar_g );
+  }
+
+  line_g = main_g->AddNewGroup();
+  ApplyLineStyle( line_g );
+
+  mark_g = main_g->AddNewGroup();
+  ApplyMarkStyle( mark_g );
+
+  hole_g = main_g->AddNewGroup();
+  ApplyHoleStyle( hole_g );
 
   if (
     type == SeriesType::Area ||
     type == SeriesType::StackedArea
   ) {
-    line_g = g1->AddNewGroup();
-    ApplyLineStyle( line_g );
-    mark_g = g1->AddNewGroup();
-    ApplyMarkStyle( mark_g );
-    Group* fill_g = g2->AddNewGroup();
-    ApplyFillStyle( fill_g );
     BuildArea(
       clip_box,
-      line_g, mark_g, fill_g,
+      fill_g, line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
@@ -1103,25 +1117,13 @@ void Series::Build(
   }
 
   if (
-    type == SeriesType::Bar ||
-    type == SeriesType::StackedBar
-  ) {
-    fill_g = g1->AddNewGroup();
-    ApplyFillStyle( fill_g );
-    mark_g = g1->AddNewGroup();
-    ApplyMarkStyle( mark_g );
-    line_g = g1->AddNewGroup();
-    ApplyLineStyle( line_g );
-  }
-
-  if (
     type == SeriesType::Lollipop ||
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar
   ) {
     BuildBar(
       clip_box,
-      line_g, mark_g, fill_g,
+      fill_g, tbar_g, line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
@@ -1137,7 +1139,7 @@ void Series::Build(
   ) {
     BuildLine(
       clip_box,
-      line_g, mark_g, fill_g,
+      line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list
     );
