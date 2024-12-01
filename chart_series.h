@@ -161,7 +161,7 @@ private:
   double e1 = 0;
   double e2 = 0;
 
-  double bar_width = 0.85;
+  double bar_width = 1.0;
   double bar_cluster_width = 0.85;
 
   std::vector< Datum > datum_list;

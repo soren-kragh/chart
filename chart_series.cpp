@@ -744,7 +744,7 @@ void Series::BuildBar(
   std::vector< double >* ofs_neg
 )
 {
-  double tx = (bar_tot == 1) ? 1.0 : bar_cluster_width;
+  double tx = bar_cluster_width;
   double wx = tx / bar_tot;
   double cx = (1 - tx + wx) / 2 + bar_num * wx;
   cx = cx - 0.5;
