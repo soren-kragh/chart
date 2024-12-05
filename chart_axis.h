@@ -200,6 +200,10 @@ private:
                             // coordinate (0).
   bool   orth_coor_is_max;  // This axis placed at max orthogonal
                             // coordinate (orth_length).
+
+  // The coordinate of the category "number" line, which is always at one of
+  // the four sides.
+  SVG::U cat_coor;
 };
 
 }

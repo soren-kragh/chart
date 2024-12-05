@@ -67,6 +67,8 @@ Axis::Axis( bool x_axis )
   orth_coor_is_min = false;
   orth_coor_is_max = false;
   orth_coor = 0;
+
+  cat_coor = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1079,7 +1081,6 @@ void Axis::BuildCategories(
   for ( auto cat : categoty_list ) {
     max_width = std::max( max_width, cat.size() );
   }
-//  cat_g->Attr()->TextFont()->SetBold();
   U cw;
   U ch;
   {
@@ -1126,8 +1127,8 @@ void Axis::BuildCategories(
       for ( auto cat : categoty_list ) {
         if ( cat != "" ) {
           Object* obj = cat_g->Add( new Text( cat ) );
-          U x = (angle == 0) ? Coor( n ) : orth_coor;
-          U y = (angle != 0) ? Coor( n ) : orth_coor;
+          U x = (angle == 0) ? Coor( n ) : cat_coor;
+          U y = (angle != 0) ? Coor( n ) : cat_coor;
           if ( trial == 0 ) {
             obj->MoveTo( ax, ay, x + dx, y + dy );
           }
@@ -1186,15 +1187,37 @@ void Axis::Build(
   // Limit for when axes are near min or max.
   double near = 0.3;
 
-  if ( angle == 0 ) {
-    if ( number_pos != Pos::Bottom && number_pos != Pos::Top ) {
-      number_pos =
-        (orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
+  if ( category_axis ) {
+    if ( angle == 0 ) {
+      if ( number_pos != Pos::Top && number_pos != Pos::Bottom ) {
+        number_pos = Pos::Auto;
+      }
+      if ( pos == Pos::Auto ) {
+        pos = (number_pos != Pos::Auto) ? number_pos : Pos::Bottom;
+      }
+      if ( number_pos == Pos::Auto ) number_pos = pos;
+      cat_coor = (pos == Pos::Top) ? orth_length : U( 0 );
+    } else {
+      if ( number_pos != Pos::Right && number_pos != Pos::Left ) {
+        number_pos = Pos::Auto;
+      }
+      if ( pos == Pos::Auto ) {
+        pos = (number_pos != Pos::Auto) ? number_pos : Pos::Left;
+      }
+      if ( number_pos == Pos::Auto ) number_pos = pos;
+      cat_coor = (pos == Pos::Right) ? orth_length : U( 0 );
     }
   } else {
-    if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
-      number_pos =
-        (orth_coor > (orth_length * (1 - near))) ? Pos::Right : Pos::Left;
+    if ( angle == 0 ) {
+      if ( number_pos != Pos::Bottom && number_pos != Pos::Top ) {
+        number_pos =
+          (orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
+      }
+    } else {
+      if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
+        number_pos =
+          (orth_coor > (orth_length * (1 - near))) ? Pos::Right : Pos::Left;
+      }
     }
   }
 

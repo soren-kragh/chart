@@ -677,7 +677,7 @@ void Main::AxisPrepare( void )
     axis_x->min = -0.5;
     axis_x->max = axis_x->min + category_list.size();
     axis_x->orth_axis_cross = axis_x->min;
-    axis_x->reverse = (axis_x->angle != 0);
+    axis_x->reverse = axis_x->reverse ^ (axis_x->angle != 0);
   }
 
   axis_x->data_def = false;
@@ -777,20 +777,58 @@ void Main::AxisPrepare( void )
 
   if ( axis_x->category_axis ) {
     if ( axis_x->angle == 0 ) {
-      if ( axis_x->pos != Pos::Top ) axis_x->pos = Pos::Bottom;
-      if ( axis_y[ 0 ]->pos != Pos::Right ) axis_y[ 0 ]->pos = Pos::Left;
+      if ( axis_x->pos != Pos::Top && axis_x->pos != Pos::Bottom ) {
+        axis_x->pos = Pos::Auto;
+      }
     } else {
       if ( axis_x->pos != Pos::Right && axis_x->pos != Pos::Left ) {
-        axis_x->pos = axis_y[ 0 ]->reverse ? Pos::Right : Pos::Left;
+        axis_x->pos = Pos::Auto;
+      }
+    }
+    int base_def = -1;
+    if ( axis_x->pos == Pos::Auto ) {
+      double base;
+      for ( Series* series : series_list ) {
+        if (
+          series->type == SeriesType::Lollipop ||
+          series->type == SeriesType::Bar ||
+          series->type == SeriesType::StackedBar ||
+          series->type == SeriesType::Area ||
+          series->type == SeriesType::StackedArea
+        ) {
+          if ( base_def < 0 ) {
+            base_def = series->axis_y_n;
+            base = series->base;
+            continue;
+          }
+          if ( series->axis_y_n != base_def || series->base != base ) {
+            base_def = -1;
+            break;
+          }
+        }
+      }
+      if ( base_def == 0 ) { // TBD
+        axis_y[ 0 ]->orth_axis_cross = base;
+      }
+    }
+    if ( axis_x->angle == 0 ) {
+      if ( base_def < 0 ) {
+        if ( axis_x->pos != Pos::Top ) axis_x->pos = Pos::Bottom;
+      }
+      if ( axis_y[ 0 ]->pos != Pos::Right ) axis_y[ 0 ]->pos = Pos::Left;
+    } else {
+      if ( base_def < 0 ) {
+        if ( axis_x->pos != Pos::Right && axis_x->pos != Pos::Left ) {
+          axis_x->pos = axis_y[ 0 ]->reverse ? Pos::Right : Pos::Left;
+        }
       }
       if ( axis_y[ 0 ]->pos != Pos::Top ) axis_y[ 0 ]->pos = Pos::Bottom;
     }
-    axis_x->number_pos = axis_x->pos;
     if ( axis_x->style == AxisStyle::Auto ) {
-      axis_x->style = AxisStyle::None;
+      axis_x->style = (base_def < 0) ? AxisStyle::None : AxisStyle::Line;
     }
-    if ( axis_x->style != AxisStyle::None ) {
-      axis_x->style = AxisStyle::Edge;
+    if ( axis_x->style != AxisStyle::None && axis_x->style != AxisStyle::Line ) {
+      axis_x->style = AxisStyle::None;
     }
     for ( auto a : axis_y ) {
       if ( a->style == AxisStyle::Auto ) {
@@ -951,7 +989,8 @@ void Main::AxisPrepare( void )
 ///////////////////////////////////////////////////////////////////////////////
 
 void Main::BuildSeries(
-  SVG::Group* g,
+  SVG::Group* below_axes_g,
+  SVG::Group* above_axes_g,
   std::vector< LegendBox >& lb_list
 )
 {
@@ -984,9 +1023,8 @@ void Main::BuildSeries(
 
   uint32_t lol_num = 0;
 
-  Group* stacked_area_fill_g = g->AddNewGroup();
-  Group* stacked_area_line_g = g->AddNewGroup();
-  Group* series_g            = g->AddNewGroup();
+  Group* stacked_area_fill_g = below_axes_g->AddNewGroup();
+  Group* stacked_area_line_g = below_axes_g->AddNewGroup();
 
   for ( Series* series : series_list ) {
     int y_n = series->axis_y_n;
@@ -1009,8 +1047,8 @@ void Main::BuildSeries(
       std::vector< double > ofs_neg( category_list.size(), series->base );
       std::vector< Point > pts_pos;
       std::vector< Point > pts_neg;
-      Group* g2 = series_g->AddNewGroup();
-      Group* g1 = series_g->AddNewGroup();
+      Group* g2 = below_axes_g->AddNewGroup();
+      Group* g1 = below_axes_g->AddNewGroup();
       series->Build(
         g1, g2,
         axis_x, axis_y[ y_n ], lb_list,
@@ -1034,7 +1072,7 @@ void Main::BuildSeries(
         }
       }
       series->Build(
-        series_g, nullptr,
+        below_axes_g, nullptr,
         axis_x, axis_y[ y_n ], lb_list,
         bar_num[ y_n ], bar_tot,
         &bar_ofs_pos[ y_n ], &bar_ofs_neg[ y_n ]
@@ -1043,7 +1081,7 @@ void Main::BuildSeries(
     }
     if ( series->type == SeriesType::Lollipop ) {
       series->Build(
-        series_g, nullptr,
+        below_axes_g, nullptr,
         axis_x, axis_y[ series->axis_y_n ], lb_list,
         lol_num, lol_tot
       );
@@ -1056,7 +1094,7 @@ void Main::BuildSeries(
       series->type == SeriesType::Point
     ) {
       series->Build(
-        series_g, nullptr,
+        above_axes_g, nullptr,
         axis_x, axis_y[ y_n ], lb_list, 0, 1
       );
     }
@@ -1079,20 +1117,21 @@ Canvas* Main::Build( void )
   chart_g->Attr()->LineColor()->Clear();
   chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
 
-  Group* grid_minor_g = chart_g->AddNewGroup();
-  Group* grid_major_g = chart_g->AddNewGroup();
-  Group* grid_zero_g  = chart_g->AddNewGroup();
-
-  Group* axes_line_g  = chart_g->AddNewGroup();
-  Group* chartbox_g   = chart_g->AddNewGroup();
-  Group* axes_num_g   = chart_g->AddNewGroup();
-  Group* axes_label_g = chart_g->AddNewGroup();
-  Group* legend_g     = chart_g->AddNewGroup();
+  Group* grid_minor_g          = chart_g->AddNewGroup();
+  Group* grid_major_g          = chart_g->AddNewGroup();
+  Group* grid_zero_g           = chart_g->AddNewGroup();
+  Group* chartbox_below_axes_g = chart_g->AddNewGroup();
+  Group* axes_line_g           = chart_g->AddNewGroup();
+  Group* chartbox_above_axes_g = chart_g->AddNewGroup();
+  Group* axes_num_g            = chart_g->AddNewGroup();
+  Group* axes_label_g          = chart_g->AddNewGroup();
+  Group* legend_g              = chart_g->AddNewGroup();
 
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::black );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
 
-  chartbox_g->Attr()->FillColor()->Clear();
+  chartbox_below_axes_g->Attr()->FillColor()->Clear();
+  chartbox_above_axes_g->Attr()->FillColor()->Clear();
 
   axes_num_g->Attr()->TextFont()->SetSize( 14 );
   axes_num_g->Attr()->LineColor()->Clear();
@@ -1191,7 +1230,7 @@ Canvas* Main::Build( void )
   std::vector< LegendBox > lb_list;
   CalcLegendBoxes( legend_g, lb_list, axis_objects );
 
-  BuildSeries( chartbox_g, lb_list );
+  BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, lb_list );
 
   PlaceLegend( axis_objects, lb_list, legend_g );
 

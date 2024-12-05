@@ -30,7 +30,7 @@ namespace Chart {
 
   enum class NumberFormat { Auto, None, Fixed, Scientific, Magnitude };
 
-  enum class AxisStyle { Auto, None, Arrow, Edge };
+  enum class AxisStyle { Auto, None, Line, Arrow, Edge };
 
   enum class GridStyle { Auto, Dash, Solid };
 
