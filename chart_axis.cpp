@@ -1197,6 +1197,8 @@ void Axis::Build(
       }
       if ( number_pos == Pos::Auto ) number_pos = pos;
       cat_coor = (pos == Pos::Top) ? orth_length : U( 0 );
+      orth_coor_is_min = (pos != Pos::Top);
+      orth_coor_is_max = (pos == Pos::Top);
     } else {
       if ( number_pos != Pos::Right && number_pos != Pos::Left ) {
         number_pos = Pos::Auto;
@@ -1206,6 +1208,8 @@ void Axis::Build(
       }
       if ( number_pos == Pos::Auto ) number_pos = pos;
       cat_coor = (pos == Pos::Right) ? orth_length : U( 0 );
+      orth_coor_is_min = (pos != Pos::Right);
+      orth_coor_is_max = (pos == Pos::Right);
     }
   } else {
     if ( angle == 0 ) {
@@ -1248,6 +1252,13 @@ void Axis::Build(
   U ey = (angle == 0) ? orth_coor : ae;
 
   if ( phase == 0 && unit != "" ) {
+    if ( category_axis ) {
+      sx = (angle == 0) ? as : cat_coor;
+      sy = (angle == 0) ? cat_coor : as;
+      ex = (angle == 0) ? ae : cat_coor;
+      ey = (angle == 0) ? cat_coor : ae;
+    }
+
     Object* obj = Label( label_g, unit, 16 );
     obj->Attr()->TextFont()->SetBold();
     bool collision = false;
@@ -1326,13 +1337,17 @@ void Axis::Build(
 
     if ( angle == 0 ) {
       if ( automatic ) {
-        unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
-        if ( orth_dual && style == AxisStyle::Arrow ) {
+        if ( category_axis ) {
           unit_pos = reverse ? Pos::Left : Pos::Right;
+        } else {
+          unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
+          if ( orth_dual && style == AxisStyle::Arrow ) {
+            unit_pos = reverse ? Pos::Left : Pos::Right;
+          }
         }
       }
       if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
-        if ( orth_dual ) {
+        if ( orth_dual || category_axis ) {
           place( Pos::Center, unit_pos );
         } else {
           if ( style == AxisStyle::Arrow ) {
@@ -1356,9 +1371,13 @@ void Axis::Build(
 
     if ( angle != 0 ) {
       if ( automatic ) {
-        unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
-        if ( orth_dual && style == AxisStyle::Arrow ) {
-          unit_pos = reverse ? Pos::Bottom : Pos::Top;
+        if ( category_axis ) {
+          unit_pos = Pos::Top;
+        } else {
+          unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
+          if ( orth_dual && style == AxisStyle::Arrow ) {
+            unit_pos = reverse ? Pos::Bottom : Pos::Top;
+          }
         }
       }
       if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
