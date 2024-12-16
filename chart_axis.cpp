@@ -31,6 +31,7 @@ Axis::Axis( bool x_axis )
   length = 0;
   style = AxisStyle::Auto;
   pos = Pos::Auto;
+  pos_base_axis_y_n = 0;
   digits = 0;
   decimals = 0;
   num_max_len = 0;
@@ -1192,7 +1193,7 @@ void Axis::Build(
       if ( number_pos != Pos::Top && number_pos != Pos::Bottom ) {
         number_pos = Pos::Auto;
       }
-      if ( pos == Pos::Auto ) {
+      if ( pos != Pos::Top && pos != Pos::Bottom ) {
         pos = (number_pos != Pos::Auto) ? number_pos : Pos::Bottom;
       }
       if ( number_pos == Pos::Auto ) number_pos = pos;
@@ -1203,7 +1204,7 @@ void Axis::Build(
       if ( number_pos != Pos::Right && number_pos != Pos::Left ) {
         number_pos = Pos::Auto;
       }
-      if ( pos == Pos::Auto ) {
+      if ( pos != Pos::Right && pos != Pos::Left ) {
         pos = (number_pos != Pos::Auto) ? number_pos : Pos::Left;
       }
       if ( number_pos == Pos::Auto ) number_pos = pos;

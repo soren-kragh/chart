@@ -149,6 +149,10 @@ private:
   Pos       pos;
   GridStyle grid_style;
 
+  // If pos is Pos::Base, this variable indicates which y-axis it refers to, in
+  // which case orth_axis_cross of that y-axis is where the base is at.
+  int pos_base_axis_y_n;
+
   SVG::U arrow_length = 10;
   SVG::U arrow_width = 10;
 
