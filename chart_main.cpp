@@ -672,10 +672,22 @@ void Main::AxisPrepare( void )
   }
 
   if ( category_list.size() > 0 ) {
+    bool no_bar = true;
+    for ( Series* series : series_list ) {
+      if (
+        series->type == SeriesType::Bar ||
+        series->type == SeriesType::StackedBar ||
+        series->type == SeriesType::Lollipop
+      )
+        no_bar = false;
+    }
     axis_x->category_axis = true;
     axis_x->log_scale = false;
-    axis_x->min = -0.5;
-    axis_x->max = axis_x->min + category_list.size();
+    axis_x->min = (no_bar && !category_list.empty()) ? 0.0 : -0.5;
+    axis_x->max =
+      axis_x->min
+      + std::max( category_list.size(), size_t( 1 ) )
+      - ((axis_x->min < 0) ? 0 : 1);
     axis_x->orth_axis_cross = axis_x->min;
     axis_x->reverse = axis_x->reverse ^ (axis_x->angle != 0);
   }
@@ -1144,7 +1156,7 @@ void Main::BuildSeries(
     }
     if ( series->type == SeriesType::Lollipop ) {
       series->Build(
-        below_axes_g, nullptr,
+        above_axes_g, nullptr,
         axis_x, axis_y[ series->axis_y_n ], lb_list,
         lol_num, lol_tot
       );
