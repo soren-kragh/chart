@@ -34,8 +34,9 @@ public:
 
   void SetStyle( AxisStyle style );
 
-  // Position of axis, will override orth_axis_cross.
-  void SetPos( Pos pos );
+  // Position of axis, will override orth_axis_cross. If pos is Pos::Base, then
+  // axis_y_n indicates which Y-axis base is refers to.
+  void SetPos( Pos pos, int axis_y_n = 0 );
 
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );

@@ -764,6 +764,13 @@ void Main::AxisPrepare( void )
     a->show = a->show || a->data_def;
   }
 
+  // Legalize axis_x->pos_base_axis_y_n.
+  if ( axis_x->pos_base_axis_y_n < 0 ) axis_x->pos_base_axis_y_n = 0;
+  if ( axis_x->pos_base_axis_y_n > 1 ) axis_x->pos_base_axis_y_n = 1;
+  while ( !axis_y[ axis_x->pos_base_axis_y_n ]->show ) {
+    axis_x->pos_base_axis_y_n = (axis_x->pos_base_axis_y_n + 2 - 1) % 2;
+  }
+
   // If we only show the secondary axis, then swap the roles.
   if ( !axis_y[ 0 ]->show && axis_y[ 1 ]->show ) {
     std::swap( axis_y[ 0 ], axis_y[ 1 ] );
@@ -835,6 +842,7 @@ void Main::AxisPrepare( void )
       if ( axis_x->pos != Pos::Base ) {
         if ( axis_x->pos != Pos::Top ) axis_x->pos = Pos::Bottom;
       }
+      // Assuming not dual:
       if ( axis_y[ 0 ]->pos != Pos::Right ) axis_y[ 0 ]->pos = Pos::Left;
     } else {
       if ( axis_x->pos != Pos::Base ) {
@@ -842,6 +850,7 @@ void Main::AxisPrepare( void )
           axis_x->pos = axis_y[ 0 ]->reverse ? Pos::Right : Pos::Left;
         }
       }
+      // Assuming not dual:
       if ( axis_y[ 0 ]->pos != Pos::Top ) axis_y[ 0 ]->pos = Pos::Bottom;
     }
     if ( axis_x->style == AxisStyle::Auto ) {
@@ -858,6 +867,13 @@ void Main::AxisPrepare( void )
     }
   } else {
     if ( axis_x->pos == Pos::Base ) axis_x->pos = Pos::Auto;
+  }
+  if ( axis_x->pos != Pos::Base ) {
+    axis_x->pos_base_axis_y_n = 0;
+  }
+  for ( auto a : axis_y ) {
+    if ( a->pos == Pos::Base ) a->pos = Pos::Auto;
+    a->pos_base_axis_y_n = 0;
   }
 
   axis_x->orth_dual = dual_y;
@@ -879,7 +895,7 @@ void Main::AxisPrepare( void )
   axis_x->LegalizeMinMax();
   for ( auto a : axis_y ) a->LegalizeMinMax();
 
-  if ( axis_x->category_axis && axis_x->pos == Pos::Base ) {
+  if ( axis_x->pos == Pos::Base ) {
     int i = axis_x->pos_base_axis_y_n;
     if (
       axis_y[ i ]->orth_axis_cross < axis_y[ i ]->min ||
@@ -890,11 +906,12 @@ void Main::AxisPrepare( void )
 
   // Edge style forces cross point to be at min or max.
   if ( axis_x->style == AxisStyle::Edge ) {
-    axis_y[ 0 ]->orth_axis_cross =
-      (axis_y[ 0 ]->orth_axis_cross < axis_y[ 0 ]->max)
-      ? axis_y[ 0 ]->min
-      : axis_y[ 0 ]->max;
+    for ( auto a : axis_y ) {
+      a->orth_axis_cross = (a->orth_axis_cross < a->max) ? a->min : a->max;
+    }
   }
+
+  // Assuming not dual:
   if ( axis_y[ 0 ]->style == AxisStyle::Edge ) {
     axis_x->orth_axis_cross =
       (axis_x->orth_axis_cross < axis_x->max)
@@ -902,6 +919,7 @@ void Main::AxisPrepare( void )
       : axis_x->max;
   }
 
+  // Assuming not dual:
   if (
     (axis_x->angle == 0)
     ? (axis_x->pos == Pos::Bottom)
@@ -943,8 +961,21 @@ void Main::AxisPrepare( void )
     axis_x->orth_axis_coor[ 0 ] = 0;
     axis_x->orth_axis_coor[ 1 ] = axis_x->length;
   }
-  axis_y[ 1 ]->orth_axis_coor[ 0 ] = axis_y[ 0 ]->orth_axis_coor[ 0 ];
-  axis_y[ 1 ]->orth_axis_coor[ 1 ] = axis_y[ 0 ]->orth_axis_coor[ 1 ];
+
+  if ( axis_x->pos == Pos::Base ) {
+    int x = axis_x->pos_base_axis_y_n;
+    axis_x->orth_coor = axis_y[ x ]->orth_axis_coor[ 0 ];
+  } else {
+    axis_x->orth_coor = axis_y[ 0 ]->orth_axis_coor[ 0 ];
+  }
+  {
+    int x = (axis_x->pos == Pos::Base) ? axis_x->pos_base_axis_y_n : 0;
+    auto a = axis_y[ x ];
+    for ( int i : { 0, 1 } ) {
+      axis_y[ i ]->orth_axis_coor[ 0 ] = a->orth_axis_coor[ 0 ];
+      axis_y[ i ]->orth_axis_coor[ 1 ] = a->orth_axis_coor[ 1 ];
+    }
+  }
 
   if ( axis_x->style == AxisStyle::Auto ) {
     axis_x->style =

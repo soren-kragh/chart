@@ -90,9 +90,10 @@ void Axis::SetStyle( AxisStyle style )
   show = true;
 }
 
-void Axis::SetPos( Pos pos )
+void Axis::SetPos( Pos pos, int axis_y_n )
 {
   this->pos = pos;
+  pos_base_axis_y_n = axis_y_n;
 }
 
 void Axis::SetLogScale( bool log_scale )
