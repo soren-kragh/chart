@@ -102,6 +102,14 @@ private:
     std::vector< LegendBox >& lb_list
   );
 
+  // Create an invisible rectangle around the chart area with extra margin to
+  // account for markers and/or lines which due to their width may spill out of
+  // of the chart area. Doing this ensures consistent chart dimensions
+  // independent of the data values close to the edge of the chart area.
+  void AddChartMargin(
+    SVG::Group* chart_g
+  );
+
   std::string title;
   std::string sub_title;
   std::string sub_sub_title;

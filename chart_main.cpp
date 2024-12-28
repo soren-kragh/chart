@@ -1225,6 +1225,47 @@ void Main::BuildSeries(
 
 //------------------------------------------------------------------------------
 
+void Main::AddChartMargin(
+  SVG::Group* chart_g
+)
+{
+  U margin = 0;
+  for ( Series* series : series_list ) {
+    series->ComputeMarker();
+    bool has_outline =
+      ( series->type == SeriesType::XY ||
+        series->type == SeriesType::Line ||
+        series->type == SeriesType::Area ||
+        series->type == SeriesType::StackedArea
+      ) && !series->line_color.IsClear();
+    bool has_marker =
+      ( series->type == SeriesType::XY ||
+        series->type == SeriesType::Scatter ||
+        series->type == SeriesType::Line ||
+        series->type == SeriesType::Point ||
+        series->type == SeriesType::Area ||
+        series->type == SeriesType::StackedArea
+      ) && series->marker_show;
+    if ( has_outline ) {
+      margin = std::max( +margin, series->line_width / 2 );
+    }
+    if ( has_marker ) {
+      margin = std::max( +margin, -series->marker_out.x1 );
+      margin = std::max( +margin, -series->marker_out.y1 );
+      margin = std::max( +margin, +series->marker_out.x2 );
+      margin = std::max( +margin, +series->marker_out.y2 );
+    }
+  }
+  chart_g->Add(
+    new Rect( -margin, -margin, chart_w + margin, chart_h + margin)
+  );
+  chart_g->Last()->Attr()->FillColor()->Clear();
+  chart_g->Last()->Attr()->LineColor()->Set( SVG::ColorName::black );
+  chart_g->Last()->Attr()->SetLineWidth( 0 );
+}
+
+//------------------------------------------------------------------------------
+
 Canvas* Main::Build( void )
 {
   Canvas* canvas = new Canvas();
@@ -1288,6 +1329,8 @@ Canvas* Main::Build( void )
       );
     }
   }
+
+  AddChartMargin( chart_g );
 
   axis_x->BuildLabel( axis_objects, axes_label_g );
   for ( auto a : axis_y ) {
