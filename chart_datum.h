@@ -22,6 +22,7 @@ class Datum
 
 public:
 
+  Datum() {}
   Datum( double x, double y ) : x( x ), y( y ) {}
 
   double x;

@@ -45,6 +45,8 @@ Series::Series( SeriesType type )
   line_color.Set( ColorName::black );
   SetLineDash( 0 );
 
+  fill_color.Clear();
+
   SetMarkerSize(
     ( type == SeriesType::Scatter ||
       type == SeriesType::Point ||
@@ -80,12 +82,24 @@ void Series::SetBase( double base )
 void Series::SetStyle( int style )
 {
   line_color.Set( &color_list[ style % color_list.size() ] );
+  fill_color.Set( &line_color );
   style = style / color_list.size();
   style = style % 8;
-  if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
-    SetLineWidth( 0 );
+  if (
+    type == SeriesType::Bar ||
+    type == SeriesType::StackedBar ||
+    type == SeriesType::Area ||
+    type == SeriesType::StackedArea
+  ) {
+    if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
+      fill_color.SetTransparency( 0.5 );
+    } else {
+      fill_color.Lighten( 0.5 );
+    }
+    SetLineWidth( 1 );
     SetLineDash( 0 );
   } else {
+    fill_color.Lighten( 0.5 );
     if ( style == 0 ) {
       SetLineWidth( 4 );
       SetLineDash( 0 );
@@ -170,6 +184,12 @@ void Series::SetMarkerShape( MarkerShape shape )
 
 //------------------------------------------------------------------------------
 
+void Series::ApplyFillStyle( SVG::Object* obj )
+{
+  obj->Attr()->LineColor()->Clear();
+  obj->Attr()->FillColor()->Set( &fill_color );
+}
+
 void Series::ApplyLineStyle( SVG::Object* obj )
 {
   obj->Attr()->SetLineWidth( line_width );
@@ -190,17 +210,22 @@ void Series::ApplyLineStyle( SVG::Object* obj )
 void Series::ApplyMarkStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
-  obj->Attr()->FillColor()->Set( &line_color );
+  if ( line_width > 0 ) {
+    obj->Attr()->FillColor()->Set( &line_color );
+    if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
+      obj->Attr()->FillColor()->SetOpacity( 1.0 );
+    }
+  } else {
+    obj->Attr()->FillColor()->Clear();
+  }
 }
 
-void Series::ApplyFillStyle( SVG::Object* obj )
+void Series::ApplyHoleStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
-  if ( fill_color.IsDefined() ) {
-    obj->Attr()->FillColor()->Set( &fill_color );
-  } else {
-    obj->Attr()->FillColor()->Set( &line_color );
-    obj->Attr()->FillColor()->Lighten( 0.5 );
+  obj->Attr()->FillColor()->Set( &fill_color );
+  if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
+    obj->Attr()->FillColor()->SetOpacity( 1.0 );
   }
 }
 
@@ -230,7 +255,7 @@ bool Series::Inside(
 //   2 : Two intersections; c1 and c2 are the points.
 int Series::ClipLine(
   SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
-  const BoundaryBox& clip_box
+  const SVG::BoundaryBox& clip_box
 )
 {
   // Record original p1.
@@ -323,10 +348,23 @@ int Series::ClipLine(
   return n;
 }
 
+SVG::Point Series::MoveInside(
+  SVG::Point p, const BoundaryBox& clip_box
+)
+{
+  if ( p.x < clip_box.min.x ) p.x = clip_box.min.x;
+  if ( p.x > clip_box.max.x ) p.x = clip_box.max.x;
+  if ( p.y < clip_box.min.y ) p.y = clip_box.min.y;
+  if ( p.y > clip_box.max.y ) p.y = clip_box.max.y;
+  return p;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 void Series::UpdateLegendBoxes(
-  std::vector< LegendBox >& lb_list, Point p1, Point p2
+  std::vector< LegendBox >& lb_list,
+  Point p1, Point p2,
+  bool p1_inc, bool p2_inc
 )
 {
   Point c1;
@@ -338,8 +376,8 @@ void Series::UpdateLegendBoxes(
     if ( p1.y > lb.bb.max.y && p2.y > lb.bb.max.y ) continue;
     bool p1_inside = Inside( p1, lb.bb );
     bool p2_inside = Inside( p2, lb.bb );
-    if ( p1_inside ) lb.weight1 += 1;
-    if ( p2_inside ) lb.weight1 += 1;
+    if ( p1_inside && p1_inc ) lb.weight1 += 1;
+    if ( p2_inside && p2_inc ) lb.weight1 += 1;
     if ( p1_inside && p2_inside ) {
       c1 = p1;
       c2 = p2;
@@ -421,7 +459,7 @@ void Series::ComputeMarker( SVG::U rim )
       ? (marker_diameter > 0)
       : (marker_diameter > line_w)
     );
-  marker_hollow = marker_diameter >= 3 * line_w;
+  marker_hollow = marker_diameter >= 3 * line_w && !fill_color.IsClear();
 
   compute( marker_int, -line_w );
   compute( marker_out, 0 );
@@ -478,171 +516,219 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+int Series::GetStackDir( Axis* y_axis )
+{
+  if ( type != SeriesType::StackedArea ) {
+    return 0;
+  }
+  double sum = 0;
+  for ( const Datum& datum : datum_list ) {
+    if ( y_axis->Valid( datum.y ) ) sum += datum.y - base;
+  }
+  return (sum < 0) ? -1 : 1;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Series::BuildArea(
   const SVG::BoundaryBox& clip_box,
+  Group* fill_g,
   Group* line_g,
   Group* mark_g,
-  Group* fill_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
   uint32_t bar_num,
   uint32_t bar_tot,
   std::vector< double >* ofs_pos,
-  std::vector< double >* ofs_neg
+  std::vector< double >* ofs_neg,
+  std::vector< SVG::Point >* pts_pos,
+  std::vector< SVG::Point >* pts_neg
 )
 {
-  U clamp_coor = y_axis->Coor( base );
-  auto clamp = [&]( Point& p )
-  {
-    if ( x_axis->angle == 0 ) {
-      p.y = clamp_coor;
-    } else {
-      p.x = clamp_coor;
-    }
-  };
+  int stack_dir = GetStackDir( y_axis );
 
-  bool has_area = !fill_g->Attr()->FillColor()->IsClear();
-  bool has_line = line_width > 0;
-
-  Poly* area_obj = nullptr;
-  Poly* line_obj = nullptr;
-  Point prv;
-  auto add_point = [&]( Point p, bool clipped, bool part_of_line )
+  // Normalize number of elements in datum_list by inserting invalid values
+  // before and after the defined values as needed.
   {
-    if ( has_area ) {
-      if ( area_obj ) {
-        UpdateLegendBoxes( lb_list, prv, p );
-      } else {
-        fill_g->Add( area_obj = new Poly() );
-      }
-      area_obj->Add( p );
-    }
-    if ( has_line && part_of_line ) {
-      if ( line_obj ) {
-        line_obj->Add( p );
-        if ( clipped ) line_obj = nullptr;
-      } else {
-        line_g->Add( line_obj = new Poly() );
-        line_obj->Add( p );
-      }
-      if ( !clipped && marker_show ) {
-        BuildMarker( mark_g, marker_out, p );
-        if ( marker_hollow ) {
-          BuildMarker( fill_g, marker_int, p );
+    if ( !datum_list.empty() ) {
+      size_t n = datum_list[ 0 ].x;
+      if ( n > 0 ) {
+        datum_list.resize( datum_list.size() + n );
+        std::move_backward(
+          datum_list.begin(),
+          datum_list.begin() + datum_list.size() - n,
+          datum_list.end()
+        );
+        for ( size_t i = 0; i < n; i++ ) {
+          datum_list[ i ] = Datum( i, num_invalid );
         }
       }
-    } else {
-      line_obj = nullptr;
     }
-    prv = p;
-  };
-  auto end_point = [&]( void )
-  {
-    area_obj = nullptr;
-    line_obj = nullptr;
-  };
-
-  double sum = 0;
-  for ( const Datum& datum : datum_list ) {
-    sum += datum.y - base;
+    size_t n = ofs_pos->size();
+    for ( size_t i = datum_list.size(); i < n; i++ ) {
+      datum_list.emplace_back( i, num_invalid );
+    }
   }
-  bool first = true;
-  Point cur;
-  Point old;
-  bool cur_valid;
-  bool cur_inside;
-  bool old_inside;
-  size_t n = datum_list.size();
-  for ( const Datum& datum : datum_list ) {
-    bool rtz = (--n == 0);
-    old = cur;
-    old_inside = cur_inside;
-    size_t i = datum.x;
-    double y = datum.y;
-    y -= base;
-    if ( y < 0 || (y == 0 && sum < 0) ) {
-      y += ofs_neg->at( i );
-      ofs_neg->at( i ) = y;
+
+  Poly* fill_obj = nullptr;
+  Poly* line_obj = nullptr;
+
+  bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
+
+  bool first_in_stack = (stack_dir < 0) ? pts_neg->empty() : pts_pos->empty();
+
+  // Initialize the fill polygon with the points from the top of the previous
+  // polygon, which are contained in pts_pos/pts_neg.
+  if ( has_fill ) {
+    fill_g->Add( fill_obj = new Poly() );
+    if ( stack_dir < 0 ) {
+      for ( auto it = pts_neg->rbegin(); it != pts_neg->rend(); ++it ) {
+        fill_obj->Add( *it );
+      }
     } else {
-      y += ofs_pos->at( i );
-      ofs_pos->at( i ) = y;
-    }
-
-    cur.x = x_axis->Coor( datum.x );
-    cur.y = y_axis->Coor( y );
-    if ( x_axis->angle != 0 ) std::swap( cur.x, cur.y );
-    cur_inside = Inside( cur, clip_box );
-    cur_valid = y_axis->Valid( y );
-
-    bool old_part_of_line = true;
-    bool cur_part_of_line = true;
-
-    if ( first ) {
-      if ( !cur_valid ) continue;
-      old = cur;
-      clamp( old );
-      old_inside = Inside( old, clip_box );
-      if ( old_inside ) {
-        add_point( old, false, false );
+      for ( auto it = pts_pos->rbegin(); it != pts_pos->rend(); ++it ) {
+        fill_obj->Add( *it );
       }
-      old_part_of_line = false;
-      first = false;
     }
+  }
+  if ( stack_dir < 0 ) {
+    pts_neg->clear();
+  } else {
+    pts_pos->clear();
+  }
 
-    while ( true ) {
-      if ( cur_valid ) {
-        if ( old_inside && cur_inside ) {
-          // Common case when we stay inside the chart area.
-          add_point( cur, false, cur_part_of_line );
-        } else {
-          // Handle clipping in and out of the chart area.
-          Point c1, c2;
-          int n = ClipLine( c1, c2, old, cur, clip_box );
-          if ( old_inside ) {
-            // We went from inside to now outside.
-            if ( n == 1 ) add_point( c1, true, old_part_of_line );
-          } else
-          if ( cur_inside ) {
-            // We went from outside to now inside.
-            if ( n == 1 ) add_point( c1, true, old_part_of_line );
-            add_point( cur, false, cur_part_of_line );
-          } else {
-            if ( n == 2 ) {
-              // We are still outside, but the line segment passes through the
-              // chart area.
-              add_point( c1, true, old_part_of_line && cur_part_of_line );
-              add_point( c2, true, old_part_of_line && cur_part_of_line );
-            }
-          }
-        }
+  Point ap_prv_p;
+  size_t ap_line_cnt = 0;
+  auto add_point = [&]( Point p, bool is_datum, bool on_line )
+  {
+    if ( on_line ) {
+      UpdateLegendBoxes(
+        lb_list, (ap_line_cnt == 0) ? p : ap_prv_p, p, false, is_datum
+      );
+    }
+    if ( stack_dir < 0 ) {
+      pts_neg->push_back( p );
+    } else {
+      pts_pos->push_back( p );
+    }
+    if ( has_fill ) {
+      fill_obj->Add( p );
+    }
+    if ( has_line && on_line ) {
+      if ( ap_line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
+      line_obj->Add( p );
+    }
+    if ( is_datum && marker_show ) {
+      BuildMarker( mark_g, marker_out, p );
+      if ( marker_hollow ) {
+        BuildMarker( hole_g, marker_int, p );
+      }
+    }
+    if ( on_line && (is_datum || ap_line_cnt == 0) ) {
+      ap_line_cnt++;
+    } else {
+      ap_line_cnt = 0;
+    }
+    ap_prv_p = p;
+    return;
+  };
+
+  Point dp_prv_p;
+  bool dp_prv_on_line = false;
+  bool dp_prv_inside = false;
+  bool dp_first = true;
+  auto do_point = [&]( Point p, bool on_line = true )
+  {
+    if ( x_axis->angle != 0 ) std::swap( p.x, p.y );
+    bool inside = Inside( p, clip_box );
+    if ( dp_first ) {
+      if ( inside ) {
+        add_point( p, on_line, on_line );
+      }
+    } else {
+      if ( dp_prv_inside && inside ) {
+        // Common case when we stay inside the chart area.
+        add_point( p, on_line, on_line );
       } else {
-        cur = old;
-        cur_inside = old_inside;
-        cur_valid = true;
-        rtz = true;
+        // Handle clipping in and out of the chart area.
+        Point c1, c2;
+        int n = ClipLine( c1, c2, dp_prv_p, p, clip_box );
+        if ( dp_prv_inside ) {
+          // We went from inside to now outside.
+          if ( n == 1 ) add_point( c1, false, on_line && dp_prv_on_line );
+        } else
+        if ( inside ) {
+          // We went from outside to now inside.
+          if ( n == 1 ) add_point( c1, false, on_line && dp_prv_on_line );
+          add_point( p, on_line, on_line );
+        } else
+        if ( n == 2 ) {
+          // We are still outside, but the line segment passes through the
+          // chart area.
+          add_point( c1, false, on_line && dp_prv_on_line );
+          add_point( c2, false, on_line && dp_prv_on_line );
+        }
       }
-      if ( rtz ) {
-        old = cur;
-        old_inside = cur_inside;
-        clamp( cur );
-        cur_inside = Inside( cur, clip_box );
-        rtz = false;
-        old_part_of_line = false;
-        cur_part_of_line = false;
+    }
+    if ( !inside ) {
+      add_point( MoveInside( p, clip_box ), false, false );
+    }
+    dp_prv_p = p;
+    dp_prv_on_line = on_line;
+    dp_prv_inside = inside;
+    dp_first = false;
+    return;
+  };
+
+  if ( !datum_list.empty() ) {
+    Point beg_p{
+      x_axis->Coor( 0 ),
+      y_axis->Coor( (stack_dir < 0) ? ofs_neg->front() : ofs_pos->front() )
+    };
+    Point end_p{
+      x_axis->Coor( ofs_pos->size() - 1 ),
+      y_axis->Coor( (stack_dir < 0) ? ofs_neg->back() : ofs_pos->back() )
+    };
+    if ( first_in_stack ) do_point( beg_p, false );
+    double prv_base = 0;
+    bool prv_valid = false;
+    bool first = true;
+    for ( const Datum& datum : datum_list ) {
+      size_t i = datum.x;
+      double y = datum.y;
+      if ( y_axis->Skip( datum.y ) ) {
         continue;
       }
-      break;
+      bool valid = y_axis->Valid( y );
+      y -= base;
+      if ( !first && prv_valid && !valid ) {
+        Point p{ x_axis->Coor( datum.x - 1 ), y_axis->Coor( prv_base ) };
+        do_point( p, false );
+      }
+      if ( !valid ) y = 0;
+      if ( stack_dir < 0 ) {
+        prv_base = ofs_neg->at( i );
+        y += prv_base;
+        ofs_neg->at( i ) = y;
+      } else {
+        prv_base = ofs_pos->at( i );
+        y += prv_base;
+        ofs_pos->at( i ) = y;
+      }
+      if ( !first && !prv_valid && valid ) {
+        Point p{ x_axis->Coor( datum.x ), y_axis->Coor( prv_base ) };
+        do_point( p, false );
+      }
+      Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
+      do_point( p, valid );
+      prv_valid = valid;
+      first = false;
     }
-
-    if ( !cur_part_of_line ) {
-      end_point();
-      first = true;
-    }
-
+    if ( first_in_stack ) do_point( end_p, false );
   }
-
-  end_point();
 
   return;
 }
@@ -651,9 +737,11 @@ void Series::BuildArea(
 
 void Series::BuildBar(
   const SVG::BoundaryBox& clip_box,
+  Group* fill_g,
+  Group* tbar_g,
   Group* line_g,
   Group* mark_g,
-  Group* fill_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
@@ -663,21 +751,31 @@ void Series::BuildBar(
   std::vector< double >* ofs_neg
 )
 {
-  double tx = (bar_tot == 1) ? 1.0 : bar_cluster_width;
-  double wx = tx / bar_tot;
-  double cx = (1 - tx + wx) / 2 + bar_num * wx;
-  cx = cx - 0.5;
-  wx = wx * bar_width;
+  double wx;    // Width of bar.
+  double cx;    // Center of bar.
+  {
+    double sa = 1.0 - bar_all_width;
+    double so = 1.0 - bar_one_width;
+    so = bar_all_width * so / (bar_tot - so);
+    if ( sa < so ) {
+      so = (1 - bar_one_width) / bar_tot;
+      sa = so;
+    }
+    wx = (1.0 - sa + so) / bar_tot - so;
+    cx = sa/2 - 0.5 + wx/2 + bar_num * (wx + so);
+  }
+
   Point p1;
   Point p2;
 
-  bool has_area = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
+  bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
   U db = std::min( 1.0, line_width / 2 );
 
   for ( const Datum& datum : datum_list ) {
     size_t i = datum.x;
     double x = datum.x + cx;
-    bool valid = x_axis->Valid( x ) && y_axis->Valid( datum.y );
+    bool valid = y_axis->Valid( datum.y );
     if ( !valid || datum.y == base ) continue;
 
     p1.x = x_axis->Coor( x );
@@ -727,10 +825,10 @@ void Series::BuildBar(
       if ( p2_inside && marker_show ) {
         BuildMarker( mark_g, marker_out, p2 );
         if ( marker_hollow ) {
-          BuildMarker( fill_g, marker_int, p2 );
+          BuildMarker( hole_g, marker_int, p2 );
         }
       }
-      UpdateLegendBoxes( lb_list, p1, p2 );
+      UpdateLegendBoxes( lb_list, p1, p2, false, true );
     }
 
     if ( type == SeriesType::Bar || type == SeriesType::StackedBar ) {
@@ -773,7 +871,7 @@ void Series::BuildBar(
         p2.x - p1.x > line_width + 2 &&
         p2.y - p1.y > line_width + 2;
       if ( has_interior ) {
-        if ( has_area ) {
+        if ( has_fill ) {
           Point c1{ p1 };
           Point c2{ p2 };
           if ( !cut_lft ) c1.x += db;
@@ -782,7 +880,7 @@ void Series::BuildBar(
           if ( !cut_bot ) c2.y -= db;
           fill_g->Add( new Rect( c1, c2 ) );
         }
-        if ( line_width > 0 ) {
+        if ( has_line ) {
           U d = line_width / 2;
           if ( cut_bot && cut_top ) {
             line_g->Add( new Line( p1.x + d, p1.y, p1.x + d, p2.y ) );
@@ -829,7 +927,7 @@ void Series::BuildBar(
           line_g->Add( new Rect( p1.x + d, p1.y + d, p2.x - d, p2.y - d ) );
         }
       } else {
-        mark_g->Add( new Rect( p1, p2 ) );
+        tbar_g->Add( new Rect( p1, p2 ) );
       }
     }
 
@@ -844,7 +942,7 @@ void Series::BuildLine(
   const SVG::BoundaryBox& clip_box,
   Group* line_g,
   Group* mark_g,
-  Group* fill_g,
+  Group* hole_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list
@@ -854,7 +952,7 @@ void Series::BuildLine(
   bool adding_segments = false;
 
   bool has_line =
-    line_width > 0 &&
+    !line_g->Attr()->LineColor()->IsClear() && line_width > 0 &&
     (type == SeriesType::XY || type == SeriesType::Line);
 
   Point prv;
@@ -867,12 +965,12 @@ void Series::BuildLine(
         UpdateLegendBoxes( lb_list, prv, p );
       }
     } else {
-      UpdateLegendBoxes( lb_list, p, p );
+      UpdateLegendBoxes( lb_list, p, p, true, false );
     }
     if ( !clipped && marker_show ) {
       BuildMarker( mark_g, marker_out, p );
       if ( marker_hollow ) {
-        BuildMarker( fill_g, marker_int, p );
+        BuildMarker( hole_g, marker_int, p );
       }
     }
     prv = p;
@@ -899,8 +997,15 @@ void Series::BuildLine(
     bool valid = x_axis->Valid( datum.x ) && y_axis->Valid( datum.y );
     bool inside = Inside( cur, clip_box );
     if ( !valid ) {
-      end_point();
-      first = true;
+      if (
+        x_axis->Skip( datum.x ) ||
+        (x_axis->Valid( datum.x ) && y_axis->Skip( datum.y ))
+      ) {
+        cur = old;
+      } else {
+        end_point();
+        first = true;
+      }
     } else
     if ( first ) {
       if ( inside ) {
@@ -944,15 +1049,17 @@ void Series::BuildLine(
 //------------------------------------------------------------------------------
 
 void Series::Build(
-  SVG::Group* g1,
-  SVG::Group* g2,
+  SVG::Group* main_g,
+  SVG::Group* stacked_area_fill_g,
   Axis* x_axis,
   Axis* y_axis,
   std::vector< LegendBox >& lb_list,
   uint32_t bar_num,
   uint32_t bar_tot,
   std::vector< double >* ofs_pos,
-  std::vector< double >* ofs_neg
+  std::vector< double >* ofs_neg,
+  std::vector< SVG::Point >* pts_pos,
+  std::vector< SVG::Point >* pts_neg
 )
 {
   ComputeMarker();
@@ -987,61 +1094,49 @@ void Series::Build(
   clip_box.max.x += e1;
   clip_box.max.y += e1;
 
+  Group* fill_g = nullptr;
+  Group* tbar_g = nullptr;
   Group* line_g = nullptr;
   Group* mark_g = nullptr;
-  Group* fill_g = nullptr;
+  Group* hole_g = nullptr;
 
-  if (
-    type == SeriesType::XY ||
-    type == SeriesType::Scatter ||
-    type == SeriesType::Line ||
-    type == SeriesType::Point ||
-    type == SeriesType::Lollipop
-  ) {
-    if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
-      line_g = g1->AddNewGroup();
-      ApplyLineStyle( line_g );
-    }
-    if ( marker_show ) {
-      mark_g = g1->AddNewGroup();
-      ApplyMarkStyle( mark_g );
-      if ( marker_hollow ) {
-        fill_g = g1->AddNewGroup();
-        ApplyFillStyle( fill_g );
-      }
-    }
+  if ( type == SeriesType::StackedArea ) {
+    fill_g = stacked_area_fill_g->AddNewGroup();
+  } else {
+    fill_g = main_g->AddNewGroup();
   }
+  ApplyFillStyle( fill_g );
+
+  tbar_g = main_g->AddNewGroup();
+  if ( !line_color.IsClear() && line_width > 0 ) {
+    tbar_g->Attr()->LineColor()->Clear();
+    tbar_g->Attr()->FillColor()->Set( &line_color );
+  } else {
+    ApplyFillStyle( tbar_g );
+  }
+
+  line_g = main_g->AddNewGroup();
+  ApplyLineStyle( line_g );
+
+  mark_g = main_g->AddNewGroup();
+  ApplyMarkStyle( mark_g );
+
+  hole_g = main_g->AddNewGroup();
+  ApplyHoleStyle( hole_g );
 
   if (
     type == SeriesType::Area ||
     type == SeriesType::StackedArea
   ) {
-    line_g = g1->AddNewGroup();
-    ApplyLineStyle( line_g );
-    mark_g = g1->AddNewGroup();
-    ApplyMarkStyle( mark_g );
-    Group* fill_g = g2->AddNewGroup();
-    ApplyFillStyle( fill_g );
     BuildArea(
       clip_box,
-      line_g, mark_g, fill_g,
+      fill_g, line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
-      ofs_pos, ofs_neg
+      ofs_pos, ofs_neg,
+      pts_pos, pts_neg
     );
-  }
-
-  if (
-    type == SeriesType::Bar ||
-    type == SeriesType::StackedBar
-  ) {
-    fill_g = g1->AddNewGroup();
-    ApplyFillStyle( fill_g );
-    mark_g = g1->AddNewGroup();
-    ApplyMarkStyle( mark_g );
-    line_g = g1->AddNewGroup();
-    ApplyLineStyle( line_g );
   }
 
   if (
@@ -1051,7 +1146,7 @@ void Series::Build(
   ) {
     BuildBar(
       clip_box,
-      line_g, mark_g, fill_g,
+      fill_g, tbar_g, line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list,
       bar_num, bar_tot,
@@ -1067,7 +1162,7 @@ void Series::Build(
   ) {
     BuildLine(
       clip_box,
-      line_g, mark_g, fill_g,
+      line_g, mark_g, hole_g,
       x_axis, y_axis,
       lb_list
     );

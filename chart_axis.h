@@ -34,8 +34,9 @@ public:
 
   void SetStyle( AxisStyle style );
 
-  // Position of axis, will override orth_axis_cross.
-  void SetPos( Pos pos );
+  // Position of axis, will override orth_axis_cross. If pos is Pos::Base, then
+  // axis_y_n indicates which Y-axis base is refers to.
+  void SetPos( Pos pos, int axis_y_n = 0 );
 
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
@@ -72,9 +73,6 @@ private:
   // Orthogonal axis is dual, implies that this axis is the X-axis.
   bool orth_dual;
 
-  const double num_lo = 1e-300;
-  const double num_hi = 1e+300;
-
   // Maximum number of decimals to show.
   const int precision = 10;
 
@@ -105,7 +103,13 @@ private:
   // Determine if value is valid.
   bool Valid( double v )
   {
-    return (std::abs( v ) < num_hi && (!log_scale || v > num_lo));
+    return (std::abs( v ) <= num_hi && (!log_scale || v >= num_lo));
+  }
+
+  // Determine if value is a skipped data point.
+  bool Skip( double v )
+  {
+    return v == num_skip;
   }
 
   void BuildTicksHelper(
@@ -128,13 +132,13 @@ private:
   );
 
   void BuildCategories(
-    const std::vector< std::string >& categoty_list,
+    const std::vector< std::string >& category_list,
     std::vector< SVG::Object* >& axis_objects,
-    SVG::Group* cat_g
+    SVG::Group* cat_g, SVG::Group* major_g
   );
 
   void Build(
-    const std::vector< std::string >& categoty_list,
+    const std::vector< std::string >& category_list,
     uint32_t phase,
     std::vector< SVG::Object* >& axis_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
@@ -151,6 +155,10 @@ private:
   AxisStyle style;
   Pos       pos;
   GridStyle grid_style;
+
+  // If pos is Pos::Base, this variable indicates which y-axis it refers to, in
+  // which case orth_axis_cross of that y-axis is where the base is at.
+  int pos_base_axis_y_n;
 
   SVG::U arrow_length = 10;
   SVG::U arrow_width = 10;
@@ -173,6 +181,8 @@ private:
   bool   data_def;
   double data_min;
   double data_max;
+  bool   data_min_is_base;
+  bool   data_max_is_base;
 
   double min;
   double max;
@@ -201,6 +211,13 @@ private:
                             // coordinate (0).
   bool   orth_coor_is_max;  // This axis placed at max orthogonal
                             // coordinate (orth_length).
+
+  // The coordinate of the category "number" line, which is always at one of
+  // the four sides.
+  SVG::U cat_coor;
+
+  // The minimum distance between non empty string categories.
+  int category_stride;
 };
 
 }

@@ -44,6 +44,10 @@ public:
   // specify a location outside the chart area.
   void SetLegendPos( Pos pos );
 
+  // Specify the relative width of bars (0.0 to 1.0) and the relative width (0.0
+  // to 1.0) of all bars belonging to the same X-value.
+  void SetBarWidth( float one_width, float all_width );
+
   Axis* AxisX( void ) { return axis_x; }
   Axis* AxisY( int n = 0 ) { return axis_y[ n ]; }
 
@@ -88,9 +92,13 @@ private:
     SVG::Group* legend_g
   );
 
+  // Compute the category stride, i.e. the minimum distance between non empty
+  // string categories.
+  int CategoryStride( void );
+
   void BuildSeries(
-    SVG::Group* chartbox_g1,
-    SVG::Group* chartbox_g2,
+    SVG::Group* below_axes_g,
+    SVG::Group* above_axes_g,
     std::vector< LegendBox >& lb_list
   );
 
@@ -105,6 +113,9 @@ private:
   SVG::U margin  = 5;
   SVG::U chart_w = 1000;
   SVG::U chart_h = 700;
+
+  float bar_one_width = 1.00;
+  float bar_all_width = 0.85;
 
   std::vector< Series* > series_list;
 

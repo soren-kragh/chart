@@ -52,51 +52,83 @@ public:
   void SetMarkerSize( SVG::U size );
   void SetMarkerShape( MarkerShape shape );
 
-  // For series types where the X value is a string (all but XY and Scatter),
-  // the x-value below is an index into Chart::Main::categoty_list.
+  // For series types where the X-value is a string (all but XY and Scatter),
+  // the X-value below is an index into Chart::Main::categoty_list. You should
+  // never add numbers with a magnitude larger than mum_hi, as they could
+  // otherwise be mistaken for the special values num_invalid and num_skip.
+  // You can however explicitly add the special numbers num_invalid and num_skip.
   void Add( double x, double y );
 
   uint32_t Size( void ) { return datum_list.size(); }
 
 private:
 
+  void ApplyFillStyle( SVG::Object* obj );
   void ApplyLineStyle( SVG::Object* obj );
   void ApplyMarkStyle( SVG::Object* obj );
-  void ApplyFillStyle( SVG::Object* obj );
+  void ApplyHoleStyle( SVG::Object* obj );
 
-  void UpdateLegendBoxes(
-    std::vector< LegendBox >& lb_list, SVG::Point p1, SVG::Point p2
+  bool Inside(
+    const SVG::Point p, const SVG::BoundaryBox& clip_box
   );
 
+  int ClipLine(
+    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
+    const SVG::BoundaryBox& clip_box
+  );
+
+  SVG::Point MoveInside(
+    SVG::Point p, const SVG::BoundaryBox& clip_box
+  );
+
+  void UpdateLegendBoxes(
+    std::vector< LegendBox >& lb_list,
+    SVG::Point p1, SVG::Point p2,
+    bool p1_inc = true, bool p2_inc = true
+  );
+
+  // Computes if the series must stack above base or below base:
+  //    +1 : Stack above base.
+  //    -1 : Stack below base.
+  //     0 : No preferred stack direction.
+  int GetStackDir( Axis* y_axis );
+
   void Build(
-    SVG::Group* g1,
-    SVG::Group* g2,
+    SVG::Group* main_g,
+    SVG::Group* stacked_area_fill_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
     uint32_t bar_num,
     uint32_t bar_tot,
     std::vector< double >* ofs_pos = nullptr,
-    std::vector< double >* ofs_neg = nullptr
+    std::vector< double >* ofs_neg = nullptr,
+    std::vector< SVG::Point >* pts_pos = nullptr,
+    std::vector< SVG::Point >* pts_neg = nullptr
   );
   void BuildArea(
     const SVG::BoundaryBox& clip_box,
+    SVG::Group* fill_g,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* fill_g,
+    SVG::Group* hole_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
     uint32_t bar_num,
     uint32_t bar_tot,
     std::vector< double >* ofs_pos,
-    std::vector< double >* ofs_neg
+    std::vector< double >* ofs_neg,
+    std::vector< SVG::Point >* pts_pos,
+    std::vector< SVG::Point >* pts_neg
   );
   void BuildBar(
     const SVG::BoundaryBox& clip_box,
+    SVG::Group* fill_g,
+    SVG::Group* tbar_g,         // Used for thin bars
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* fill_g,
+    SVG::Group* hole_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,
@@ -109,19 +141,10 @@ private:
     const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
-    SVG::Group* fill_g,
+    SVG::Group* hole_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list
-  );
-
-  bool Inside(
-    const SVG::Point p, const SVG::BoundaryBox& clip_box
-  );
-
-  int ClipLine(
-    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
-    const SVG::BoundaryBox& clip_box
   );
 
   SeriesType type;
@@ -141,8 +164,8 @@ private:
   double e1 = 0;
   double e2 = 0;
 
-  double bar_width = 0.85;
-  double bar_cluster_width = 0.85;
+  float bar_one_width = 1.00;
+  float bar_all_width = 0.85;
 
   std::vector< Datum > datum_list;
 

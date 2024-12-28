@@ -17,16 +17,22 @@
 
 namespace Chart {
 
+  const double num_lo      = 1e-300;
+  const double num_hi      = 1e+300;
+  const double num_invalid = 0.56598313e+301;   // Magic reserved value.
+  const double num_skip    = 0.90870847e+301;   // Magic reserved value.
+  const double coor_hi     = 1e24;
+
   // Correction factor for floating point precision issues in comparisons etc.
   const double epsilon = 1e-6;
 
-  enum class Pos { Auto, Center, Left, Right, Top, Bottom };
+  enum class Pos { Auto, Center, Left, Right, Top, Bottom, Base };
 
   enum class Dir { Right, Left, Up, Down };
 
   enum class NumberFormat { Auto, None, Fixed, Scientific, Magnitude };
 
-  enum class AxisStyle { Auto, None, Arrow, Edge };
+  enum class AxisStyle { Auto, None, Line, Arrow, Edge };
 
   enum class GridStyle { Auto, Dash, Solid };
 

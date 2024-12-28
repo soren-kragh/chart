@@ -31,6 +31,7 @@ Axis::Axis( bool x_axis )
   length = 0;
   style = AxisStyle::Auto;
   pos = Pos::Auto;
+  pos_base_axis_y_n = 0;
   digits = 0;
   decimals = 0;
   num_max_len = 0;
@@ -42,6 +43,8 @@ Axis::Axis( bool x_axis )
   data_def = false;
   data_min = 0;
   data_max = 0;
+  data_min_is_base = false;
+  data_max_is_base = false;
   min = 0;
   max = 0;
   orth_axis_cross = 0;
@@ -65,6 +68,9 @@ Axis::Axis( bool x_axis )
   orth_coor_is_min = false;
   orth_coor_is_max = false;
   orth_coor = 0;
+
+  cat_coor = 0;
+  category_stride = 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,9 +91,10 @@ void Axis::SetStyle( AxisStyle style )
   show = true;
 }
 
-void Axis::SetPos( Pos pos )
+void Axis::SetPos( Pos pos, int axis_y_n )
 {
   this->pos = pos;
+  pos_base_axis_y_n = axis_y_n;
 }
 
 void Axis::SetLogScale( bool log_scale )
@@ -230,7 +237,7 @@ void Axis::LegalizeMajor( void ) {
 
     if ( category_axis ) {
       number_format = NumberFormat::None;
-      major = 1;
+      if ( major < 1 ) major = 1;
       sub_divs = 0;
       break;
     }
@@ -340,6 +347,9 @@ void Axis::LegalizeMajor( void ) {
 
 void Axis::LegalizeMinMax( void )
 {
+  bool min_is_base = false;
+  bool max_is_base = false;
+
   if ( data_min == data_max ) {
     if ( log_scale ) {
       data_min = data_min / 10;
@@ -348,6 +358,8 @@ void Axis::LegalizeMinMax( void )
       data_min = data_min - 1;
       data_max = data_max + 1;
     }
+    data_min_is_base = false;
+    data_max_is_base = false;
   }
 
   bool automatic = false;
@@ -356,15 +368,21 @@ void Axis::LegalizeMinMax( void )
     automatic = true;
     min = data_min;
     max = data_max;
+    min_is_base = data_min_is_base;
+    max_is_base = data_max_is_base;
   }
   if ( log_scale && min <= 0 ) {
     min = data_min;
-    if ( max <= min ) max = 1000 * min;
+    min_is_base = data_min_is_base;
+    if ( max <= min ) {
+      max = 1000 * min;
+      max_is_base = false;
+    }
   }
 
   if ( automatic && !log_scale && !x_axis ) {
-    if ( min > 0 && (max - min) / max > 0.5 ) min = 0;
-    if ( max < 0 && (min - max) / min > 0.5 ) max = 0;
+    if ( min > 0 && (max - min) / max > 0.5 && !min_is_base ) min = 0;
+    if ( max < 0 && (min - max) / min > 0.5 && !max_is_base ) max = 0;
   }
 
   LegalizeMajor();
@@ -374,17 +392,25 @@ void Axis::LegalizeMinMax( void )
     if ( major > 0 ) {
       if ( log_scale ) {
         int32_t u = std::lround( std::log10( major ) );
-        p = std::log10( min ) / u + epsilon;
-        min = std::pow( std::pow( double( 10 ), u ), std::floor( p ) );
-        p = std::log10( max ) / u - epsilon;
-        max = std::pow( std::pow( double( 10 ), u ), std::ceil( p ) );
-        if ( max < 10 * min ) max = 10 * min;
+        if ( !min_is_base ) {
+          p = std::log10( min ) / u + epsilon;
+          min = std::pow( std::pow( double( 10 ), u ), std::floor( p ) );
+        }
+        if ( !max_is_base ) {
+          p = std::log10( max ) / u - epsilon;
+          max = std::pow( std::pow( double( 10 ), u ), std::ceil( p ) );
+          if ( max < 10 * min ) max = 10 * min;
+        }
       } else {
         double e = (max - min) * epsilon;
-        p = (min + e) / major;
-        min = std::floor( p ) * major;
-        p = (max - e) / major;
-        max = std::ceil( p ) * major;
+        if ( !min_is_base ) {
+          p = (min + e) / major;
+          min = std::floor( p ) * major;
+        }
+        if ( !max_is_base ) {
+          p = (max - e) / major;
+          max = std::ceil( p ) * major;
+        }
       }
     }
     if ( x_axis && orth_style[ 0 ] == AxisStyle::None ) {
@@ -408,7 +434,7 @@ void Axis::LegalizeMinMax( void )
 
 U Axis::Coor( double v )
 {
-  double c = -1e20;
+  double c = -coor_hi;
   if ( log_scale ) {
     if ( v > 0 ) {
       double a = std::log10( min );
@@ -418,7 +444,10 @@ U Axis::Coor( double v )
   } else {
     c = (v - min) * length / (max - min);
   }
-  return reverse ? (length - c) : c;
+  c = reverse ? (length - c) : c;
+  c = std::max( -coor_hi, c );
+  c = std::min( +coor_hi, c );
+  return c;
 }
 
 bool Axis::CoorNear( SVG::U c1, SVG::U c2 )
@@ -743,7 +772,6 @@ void Axis::BuildTicksHelper(
       orth_style[ i ] != AxisStyle::None &&
       CoorNear( v_coor, orth_axis_coor[ i ] );
   }
-
   bool not_near_crossing_axis =
     !near_crossing_axis[ 0 ] && !near_crossing_axis[ 1 ];
 
@@ -1048,17 +1076,11 @@ void Axis::BuildTicksNumsLogarithmic(
 ////////////////////////////////////////////////////////////////////////////////
 
 void Axis::BuildCategories(
-  const std::vector< std::string >& categoty_list,
+  const std::vector< std::string >& category_list,
   std::vector< SVG::Object* >& axis_objects,
-  SVG::Group* cat_g
+  SVG::Group* cat_g, SVG::Group* major_g
 )
 {
-  size_t max_width = 0;
-
-  for ( auto cat : categoty_list ) {
-    max_width = std::max( max_width, cat.size() );
-  }
-//  cat_g->Attr()->TextFont()->SetBold();
   U cw;
   U ch;
   {
@@ -1082,7 +1104,7 @@ void Axis::BuildCategories(
       ay = AnchorY::Max;
       dy = 0 - tick_major_len - num_space_y;
     }
-    if ( length < categoty_list.size() * ch * 2 ) {
+    if ( length < category_list.size() * ch * 1.5 / category_stride ) {
       text_angle = 90;
     }
   } else {
@@ -1096,17 +1118,18 @@ void Axis::BuildCategories(
   }
 
   std::vector< SVG::Object* > cat_objects;
+  std::vector< uint32_t > mn_list;
 
   uint32_t trial = 0;
   for ( bool commit : { false, true } ) {
     while ( true ) {
       bool collision = false;
       uint32_t n = 0;
-      for ( auto cat : categoty_list ) {
+      for ( auto cat : category_list ) {
         if ( cat != "" ) {
           Object* obj = cat_g->Add( new Text( cat ) );
-          U x = (angle == 0) ? Coor( n ) : orth_coor;
-          U y = (angle != 0) ? Coor( n ) : orth_coor;
+          U x = (angle == 0) ? Coor( n ) : cat_coor;
+          U y = (angle != 0) ? Coor( n ) : cat_coor;
           if ( trial == 0 ) {
             obj->MoveTo( ax, ay, x + dx, y + dy );
           }
@@ -1130,7 +1153,14 @@ void Axis::BuildCategories(
             collision = true;
             cat_g->DeleteFront();
           } else {
-            cat_objects.push_back( obj );
+            U mx = (angle == 0) ? 4 : 0;
+            bool aoc = Chart::Collides( obj, axis_objects, mx, 0 );
+            if ( commit && aoc ) {
+              cat_g->DeleteFront();
+            } else {
+              cat_objects.push_back( obj );
+              if ( commit ) mn_list.push_back( n );
+            }
           }
         }
         n++;
@@ -1147,13 +1177,45 @@ void Axis::BuildCategories(
     }
   }
 
+  if ( major_grid_enable && major > 0 ) {
+    uint32_t mm = std::llround( major );
+    if ( mm < 1 ) mm = 1;
+    for ( uint32_t mn : mn_list ) {
+      if ( mn % mm ) continue;
+      double v = mn;
+      if ( v > max ) break;
+      U v_coor = Coor( v );
+      U gx1 = 0;
+      U gy1 = 0;
+      U gx2 = orth_length;
+      U gy2 = orth_length;
+      if ( angle == 0 ) {
+        gx1 = gx2 = v_coor;
+      } else {
+        gy1 = gy2 = v_coor;
+      }
+      bool near_crossing_axis[ 2 ];
+      for ( int i : { 0, 1 } ) {
+        near_crossing_axis[ i ] =
+          orth_style[ i ] != AxisStyle::None &&
+          CoorNear( v_coor, orth_axis_coor[ i ] );
+      }
+      bool not_near_crossing_axis =
+        !near_crossing_axis[ 0 ] && !near_crossing_axis[ 1 ];
+      if ( not_near_crossing_axis ) {
+        major_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
+      }
+      mn++;
+    }
+  }
+
   return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void Axis::Build(
-  const std::vector< std::string >& categoty_list,
+  const std::vector< std::string >& category_list,
   uint32_t phase,
   std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
@@ -1165,15 +1227,43 @@ void Axis::Build(
   // Limit for when axes are near min or max.
   double near = 0.3;
 
-  if ( angle == 0 ) {
-    if ( number_pos != Pos::Bottom && number_pos != Pos::Top ) {
-      number_pos =
-        (orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
+  if ( category_axis ) {
+    if ( angle == 0 ) {
+      if ( number_pos != Pos::Top && number_pos != Pos::Bottom ) {
+        number_pos = Pos::Auto;
+      }
+      if ( pos == Pos::Base && orth_coor_is_max ) pos = Pos::Top;
+      if ( pos != Pos::Top && pos != Pos::Bottom ) {
+        pos = (number_pos != Pos::Auto) ? number_pos : Pos::Bottom;
+      }
+      if ( number_pos == Pos::Auto ) number_pos = pos;
+      cat_coor = (pos == Pos::Top) ? orth_length : U( 0 );
+      orth_coor_is_min = (pos != Pos::Top);
+      orth_coor_is_max = (pos == Pos::Top);
+    } else {
+      if ( number_pos != Pos::Right && number_pos != Pos::Left ) {
+        number_pos = Pos::Auto;
+      }
+      if ( pos == Pos::Base && orth_coor_is_max ) pos = Pos::Right;
+      if ( pos != Pos::Right && pos != Pos::Left ) {
+        pos = (number_pos != Pos::Auto) ? number_pos : Pos::Left;
+      }
+      if ( number_pos == Pos::Auto ) number_pos = pos;
+      cat_coor = (pos == Pos::Right) ? orth_length : U( 0 );
+      orth_coor_is_min = (pos != Pos::Right);
+      orth_coor_is_max = (pos == Pos::Right);
     }
   } else {
-    if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
-      number_pos =
-        (orth_coor > (orth_length * (1 - near))) ? Pos::Right : Pos::Left;
+    if ( angle == 0 ) {
+      if ( number_pos != Pos::Bottom && number_pos != Pos::Top ) {
+        number_pos =
+          (orth_coor > (orth_length * (1 - near))) ? Pos::Top : Pos::Bottom;
+      }
+    } else {
+      if ( number_pos != Pos::Left && number_pos != Pos::Right ) {
+        number_pos =
+          (orth_coor > (orth_length * (1 - near))) ? Pos::Right : Pos::Left;
+      }
     }
   }
 
@@ -1204,6 +1294,13 @@ void Axis::Build(
   U ey = (angle == 0) ? orth_coor : ae;
 
   if ( phase == 0 && unit != "" ) {
+    if ( category_axis ) {
+      sx = (angle == 0) ? as : cat_coor;
+      sy = (angle == 0) ? cat_coor : as;
+      ex = (angle == 0) ? ae : cat_coor;
+      ey = (angle == 0) ? cat_coor : ae;
+    }
+
     Object* obj = Label( label_g, unit, 16 );
     obj->Attr()->TextFont()->SetBold();
     bool collision = false;
@@ -1282,13 +1379,17 @@ void Axis::Build(
 
     if ( angle == 0 ) {
       if ( automatic ) {
-        unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
-        if ( orth_dual && style == AxisStyle::Arrow ) {
+        if ( category_axis ) {
           unit_pos = reverse ? Pos::Left : Pos::Right;
+        } else {
+          unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
+          if ( orth_dual && style == AxisStyle::Arrow ) {
+            unit_pos = reverse ? Pos::Left : Pos::Right;
+          }
         }
       }
       if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
-        if ( orth_dual ) {
+        if ( orth_dual || category_axis ) {
           place( Pos::Center, unit_pos );
         } else {
           if ( style == AxisStyle::Arrow ) {
@@ -1312,9 +1413,16 @@ void Axis::Build(
 
     if ( angle != 0 ) {
       if ( automatic ) {
-        unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
-        if ( orth_dual && style == AxisStyle::Arrow ) {
-          unit_pos = reverse ? Pos::Bottom : Pos::Top;
+        if ( category_axis ) {
+          unit_pos = Pos::Top;
+        } else {
+          unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
+          if (
+            (orth_dual && style == AxisStyle::Arrow) ||
+            style == AxisStyle::None
+          ) {
+            unit_pos = reverse ? Pos::Bottom : Pos::Top;
+          }
         }
       }
       if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
@@ -1421,7 +1529,7 @@ void Axis::Build(
   }
 
   if ( category_axis ) {
-    BuildCategories( categoty_list, axis_objects, num_g );
+    BuildCategories( category_list, axis_objects, num_g, major_g );
   } else {
     ComputeNumFormat();
     if ( log_scale ) {
