@@ -181,15 +181,16 @@ private:
 
   // Derived marker variables:
   bool       marker_show;
-  bool       marker_hollow;
-  SVG::U     marker_diameter;
-  SVG::U     marker_radius;
-  MarkerDims marker_int;        // Interior dimension for hollow marker.
+  bool       marker_show_out;
+  bool       marker_show_int;
+  MarkerDims marker_int;        // Interior marker dimension.
   MarkerDims marker_out;        // Outer marker dimension.
-  MarkerDims marker_rim;        // Dimension of rim around marker.
 
-  // Compute derived marker_* variables.
-  void ComputeMarker( SVG::U rim = 0 );
+  bool has_line;
+  bool has_fill;
+
+  // Compute derived marker_* variables and other visual properties.
+  void DetermineVisualProperties( void );
 
   // Build marker based on marker_* variables.
   void BuildMarker( SVG::Group* g, const MarkerDims& m, SVG::Point p );

@@ -141,15 +141,10 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 
   for ( Series* series : series_list ) {
     if ( series->name.length() == 0 ) continue;
-
     bool has_outline =
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Lollipop
-      )
-      && series->line_width > 0
-      && !series->line_color.IsClear();
-
+      series->has_line &&
+      series->type != SeriesType::Area &&
+      series->type != SeriesType::StackedArea;
     if ( has_outline ) {
       legend_dims.mw = std::max( legend_dims.mw, series->line_width );
     }
@@ -186,7 +181,6 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 
       Series::MarkerDims md;
       md.x1 = md.y1 = md.x2 = md.y2 = 0;
-      series->ComputeMarker();
       if (
         series->marker_show &&
         series->type != SeriesType::Area &&
@@ -215,12 +209,9 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
       }
 
       bool has_outline =
-        ( series->type == SeriesType::XY ||
-          series->type == SeriesType::Line ||
-          series->type == SeriesType::Lollipop
-        )
-        && series->line_width > 0
-        && !series->line_color.IsClear();
+        series->has_line &&
+        series->type != SeriesType::Area &&
+        series->type != SeriesType::StackedArea;
 
       legend_dims.tx = std::max( +legend_dims.tx, md.x2 + ox );
       if ( has_outline ) {
@@ -449,17 +440,13 @@ void Main::BuildLegend( Group* g, int nx )
     U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
     Point marker_p{ px + legend_dims.mw/2, py - legend_dims.sy/2 };
 
-    U line_w = 0;
-    if ( !series->line_color.IsClear() ) {
-      line_w = std::max( line_w, series->line_width );
-    }
+    U line_w = series->line_width;
+    if ( !series->has_line ) line_w = 0;
 
     bool has_outline =
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Lollipop
-      )
-      && line_w > 0;
+      series->has_line &&
+      series->type != SeriesType::Area &&
+      series->type != SeriesType::StackedArea;
 
     if ( has_outline ) {
       g->Add(
@@ -480,9 +467,11 @@ void Main::BuildLegend( Group* g, int nx )
       series->type != SeriesType::StackedArea
     ) {
       marker_p.y -= (series->marker_out.y1 + series->marker_out.y2) / 2;
-      series->BuildMarker( g, series->marker_out, marker_p );
-      series->ApplyMarkStyle( g->Last() );
-      if ( series->marker_hollow ) {
+      if ( series->marker_show_out ) {
+        series->BuildMarker( g, series->marker_out, marker_p );
+        series->ApplyMarkStyle( g->Last() );
+      }
+      if ( series->marker_show_int ) {
         series->BuildMarker( g, series->marker_int, marker_p );
         series->ApplyHoleStyle( g->Last() );
       }
@@ -1231,25 +1220,14 @@ void Main::AddChartMargin(
 {
   U margin = 0;
   for ( Series* series : series_list ) {
-    series->ComputeMarker();
-    bool has_outline =
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Area ||
-        series->type == SeriesType::StackedArea
-      ) && !series->line_color.IsClear();
-    bool has_marker =
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Scatter ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Point ||
-        series->type == SeriesType::Area ||
-        series->type == SeriesType::StackedArea
-      ) && series->marker_show;
-    if ( has_outline ) {
+    if (
+      series->has_line &&
+      series->type != SeriesType::Bar &&
+      series->type != SeriesType::StackedBar
+    ) {
       margin = std::max( +margin, series->line_width / 2 );
     }
-    if ( has_marker ) {
+    if ( series->marker_show ) {
       margin = std::max( +margin, -series->marker_out.x1 );
       margin = std::max( +margin, -series->marker_out.y1 );
       margin = std::max( +margin, +series->marker_out.x2 );
@@ -1268,6 +1246,10 @@ void Main::AddChartMargin(
 
 Canvas* Main::Build( void )
 {
+  for ( Series* series : series_list ) {
+    series->DetermineVisualProperties();
+  }
+
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();

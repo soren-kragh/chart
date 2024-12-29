@@ -47,15 +47,14 @@ Series::Series( SeriesType type )
 
   fill_color.Clear();
 
-  SetMarkerSize(
-    ( type == SeriesType::Scatter ||
-      type == SeriesType::Point ||
-      type == SeriesType::Lollipop
-    )
-    ? 12
-    : 0
-  );
+  SetMarkerSize( 0 );
   SetMarkerShape( MarkerShape::Circle );
+
+  marker_show = false;
+  marker_show_out = false;
+  marker_show_int = false;
+  has_line = false;
+  has_fill = false;
 }
 
 Series::~Series( void )
@@ -170,11 +169,7 @@ void Series::SetLineDash( SVG::U dash, SVG::U hole )
 
 void Series::SetMarkerSize( SVG::U size )
 {
-  if ( size > 0 ) {
-    marker_size = size;
-  } else {
-    marker_size = 0;
-  }
+  marker_size = std::max( 0.0, +size );
 }
 
 void Series::SetMarkerShape( MarkerShape shape )
@@ -398,10 +393,32 @@ void Series::UpdateLegendBoxes(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::ComputeMarker( SVG::U rim )
+void Series::DetermineVisualProperties( void )
 {
   marker_show = false;
-  marker_diameter = 0;
+  marker_show_out = false;
+  marker_show_int = false;
+  has_line = false;
+  has_fill = false;
+
+  if (
+    type == SeriesType::XY ||
+    type == SeriesType::Line ||
+    type == SeriesType::Lollipop ||
+    type == SeriesType::Area ||
+    type == SeriesType::StackedArea
+  ) {
+    has_line = line_width > 0 && !line_color.IsClear();
+  }
+
+  if (
+    type == SeriesType::Bar ||
+    type == SeriesType::StackedBar ||
+    type == SeriesType::Area ||
+    type == SeriesType::StackedArea
+  ) {
+    has_fill = !fill_color.IsClear();
+  }
 
   if (
     type != SeriesType::XY &&
@@ -415,55 +432,59 @@ void Series::ComputeMarker( SVG::U rim )
     return;
   }
 
+  U radius = marker_size / 2;
+
   auto compute = [&]( MarkerDims& m, U delta )
   {
     switch ( marker_shape ) {
       case MarkerShape::Square :
-        m.x1 = -1.0000 * (0.9 * marker_radius + delta);
-        m.x2 = +1.0000 * (0.9 * marker_radius + delta);
-        m.y1 = -1.0000 * (0.9 * marker_radius + delta);
-        m.y2 = +1.0000 * (0.9 * marker_radius + delta);
+        m.x1 = -1.0000 * (0.9 * radius + delta);
+        m.x2 = +1.0000 * (0.9 * radius + delta);
+        m.y1 = -1.0000 * (0.9 * radius + delta);
+        m.y2 = +1.0000 * (0.9 * radius + delta);
         break;
       case MarkerShape::Triangle :
-        m.x1 = -1.7320 * (0.7 * marker_radius + delta);
-        m.x2 = +1.7320 * (0.7 * marker_radius + delta);
-        m.y1 = -2.0000 * (0.7 * marker_radius + delta);
-        m.y2 = +1.0000 * (0.7 * marker_radius + delta);
+        m.x1 = -1.7320 * (0.7 * radius + delta);
+        m.x2 = +1.7320 * (0.7 * radius + delta);
+        m.y1 = -2.0000 * (0.7 * radius + delta);
+        m.y2 = +1.0000 * (0.7 * radius + delta);
         break;
       case MarkerShape::Diamond :
-        m.x1 = -1.4142 * (0.9 * marker_radius + delta);
-        m.x2 = +1.4142 * (0.9 * marker_radius + delta);
-        m.y1 = -1.4142 * (0.9 * marker_radius + delta);
-        m.y2 = +1.4142 * (0.9 * marker_radius + delta);
+        m.x1 = -1.4142 * (0.9 * radius + delta);
+        m.x2 = +1.4142 * (0.9 * radius + delta);
+        m.y1 = -1.4142 * (0.9 * radius + delta);
+        m.y2 = +1.4142 * (0.9 * radius + delta);
         break;
       default :
-        m.x1 = -1.0000 * (1.0 * marker_radius + delta);
-        m.x2 = +1.0000 * (1.0 * marker_radius + delta);
-        m.y1 = -1.0000 * (1.0 * marker_radius + delta);
-        m.y2 = +1.0000 * (1.0 * marker_radius + delta);
+        m.x1 = -1.0000 * (1.0 * radius + delta);
+        m.x2 = +1.0000 * (1.0 * radius + delta);
+        m.y1 = -1.0000 * (1.0 * radius + delta);
+        m.y2 = +1.0000 * (1.0 * radius + delta);
         break;
     }
     return;
   };
 
-  U line_w = 0;
-  if ( !line_color.IsClear() ) {
-    line_w = std::max( line_w, line_width );
+  U lw = line_width;
+
+  if ( radius > 0 ) {
+    marker_show_out = !line_color.IsClear() && line_width > 0;
+    marker_show_int = !fill_color.IsClear();
+    if ( 2 * radius < 3 * line_width ) {
+      if ( has_line && 2 * radius < line_width ) {
+        lw = line_width / 2 - radius;
+        radius = line_width / 2;
+        marker_show_out = marker_show_out && lw > 0;
+      } else {
+        marker_show_int = marker_show_int && !marker_show_out;
+      }
+    }
   }
+  marker_show = marker_show_out || marker_show_int;
+  if ( !marker_show_out || !marker_show_int ) lw = 0;
 
-  marker_diameter = marker_size;
-  marker_radius = marker_diameter / 2;
-  marker_show =
-    marker_size > 0 &&
-    ( (type == SeriesType::Scatter || type == SeriesType::Point)
-      ? (marker_diameter > 0)
-      : (marker_diameter > line_w)
-    );
-  marker_hollow = marker_diameter >= 3 * line_w && !fill_color.IsClear();
-
-  compute( marker_int, -line_w );
+  compute( marker_int, -lw );
   compute( marker_out, 0 );
-  compute( marker_rim, rim );
 
   return;
 }
@@ -575,9 +596,6 @@ void Series::BuildArea(
   Poly* fill_obj = nullptr;
   Poly* line_obj = nullptr;
 
-  bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
-  bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
-
   bool first_in_stack = (stack_dir < 0) ? pts_neg->empty() : pts_pos->empty();
 
   // Initialize the fill polygon with the points from the top of the previous
@@ -622,10 +640,8 @@ void Series::BuildArea(
       line_obj->Add( p );
     }
     if ( is_datum && marker_show ) {
-      BuildMarker( mark_g, marker_out, p );
-      if ( marker_hollow ) {
-        BuildMarker( hole_g, marker_int, p );
-      }
+      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
+      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
     }
     if ( on_line && (is_datum || ap_line_cnt == 0) ) {
       ap_line_cnt++;
@@ -768,8 +784,6 @@ void Series::BuildBar(
   Point p1;
   Point p2;
 
-  bool has_fill = !fill_g->Attr()->FillColor()->IsClear();
-  bool has_line = !line_g->Attr()->LineColor()->IsClear() && line_width > 0;
   U db = std::min( 1.0, line_width / 2 );
 
   for ( const Datum& datum : datum_list ) {
@@ -823,10 +837,8 @@ void Series::BuildBar(
     if ( type == SeriesType::Lollipop ) {
       line_g->Add( new Line( p1, p2 ) );
       if ( p2_inside && marker_show ) {
-        BuildMarker( mark_g, marker_out, p2 );
-        if ( marker_hollow ) {
-          BuildMarker( hole_g, marker_int, p2 );
-        }
+        if ( marker_show_out ) BuildMarker( mark_g, marker_out, p2 );
+        if ( marker_show_int ) BuildMarker( hole_g, marker_int, p2 );
       }
       UpdateLegendBoxes( lb_list, p1, p2, false, true );
     }
@@ -951,10 +963,6 @@ void Series::BuildLine(
   Poly* poly = nullptr;
   bool adding_segments = false;
 
-  bool has_line =
-    !line_g->Attr()->LineColor()->IsClear() && line_width > 0 &&
-    (type == SeriesType::XY || type == SeriesType::Line);
-
   Point prv;
   auto add_point = [&]( Point p, bool clipped = false )
   {
@@ -968,10 +976,8 @@ void Series::BuildLine(
       UpdateLegendBoxes( lb_list, p, p, true, false );
     }
     if ( !clipped && marker_show ) {
-      BuildMarker( mark_g, marker_out, p );
-      if ( marker_hollow ) {
-        BuildMarker( hole_g, marker_int, p );
-      }
+      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
+      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
     }
     prv = p;
     adding_segments = true;
@@ -1062,8 +1068,6 @@ void Series::Build(
   std::vector< SVG::Point >* pts_neg
 )
 {
-  ComputeMarker();
-
   // Define clip-box.
   SVG::BoundaryBox clip_box;
   if ( x_axis->angle == 0 ) {
