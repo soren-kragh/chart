@@ -97,9 +97,6 @@ private:
   // Convert a value to an SVG coordinate.
   SVG::U Coor( double v );
 
-  // Determines if coordinates are so near as to be considered the same.
-  bool CoorNear( SVG::U c1, SVG::U c2 );
-
   // Determine if value is valid.
   bool Valid( double v )
   {
@@ -151,6 +148,9 @@ private:
   );
 
   SVG::U length;
+
+  // Indicates that we have a chart box.
+  bool chart_box;
 
   AxisStyle style;
   Pos       pos;

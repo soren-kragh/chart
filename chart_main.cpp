@@ -39,15 +39,20 @@ Main::~Main( void )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Main::SetMargin( SVG::U margin )
+{
+  this->margin = margin;
+}
+
 void Main::SetChartArea( SVG::U width, SVG::U height )
 {
   chart_w = std::max( U( 100 ), width );
   chart_h = std::max( U( 100 ), height );
 }
 
-void Main::SetMargin( SVG::U margin )
+void Main::SetChartBox( bool chart_box )
 {
-  this->margin = margin;
+  this->chart_box = chart_box;
 }
 
 void Main::SetTitle( const std::string& txt )
@@ -1015,16 +1020,12 @@ void Main::AxisPrepare( void )
   }
 
   axis_x->orth_coor = axis_y[ 0 ]->orth_axis_coor[ 0 ];
-  axis_x->orth_coor_is_min =
-    axis_y[ 0 ]->CoorNear( axis_x->orth_coor, 0 );
-  axis_x->orth_coor_is_max =
-    axis_y[ 0 ]->CoorNear( axis_x->orth_coor, axis_y[ 0 ]->length );
+  axis_x->orth_coor_is_min = CoorNear( axis_x->orth_coor, 0 );
+  axis_x->orth_coor_is_max = CoorNear( axis_x->orth_coor, axis_y[ 0 ]->length );
   for ( int i : { 0, 1 } ) {
     axis_y[ i ]->orth_coor = axis_x->orth_axis_coor[ i ];
-    axis_y[ i ]->orth_coor_is_min =
-      axis_x->CoorNear( axis_y[ i ]->orth_coor, 0 );
-    axis_y[ i ]->orth_coor_is_max =
-      axis_x->CoorNear( axis_y[ i ]->orth_coor, axis_x->length );
+    axis_y[ i ]->orth_coor_is_min = CoorNear( axis_y[ i ]->orth_coor, 0 );
+    axis_y[ i ]->orth_coor_is_max = CoorNear( axis_y[ i ]->orth_coor, axis_x->length );
   }
 
   if ( axis_x->category_axis && !axis_x->grid_set ) {
@@ -1235,7 +1236,7 @@ void Main::AddChartMargin(
     }
   }
   chart_g->Add(
-    new Rect( -margin, -margin, chart_w + margin, chart_h + margin)
+    new Rect( -margin, -margin, chart_w + margin, chart_h + margin )
   );
   chart_g->Last()->Attr()->FillColor()->Clear();
   chart_g->Last()->Attr()->LineColor()->Set( SVG::ColorName::black );
@@ -1272,6 +1273,7 @@ Canvas* Main::Build( void )
 
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::black );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
+  axes_line_g->Attr()->FillColor()->Clear();
 
   chartbox_below_axes_g->Attr()->FillColor()->Clear();
   chartbox_above_axes_g->Attr()->FillColor()->Clear();
@@ -1285,9 +1287,11 @@ Canvas* Main::Build( void )
 
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
+  axis_x->chart_box   = chart_box;
   for ( auto a : axis_y ) {
     a->length      = (a->angle == 0) ? chart_w : chart_h;
     a->orth_length = (a->angle == 0) ? chart_h : chart_w;
+    a->chart_box   = chart_box;
   }
 
   AxisPrepare();
@@ -1312,7 +1316,9 @@ Canvas* Main::Build( void )
     }
   }
 
-  AddChartMargin( chart_g );
+  if ( chart_box ) {
+    axes_line_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
+  }
 
   axis_x->BuildLabel( axis_objects, axes_label_g );
   for ( auto a : axis_y ) {
@@ -1395,6 +1401,8 @@ Canvas* Main::Build( void )
     }
     chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
   }
+
+  AddChartMargin( chart_g );
 
   BoundaryBox bb = chart_g->GetBB();
   chart_g->Add(

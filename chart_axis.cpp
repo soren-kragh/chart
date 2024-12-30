@@ -29,6 +29,7 @@ Axis::Axis( bool x_axis )
   y_dual = false;
   orth_dual = false;
   length = 0;
+  chart_box = false;
   style = AxisStyle::Auto;
   pos = Pos::Auto;
   pos_base_axis_y_n = 0;
@@ -450,11 +451,6 @@ U Axis::Coor( double v )
   return c;
 }
 
-bool Axis::CoorNear( SVG::U c1, SVG::U c2 )
-{
-  return ( std::abs( c1 - c2 ) < length * epsilon );
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // Compute number of required decimals. If update=true then the digits and
@@ -775,27 +771,53 @@ void Axis::BuildTicksHelper(
   bool not_near_crossing_axis =
     !near_crossing_axis[ 0 ] && !near_crossing_axis[ 1 ];
 
+  bool near_chart_box_min = chart_box && CoorNear( v_coor, 0 );
+  bool near_chart_box_max = chart_box && CoorNear( v_coor, length );
+  bool not_near_chart_box = !near_chart_box_min && !near_chart_box_max;
+
+  bool centered_tick =
+    style == AxisStyle::Arrow || style == AxisStyle::Line;
+
   // Tick collides with orthogonal axis.
   bool collision = false;
   for ( int i : { 0, 1 } ) {
     if ( !near_crossing_axis[ i ] ) continue;
     bool at_orth_arrow =
+      near_crossing_axis[ i ] &&
       orth_style[ i ] == AxisStyle::Arrow &&
       (orth_reverse[ i ] ? orth_coor_is_min : orth_coor_is_max);
     if ( !at_orth_arrow ) {
       if ( angle == 0 ) {
         if ( orth_coor_is_min && number_pos == Pos::Bottom ) continue;
-        if ( orth_coor_is_min && style == AxisStyle::Arrow ) continue;
+        if ( orth_coor_is_min && centered_tick             ) continue;
         if ( orth_coor_is_max && number_pos == Pos::Top    ) continue;
-        if ( orth_coor_is_max && style == AxisStyle::Arrow ) continue;
+        if ( orth_coor_is_max && centered_tick             ) continue;
       } else {
         if ( orth_coor_is_min && number_pos == Pos::Left   ) continue;
-        if ( orth_coor_is_min && style == AxisStyle::Arrow ) continue;
+        if ( orth_coor_is_min && centered_tick             ) continue;
         if ( orth_coor_is_max && number_pos == Pos::Right  ) continue;
-        if ( orth_coor_is_max && style == AxisStyle::Arrow ) continue;
+        if ( orth_coor_is_max && centered_tick             ) continue;
       }
     }
     collision = true;
+  }
+
+  // Tick collides with chart box.
+  while ( 1 ) {
+    if ( not_near_chart_box ) break;
+    if ( angle == 0 ) {
+      if ( orth_coor_is_min && number_pos == Pos::Bottom ) break;
+      if ( orth_coor_is_min && centered_tick             ) break;
+      if ( orth_coor_is_max && number_pos == Pos::Top    ) break;
+      if ( orth_coor_is_max && centered_tick             ) break;
+    } else {
+      if ( orth_coor_is_min && number_pos == Pos::Left   ) break;
+      if ( orth_coor_is_min && centered_tick             ) break;
+      if ( orth_coor_is_max && number_pos == Pos::Right  ) break;
+      if ( orth_coor_is_max && centered_tick             ) break;
+    }
+    collision = true;
+    break;
   }
 
   U x = (angle == 0) ? v_coor : orth_coor;
@@ -810,7 +832,7 @@ void Axis::BuildTicksHelper(
     gx1 = gx2 = x;
     U y1 = y - d;
     U y2 = y + d;
-    if ( !not_near_crossing_axis && style == AxisStyle::Arrow ) {
+    if ( (!not_near_crossing_axis || !not_near_chart_box) && centered_tick ) {
       if ( orth_coor_is_max ) y1 = y;
       if ( orth_coor_is_min ) y2 = y;
     }
@@ -825,7 +847,7 @@ void Axis::BuildTicksHelper(
     gy1 = gy2 = y;
     U x1 = x - d;
     U x2 = x + d;
-    if ( !not_near_crossing_axis && style == AxisStyle::Arrow ) {
+    if ( (!not_near_crossing_axis || !not_near_chart_box) && centered_tick ) {
       if ( orth_coor_is_max ) x1 = x;
       if ( orth_coor_is_min ) x2 = x;
     }
@@ -838,7 +860,7 @@ void Axis::BuildTicksHelper(
     }
   }
 
-  if ( not_near_crossing_axis ) {
+  if ( not_near_crossing_axis && not_near_chart_box ) {
     bool mg = sn == 0 && major_grid_enable;
     if ( mg || minor_grid_enable ) {
       if ( mg ) {
@@ -1202,7 +1224,10 @@ void Axis::BuildCategories(
       }
       bool not_near_crossing_axis =
         !near_crossing_axis[ 0 ] && !near_crossing_axis[ 1 ];
-      if ( not_near_crossing_axis ) {
+      bool near_chart_box_min = chart_box && CoorNear( v_coor, 0 );
+      bool near_chart_box_max = chart_box && CoorNear( v_coor, length );
+      bool not_near_chart_box = !near_chart_box_min && !near_chart_box_max;
+      if ( not_near_crossing_axis && not_near_chart_box ) {
         major_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
       }
       mn++;
@@ -1339,10 +1364,12 @@ void Axis::Build(
       BoundaryBox bb = obj->GetBB();
       collision = false;
       for ( int i = 0; i < 2; i++ ) {
+        U mx = 48;
+        U my = 32;
         if ( angle == 0 ) {
-          if ( orth_axis_coor[ i ] <= bb.min.x - 48 )
+          if ( orth_axis_coor[ i ] <= bb.min.x - mx )
             continue;
-          if ( orth_axis_coor[ i ] >= bb.max.x + 48 )
+          if ( orth_axis_coor[ i ] >= bb.max.x + mx )
             continue;
           if (
             ( orth_reverse[ i ]
@@ -1354,9 +1381,9 @@ void Axis::Build(
           )
             continue;
         } else {
-          if ( orth_axis_coor[ i ] <= bb.min.y - 32 )
+          if ( orth_axis_coor[ i ] <= bb.min.y - my )
             continue;
-          if ( orth_axis_coor[ i ] >= bb.max.y + 32 )
+          if ( orth_axis_coor[ i ] >= bb.max.y + my )
             continue;
           if (
             ( orth_reverse[ i ]
@@ -1369,6 +1396,29 @@ void Axis::Build(
             continue;
         }
         collision = true;
+      }
+      if ( chart_box ) {
+        U mx = 12;
+        U my = 8;
+        bb.min.x -= mx; bb.max.x += mx;
+        bb.min.y -= my; bb.max.y += my;
+        BoundaryBox cb;
+        cb.min.x = 0;
+        cb.min.y = 0;
+        cb.max.x = (angle == 0) ? length : orth_length;
+        cb.max.y = (angle != 0) ? length : orth_length;
+        if (
+          (bb.min.x < cb.min.x && bb.max.x > cb.min.x) ||
+          (bb.min.x < cb.max.x && bb.max.x > cb.max.x)
+        ) {
+          if ( bb.min.y < cb.max.y && bb.max.y > cb.min.y ) collision = true;
+        }
+        if (
+          (bb.min.y < cb.min.y && bb.max.y > cb.min.y) ||
+          (bb.min.y < cb.max.y && bb.max.y > cb.max.y)
+        ) {
+          if ( bb.min.x < cb.max.x && bb.max.x > cb.min.x ) collision = true;
+        }
       }
       return collision;
     };
@@ -1456,11 +1506,20 @@ void Axis::Build(
   line_g = line_g->AddNewGroup();
   num_g  = num_g->AddNewGroup();
 
+  bool axis_at_chart_box = chart_box && (orth_coor_is_min || orth_coor_is_max);
+
   if ( style != AxisStyle::None ) {
     if ( style == AxisStyle::Arrow ) {
       U sv = reverse ? -1 : +1;
       U dx = (angle == 0) ? (sv * arrow_length/2) : 0;
       U dy = (angle != 0) ? (sv * arrow_length/2) : 0;
+      if ( axis_at_chart_box ) {
+        if ( angle == 0 ) {
+          sx = reverse ? U( 0 ) : length;
+        } else {
+          sy = reverse ? U( 0 ) : length;
+        }
+      }
       line_g->Add( new Line( sx, sy, ex - dx, ey - dy) );
       Poly* poly =
         new Poly(
@@ -1474,7 +1533,9 @@ void Axis::Build(
       poly->Attr()->FillColor()->Set( ColorName::black );
       poly->Rotate( angle, ex, ey );
     } else {
-      line_g->Add( new Line( sx, sy, ex, ey ) );
+      if ( !axis_at_chart_box ) {
+        line_g->Add( new Line( sx, sy, ex, ey ) );
+      }
     }
   }
 

@@ -43,6 +43,12 @@ namespace Chart {
 
   enum class MarkerShape { Circle, Square, Triangle, Diamond };
 
+  // Determines if coordinates are so near as to be considered the same.
+  inline bool CoorNear( SVG::U c1, SVG::U c2 )
+  {
+    return std::abs( c1 - c2 ) < epsilon;
+  }
+
   void TextBG(
     SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h
   );

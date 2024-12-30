@@ -30,8 +30,9 @@ public:
   Main( void );
   ~Main( void );
 
-  void SetChartArea( SVG::U width, SVG::U height );
   void SetMargin( SVG::U margin );
+  void SetChartArea( SVG::U width, SVG::U height );
+  void SetChartBox( bool chart_box = true );
 
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
@@ -118,9 +119,10 @@ private:
 
   Pos legend_pos;
 
-  SVG::U margin  = 5;
-  SVG::U chart_w = 1000;
-  SVG::U chart_h = 700;
+  SVG::U margin    = 5;
+  SVG::U chart_w   = 1000;
+  SVG::U chart_h   = 700;
+  bool   chart_box = false;
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;
