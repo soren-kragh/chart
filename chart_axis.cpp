@@ -418,7 +418,7 @@ void Axis::LegalizeMinMax( void )
       orth_axis_cross = min;
     } else {
       orth_axis_cross = (max <= 0) ? max : min;
-      if ( min < 0 && max > 0 ) orth_axis_cross = 0;
+      if ( min < 0 && max > 0 && !chart_box ) orth_axis_cross = 0;
       if ( log_scale ) orth_axis_cross = min;
     }
   }
@@ -1539,8 +1539,9 @@ void Axis::Build(
     }
   }
 
-  // Add DMZ rectangle for orthogonal axis to trigger collision for numbers
+  // Add DMZ rectangles for orthogonal axis to trigger collision for numbers
   // that are too close.
+  int dmz_cnt = 0;
   for ( int i : { 0, 1 } ) {
     if ( orth_style[ i ] == AxisStyle::None ) continue;
     U oc = orth_axis_coor[ i ];
@@ -1558,6 +1559,24 @@ void Axis::Build(
       axis_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
     } else {
       axis_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
+    }
+    dmz_cnt++;
+  }
+
+  // Add DMZ rectangles for chart box to trigger collision for numbers that are
+  // too close.
+  if ( chart_box ) {
+    for ( int i : { 0, 1 } ) {
+      U oc = (i == 0) ? U( 0 ) : length;
+      U zc = tick_major_len;
+      U os = 0;
+      U oe = orth_length;
+      if ( angle == 0 ) {
+        axis_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
+      } else {
+        axis_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
+      }
+      dmz_cnt++;
     }
   }
 
@@ -1606,11 +1625,11 @@ void Axis::Build(
     }
   }
 
-  // Remove DMZ rectangle.
-  for ( int i : { 0, 1 } ) {
-    if ( orth_style[ i ] == AxisStyle::None ) continue;
+  // Remove DMZ rectangles.
+  while ( dmz_cnt > 0 ) {
     delete axis_objects.back();
     axis_objects.pop_back();
+    dmz_cnt--;
   }
 
   axis_objects.push_back( line_g );

@@ -1005,11 +1005,14 @@ void Main::AxisPrepare( void )
         )
       )
       ? AxisStyle::Edge
-      : AxisStyle::Arrow;
+      : (chart_box ? AxisStyle::Edge : AxisStyle::Arrow);
   }
   for ( auto a : axis_y ) {
     if ( a->style == AxisStyle::Auto ) {
-      a->style = dual_y ? AxisStyle::Edge : AxisStyle::Arrow;
+      a->style =
+        dual_y
+        ? AxisStyle::Edge
+        : (chart_box ? AxisStyle::Edge : AxisStyle::Arrow);
     }
   }
 
@@ -1026,6 +1029,17 @@ void Main::AxisPrepare( void )
     axis_y[ i ]->orth_coor = axis_x->orth_axis_coor[ i ];
     axis_y[ i ]->orth_coor_is_min = CoorNear( axis_y[ i ]->orth_coor, 0 );
     axis_y[ i ]->orth_coor_is_max = CoorNear( axis_y[ i ]->orth_coor, axis_x->length );
+  }
+
+  if ( chart_box ) {
+    if ( !axis_x->orth_coor_is_min && !axis_x->orth_coor_is_max ) {
+      if ( axis_x->style == AxisStyle::Edge ) axis_x->style = AxisStyle::Line;
+    }
+    for ( auto a : axis_y ) {
+      if ( !a->orth_coor_is_min && !a->orth_coor_is_max ) {
+        if ( a->style == AxisStyle::Edge ) a->style = AxisStyle::Line;
+      }
+    }
   }
 
   if ( axis_x->category_axis && !axis_x->grid_set ) {
