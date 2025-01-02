@@ -1239,12 +1239,270 @@ void Axis::BuildCategories(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Axis::BuildUnit(
+  SVG::Group* unit_g,
+  std::vector< SVG::Object* >& axis_objects
+)
+{
+  if ( unit == "" ) return;
+
+  U coor = category_axis ? cat_coor : orth_coor;
+
+  U outer_max = length;
+  U outer_min = 0;
+  U inner_max = outer_max;
+  U inner_min = outer_min;
+
+  outer_max += (angle == 0) ? num_space_x : num_space_y;
+  outer_min -= (angle == 0) ? num_space_x : num_space_y;
+  if ( style == AxisStyle::Arrow ) {
+    if ( reverse ) {
+      outer_max += tick_major_len;
+      outer_min -= overhang;
+    } else {
+      outer_max += overhang;
+      outer_min -= tick_major_len;
+    }
+  } else {
+    outer_max += tick_major_len;
+    outer_min -= tick_major_len;
+  }
+  if ( chart_box ) {
+    inner_max -= tick_major_len;
+    inner_min += tick_major_len;
+  } else {
+    inner_max = outer_max;
+    inner_min = outer_min;
+  }
+
+  Object* obj = Label( unit_g, unit, 16 );
+  obj->Attr()->TextFont()->SetBold();
+  bool collision = false;
+
+  auto place = [&]( Pos px, Pos py )
+  {
+    AnchorX ax = AnchorX::Mid;
+    AnchorY ay = AnchorY::Mid;
+    U cx = length / 2;
+    U cy = length / 2;
+    if ( px == Pos::Left ) {
+      if ( angle == 0 ) {
+        cx = (py == Pos::Center) ? outer_min : inner_min;
+        ax = (py == Pos::Center) ? AnchorX::Max : AnchorX::Min;
+      } else {
+        cx = coor - tick_major_len - num_space_x;
+        ax = AnchorX::Max;
+      }
+    }
+    if ( px == Pos::Right ) {
+      if ( angle == 0 ) {
+        cx = (py == Pos::Center) ? outer_max : inner_max;
+        ax = (py == Pos::Center) ? AnchorX::Min : AnchorX::Max;
+      } else {
+        cx = coor + tick_major_len + num_space_x;
+        ax = AnchorX::Min;
+      }
+
+    }
+    if ( px == Pos::Center ) {
+      cx = (angle == 0) ? U( length / 2 ) : coor;
+      ax = AnchorX::Mid;
+    }
+    if ( py == Pos::Bottom ) {
+      if ( angle == 0 ) {
+        cy = coor - tick_major_len - num_space_y;
+        ay = AnchorY::Max;
+      } else {
+        cy = (px == Pos::Center) ? outer_min : inner_min;
+        ay = (px == Pos::Center) ? AnchorY::Max : AnchorY::Min;
+      }
+    }
+    if ( py == Pos::Top ) {
+      if ( angle == 0 ) {
+        cy = coor + tick_major_len + num_space_y;
+        ay = AnchorY::Min;
+      } else {
+        cy = (px == Pos::Center) ? outer_max : inner_max;
+        ay = (px == Pos::Center) ? AnchorY::Min : AnchorY::Max;
+      }
+    }
+    if ( py == Pos::Center ) {
+      cy = (angle == 0) ? coor : U( length / 2 );
+      ay = AnchorY::Mid;
+    }
+    obj->MoveTo( ax, ay, cx, cy );
+    BoundaryBox bb = obj->GetBB();
+    collision = false;
+    for ( int i = 0; i < 2; i++ ) {
+      U mx = 48;
+      U my = 32;
+      if ( angle == 0 ) {
+        if ( orth_axis_coor[ i ] <= bb.min.x - mx )
+          continue;
+        if ( orth_axis_coor[ i ] >= bb.max.x + mx )
+          continue;
+        if (
+          ( orth_reverse[ i ]
+            ? (orth_coor_is_max && py == Pos::Top   )
+            : (orth_coor_is_min && py == Pos::Bottom)
+          ) &&
+          px == (reverse ? Pos::Left : Pos::Right) &&
+          style == AxisStyle::Arrow
+        )
+          continue;
+      } else {
+        if ( orth_axis_coor[ i ] <= bb.min.y - my )
+          continue;
+        if ( orth_axis_coor[ i ] >= bb.max.y + my )
+          continue;
+        if (
+          ( orth_reverse[ i ]
+            ? (orth_coor_is_max && px == Pos::Right)
+            : (orth_coor_is_min && px == Pos::Left )
+          ) &&
+          py == (reverse ? Pos::Bottom : Pos::Top) &&
+          style == AxisStyle::Arrow
+        )
+          continue;
+      }
+      collision = true;
+    }
+    if ( chart_box ) {
+      U mx = tick_major_len - epsilon;
+      U my = tick_major_len - epsilon;
+      bb.min.x -= mx; bb.max.x += mx;
+      bb.min.y -= my; bb.max.y += my;
+      BoundaryBox cb;
+      cb.min.x = 0;
+      cb.min.y = 0;
+      cb.max.x = (angle == 0) ? length : orth_length;
+      cb.max.y = (angle != 0) ? length : orth_length;
+      if (
+        (bb.min.x < cb.min.x && bb.max.x > cb.min.x) ||
+        (bb.min.x < cb.max.x && bb.max.x > cb.max.x)
+      ) {
+        if ( bb.min.y < cb.max.y && bb.max.y > cb.min.y ) collision = true;
+      }
+      if (
+        (bb.min.y < cb.min.y && bb.max.y > cb.min.y) ||
+        (bb.min.y < cb.max.y && bb.max.y > cb.max.y)
+      ) {
+        if ( bb.min.x < cb.max.x && bb.max.x > cb.min.x ) collision = true;
+      }
+    }
+    return collision;
+  };
+
+  bool automatic =
+    unit_pos != Pos::Bottom && unit_pos != Pos::Top &&
+    unit_pos != Pos::Left && unit_pos != Pos::Right;
+
+  if ( angle == 0 ) {
+    if ( automatic ) {
+      if ( category_axis ) {
+        unit_pos = reverse ? Pos::Left : Pos::Right;
+      } else {
+        unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
+        if ( chart_box ) {
+          if ( orth_coor_is_min && number_pos == Pos::Top ) {
+            unit_pos = Pos::Top;
+          }
+          if ( orth_coor_is_max && number_pos == Pos::Bottom ) {
+            unit_pos = Pos::Bottom;
+          }
+          if ( !orth_coor_is_min && !orth_coor_is_max ) {
+            unit_pos = (number_pos == Pos::Top) ? Pos::Top : Pos::Bottom;
+          }
+        } else {
+          if ( orth_dual && style == AxisStyle::Arrow ) {
+            unit_pos = reverse ? Pos::Left : Pos::Right;
+          }
+        }
+      }
+    }
+    if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
+      if ( orth_dual || category_axis ) {
+        place( Pos::Center, unit_pos );
+      } else {
+        if ( style == AxisStyle::Arrow ) {
+          place( reverse ? Pos::Left : Pos::Right, unit_pos    ) &&
+          place( reverse ? Pos::Left : Pos::Right, Pos::Center );
+        } else {
+          place( reverse ? Pos::Left  : Pos::Right, unit_pos ) &&
+          place( reverse ? Pos::Right : Pos::Left , unit_pos ) &&
+          place( Pos::Center, unit_pos );
+        }
+      }
+    }
+    if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
+      place( unit_pos, Pos::Center );
+      collision = false;
+    }
+    if ( collision ) {
+      place( reverse ? Pos::Left : Pos::Right, Pos::Center );
+    }
+  }
+
+  if ( angle != 0 ) {
+    if ( automatic ) {
+      if ( category_axis ) {
+        unit_pos = Pos::Top;
+      } else {
+        unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
+        if ( chart_box ) {
+          if ( orth_coor_is_min && number_pos == Pos::Right ) {
+            unit_pos = Pos::Right;
+          }
+          if ( orth_coor_is_max && number_pos == Pos::Left ) {
+            unit_pos = Pos::Left;
+          }
+          if ( !orth_coor_is_min && !orth_coor_is_max ) {
+            unit_pos = (number_pos == Pos::Left) ? Pos::Left : Pos::Right;
+          }
+        } else {
+          if (
+            (orth_dual && style == AxisStyle::Arrow) ||
+            style == AxisStyle::None
+          ) {
+            unit_pos = reverse ? Pos::Bottom : Pos::Top;
+          }
+        }
+      }
+    }
+    if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
+      if ( orth_dual ) {
+        place( unit_pos, Pos::Center );
+      } else {
+        if ( style == AxisStyle::Arrow ) {
+          place( unit_pos   , reverse ? Pos::Bottom : Pos::Top ) &&
+          place( Pos::Center, reverse ? Pos::Bottom : Pos::Top );
+        } else {
+          place( unit_pos, reverse ? Pos::Bottom : Pos::Top    ) &&
+          place( unit_pos, reverse ? Pos::Top    : Pos::Bottom ) &&
+          place( unit_pos, Pos::Center );
+        }
+      }
+    }
+    if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
+      place( Pos::Center, unit_pos );
+      collision = false;
+    }
+    if ( collision ) {
+      place( Pos::Center, reverse ? Pos::Bottom : Pos::Top );
+    }
+  }
+
+  axis_objects.push_back( obj );
+}
+
+//------------------------------------------------------------------------------
+
 void Axis::Build(
   const std::vector< std::string >& category_list,
   uint32_t phase,
   std::vector< SVG::Object* >& axis_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-  SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
+  SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
 )
 {
   if ( !show ) return;
@@ -1292,6 +1550,11 @@ void Axis::Build(
     }
   }
 
+  if ( phase == 0 ) {
+    BuildUnit( unit_g, axis_objects );
+    return;
+  }
+
   U as = 0;
   U ae = length;
   if ( reverse ) {
@@ -1300,208 +1563,10 @@ void Axis::Build(
   } else {
     if ( style == AxisStyle::Arrow ) ae += overhang;
   }
-  if ( phase == 0 ) {
-    U ds = tick_major_len + ((angle == 0) ? num_space_x : num_space_y);
-    U de =
-      ((style == AxisStyle::Arrow) ? U( 0 ) : tick_major_len) +
-      ((angle == 0) ? num_space_x : num_space_y);
-    if ( reverse ) {
-      as += ds;
-      ae -= de;
-    } else {
-      as -= ds;
-      ae += de;
-    }
-  }
   U sx = (angle == 0) ? as : orth_coor;
   U sy = (angle == 0) ? orth_coor : as;
   U ex = (angle == 0) ? ae : orth_coor;
   U ey = (angle == 0) ? orth_coor : ae;
-
-  if ( phase == 0 && unit != "" ) {
-    if ( category_axis ) {
-      sx = (angle == 0) ? as : cat_coor;
-      sy = (angle == 0) ? cat_coor : as;
-      ex = (angle == 0) ? ae : cat_coor;
-      ey = (angle == 0) ? cat_coor : ae;
-    }
-
-    Object* obj = Label( label_g, unit, 16 );
-    obj->Attr()->TextFont()->SetBold();
-    bool collision = false;
-
-    auto place = [&]( Pos px, Pos py )
-    {
-      AnchorX ax = AnchorX::Mid;
-      AnchorY ay = AnchorY::Mid;
-      U x = length / 2;
-      U y = length / 2;
-      if ( px == Pos::Left ) {
-        x = (reverse ? ex : sx) - ((angle == 0) ? 0 : (tick_major_len + num_space_x));
-        ax = (angle == 0 && py != Pos::Center) ? AnchorX::Min : AnchorX::Max;
-      }
-      if ( px == Pos::Right ) {
-        x = (reverse ? sx : ex) + ((angle == 0) ? 0 : (tick_major_len + num_space_x));
-        ax = (angle == 0 && py != Pos::Center) ? AnchorX::Max : AnchorX::Min;
-      }
-      if ( px == Pos::Center ) {
-        x = (angle == 0) ? U(length / 2) : sx;
-        ax = AnchorX::Mid;
-      }
-      if ( py == Pos::Bottom ) {
-        y = (reverse ? ey : sy) - ((angle != 0) ? 0 : (tick_major_len + num_space_y));
-        ay = (angle != 0 && px != Pos::Center) ? AnchorY::Min : AnchorY::Max;
-      }
-      if ( py == Pos::Top ) {
-        y = (reverse ? sy : ey) + ((angle != 0) ? 0 : (tick_major_len + num_space_y));
-        ay = (angle != 0 && px != Pos::Center) ? AnchorY::Max : AnchorY::Min;
-      }
-      if ( py == Pos::Center ) {
-        y = (angle == 0) ? sy: U(length / 2);
-        ay = AnchorY::Mid;
-      }
-      obj->MoveTo( ax, ay, x, y );
-      BoundaryBox bb = obj->GetBB();
-      collision = false;
-      for ( int i = 0; i < 2; i++ ) {
-        U mx = 48;
-        U my = 32;
-        if ( angle == 0 ) {
-          if ( orth_axis_coor[ i ] <= bb.min.x - mx )
-            continue;
-          if ( orth_axis_coor[ i ] >= bb.max.x + mx )
-            continue;
-          if (
-            ( orth_reverse[ i ]
-              ? (orth_coor_is_max && py == Pos::Top   )
-              : (orth_coor_is_min && py == Pos::Bottom)
-            ) &&
-            px == (reverse ? Pos::Left : Pos::Right) &&
-            style == AxisStyle::Arrow
-          )
-            continue;
-        } else {
-          if ( orth_axis_coor[ i ] <= bb.min.y - my )
-            continue;
-          if ( orth_axis_coor[ i ] >= bb.max.y + my )
-            continue;
-          if (
-            ( orth_reverse[ i ]
-              ? (orth_coor_is_max && px == Pos::Right)
-              : (orth_coor_is_min && px == Pos::Left )
-            ) &&
-            py == (reverse ? Pos::Bottom : Pos::Top) &&
-            style == AxisStyle::Arrow
-          )
-            continue;
-        }
-        collision = true;
-      }
-      if ( chart_box ) {
-        U mx = 12;
-        U my = 8;
-        bb.min.x -= mx; bb.max.x += mx;
-        bb.min.y -= my; bb.max.y += my;
-        BoundaryBox cb;
-        cb.min.x = 0;
-        cb.min.y = 0;
-        cb.max.x = (angle == 0) ? length : orth_length;
-        cb.max.y = (angle != 0) ? length : orth_length;
-        if (
-          (bb.min.x < cb.min.x && bb.max.x > cb.min.x) ||
-          (bb.min.x < cb.max.x && bb.max.x > cb.max.x)
-        ) {
-          if ( bb.min.y < cb.max.y && bb.max.y > cb.min.y ) collision = true;
-        }
-        if (
-          (bb.min.y < cb.min.y && bb.max.y > cb.min.y) ||
-          (bb.min.y < cb.max.y && bb.max.y > cb.max.y)
-        ) {
-          if ( bb.min.x < cb.max.x && bb.max.x > cb.min.x ) collision = true;
-        }
-      }
-      return collision;
-    };
-
-    bool automatic =
-      unit_pos != Pos::Bottom && unit_pos != Pos::Top &&
-      unit_pos != Pos::Left && unit_pos != Pos::Right;
-
-    if ( angle == 0 ) {
-      if ( automatic ) {
-        if ( category_axis ) {
-          unit_pos = reverse ? Pos::Left : Pos::Right;
-        } else {
-          unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
-          if ( orth_dual && style == AxisStyle::Arrow ) {
-            unit_pos = reverse ? Pos::Left : Pos::Right;
-          }
-        }
-      }
-      if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
-        if ( orth_dual || category_axis ) {
-          place( Pos::Center, unit_pos );
-        } else {
-          if ( style == AxisStyle::Arrow ) {
-            place( reverse ? Pos::Left : Pos::Right, unit_pos    ) &&
-            place( reverse ? Pos::Left : Pos::Right, Pos::Center );
-          } else {
-            place( reverse ? Pos::Left  : Pos::Right, unit_pos ) &&
-            place( reverse ? Pos::Right : Pos::Left , unit_pos ) &&
-            place( Pos::Center, unit_pos );
-          }
-        }
-      }
-      if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
-        place( unit_pos, Pos::Center );
-        collision = false;
-      }
-      if ( collision ) {
-        place( reverse ? Pos::Left : Pos::Right, Pos::Center );
-      }
-    }
-
-    if ( angle != 0 ) {
-      if ( automatic ) {
-        if ( category_axis ) {
-          unit_pos = Pos::Top;
-        } else {
-          unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
-          if (
-            (orth_dual && style == AxisStyle::Arrow) ||
-            style == AxisStyle::None
-          ) {
-            unit_pos = reverse ? Pos::Bottom : Pos::Top;
-          }
-        }
-      }
-      if ( unit_pos == Pos::Left || unit_pos == Pos::Right ) {
-        if ( orth_dual ) {
-          place( unit_pos, Pos::Center );
-        } else {
-          if ( style == AxisStyle::Arrow ) {
-            place( unit_pos   , reverse ? Pos::Bottom : Pos::Top ) &&
-            place( Pos::Center, reverse ? Pos::Bottom : Pos::Top );
-          } else {
-            place( unit_pos, reverse ? Pos::Bottom : Pos::Top    ) &&
-            place( unit_pos, reverse ? Pos::Top    : Pos::Bottom ) &&
-            place( unit_pos, Pos::Center );
-          }
-        }
-      }
-      if ( unit_pos == Pos::Bottom || unit_pos == Pos::Top ) {
-        place( Pos::Center, unit_pos );
-        collision = false;
-      }
-      if ( collision ) {
-        place( Pos::Center, reverse ? Pos::Bottom : Pos::Top );
-      }
-    }
-
-    axis_objects.push_back( obj );
-  }
-
-  if ( phase == 0 ) return;
 
   line_g = line_g->AddNewGroup();
   num_g  = num_g->AddNewGroup();

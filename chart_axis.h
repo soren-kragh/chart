@@ -134,12 +134,17 @@ private:
     SVG::Group* cat_g, SVG::Group* major_g
   );
 
+  void BuildUnit(
+    SVG::Group* unit_g,
+    std::vector< SVG::Object* >& axis_objects
+  );
+
   void Build(
     const std::vector< std::string >& category_list,
     uint32_t phase,
     std::vector< SVG::Object* >& axis_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
-    SVG::Group* line_g, SVG::Group* num_g, SVG::Group* label_g
+    SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
   );
 
   void BuildLabel(
@@ -168,7 +173,7 @@ private:
   SVG::U tick_minor_len = 4;
 
   // Axis number spacing from major tick.
-  SVG::U num_space_x = 2;
+  SVG::U num_space_x = 3;
   SVG::U num_space_y = 3;
 
   bool         log_scale;
