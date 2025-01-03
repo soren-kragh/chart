@@ -749,6 +749,8 @@ void Main::AxisPrepare( void )
       for ( auto& datum : series->datum_list ) {
         double x = datum.x;
         double y = datum.y;
+        if ( !ax->Valid( x ) ) continue;
+        if ( !ay->Valid( y ) ) continue;
         if ( stackable ) {
           size_t i = x;
           y -= series->base;
@@ -759,9 +761,8 @@ void Main::AxisPrepare( void )
             y += ofs_pos[ type_n ][ axis_n ].at( i );
             ofs_pos[ type_n ][ axis_n ][ i ] = y;
           }
+          if ( !ay->Valid( y ) ) continue;
         }
-        if ( !ax->Valid( x ) ) continue;
-        if ( !ay->Valid( y ) ) continue;
         if ( !ax->data_def || ax->data_min > x ) ax->data_min = x;
         if ( !ax->data_def || ax->data_max < x ) ax->data_max = x;
         if ( !ay->data_def || ay->data_min > y ) {
