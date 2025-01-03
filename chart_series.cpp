@@ -714,10 +714,22 @@ void Series::BuildArea(
     double prv_base = 0;
     bool prv_valid = false;
     bool first = true;
+
+    // Make sure trailing skipped data points in the series are
+    // regarded as non-skipped but invalid.
+    int valid_cnt = datum_list.size();
+    for ( auto it = datum_list.rbegin(); it != datum_list.rend(); ++it ) {
+      const Datum& datum = *it;
+      if ( y_axis->Valid( datum.y ) ) break;
+      valid_cnt--;
+    }
+
+    valid_cnt++;
     for ( const Datum& datum : datum_list ) {
+      valid_cnt--;
       size_t i = datum.x;
       double y = datum.y;
-      if ( y_axis->Skip( datum.y ) ) {
+      if ( y_axis->Skip( datum.y ) && valid_cnt > 0 ) {
         continue;
       }
       bool valid = y_axis->Valid( y );
