@@ -148,6 +148,8 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
     if ( series->name.length() == 0 ) continue;
     bool has_outline =
       series->has_line &&
+      series->type != SeriesType::Bar &&
+      series->type != SeriesType::StackedBar &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea;
     if ( has_outline ) {
@@ -215,6 +217,8 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 
       bool has_outline =
         series->has_line &&
+        series->type != SeriesType::Bar &&
+        series->type != SeriesType::StackedBar &&
         series->type != SeriesType::Area &&
         series->type != SeriesType::StackedArea;
 
@@ -450,6 +454,8 @@ void Main::BuildLegend( Group* g, int nx )
 
     bool has_outline =
       series->has_line &&
+      series->type != SeriesType::Bar &&
+      series->type != SeriesType::StackedBar &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea;
 
