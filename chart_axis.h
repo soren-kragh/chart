@@ -220,6 +220,8 @@ private:
   // The coordinate of the category "number" line, which is always at one of
   // the four sides.
   SVG::U cat_coor;
+  bool   cat_coor_is_min;
+  bool   cat_coor_is_max;
 
   // The minimum distance between non empty string categories.
   int category_stride;

@@ -70,6 +70,8 @@ Axis::Axis( bool x_axis )
   orth_coor_is_max = false;
   orth_coor = 0;
 
+  cat_coor_is_min = false;
+  cat_coor_is_max = false;
   cat_coor = 0;
   category_stride = 1;
 }
@@ -1246,6 +1248,9 @@ void Axis::BuildUnit(
 {
   if ( unit == "" ) return;
 
+  bool at_orth_min = category_axis ? cat_coor_is_min : orth_coor_is_min;
+  bool at_orth_max = category_axis ? cat_coor_is_max : orth_coor_is_max;
+
   U coor = category_axis ? cat_coor : orth_coor;
 
   U outer_max = length;
@@ -1343,8 +1348,8 @@ void Axis::BuildUnit(
           continue;
         if (
           ( orth_reverse[ i ]
-            ? (orth_coor_is_max && py == Pos::Top   )
-            : (orth_coor_is_min && py == Pos::Bottom)
+            ? (at_orth_max && py == Pos::Top   )
+            : (at_orth_min && py == Pos::Bottom)
           ) &&
           px == (reverse ? Pos::Left : Pos::Right) &&
           style == AxisStyle::Arrow
@@ -1357,8 +1362,8 @@ void Axis::BuildUnit(
           continue;
         if (
           ( orth_reverse[ i ]
-            ? (orth_coor_is_max && px == Pos::Right)
-            : (orth_coor_is_min && px == Pos::Left )
+            ? (at_orth_max && px == Pos::Right)
+            : (at_orth_min && px == Pos::Left )
           ) &&
           py == (reverse ? Pos::Bottom : Pos::Top) &&
           style == AxisStyle::Arrow
@@ -1404,13 +1409,13 @@ void Axis::BuildUnit(
       } else {
         unit_pos = (number_pos == Pos::Bottom) ? Pos::Top : Pos::Bottom;
         if ( chart_box ) {
-          if ( orth_coor_is_min && number_pos == Pos::Top ) {
+          if ( at_orth_min && number_pos == Pos::Top ) {
             unit_pos = Pos::Top;
           }
-          if ( orth_coor_is_max && number_pos == Pos::Bottom ) {
+          if ( at_orth_max && number_pos == Pos::Bottom ) {
             unit_pos = Pos::Bottom;
           }
-          if ( !orth_coor_is_min && !orth_coor_is_max ) {
+          if ( !at_orth_min && !at_orth_max ) {
             unit_pos = (number_pos == Pos::Top) ? Pos::Top : Pos::Bottom;
           }
         } else {
@@ -1450,13 +1455,13 @@ void Axis::BuildUnit(
       } else {
         unit_pos = (number_pos == Pos::Left) ? Pos::Right : Pos::Left;
         if ( chart_box ) {
-          if ( orth_coor_is_min && number_pos == Pos::Right ) {
+          if ( at_orth_min && number_pos == Pos::Right ) {
             unit_pos = Pos::Right;
           }
-          if ( orth_coor_is_max && number_pos == Pos::Left ) {
+          if ( at_orth_max && number_pos == Pos::Left ) {
             unit_pos = Pos::Left;
           }
-          if ( !orth_coor_is_min && !orth_coor_is_max ) {
+          if ( !at_orth_min && !at_orth_max ) {
             unit_pos = (number_pos == Pos::Left) ? Pos::Left : Pos::Right;
           }
         } else {
@@ -1521,8 +1526,8 @@ void Axis::Build(
       }
       if ( number_pos == Pos::Auto ) number_pos = pos;
       cat_coor = (pos == Pos::Top) ? orth_length : U( 0 );
-      orth_coor_is_min = (pos != Pos::Top);
-      orth_coor_is_max = (pos == Pos::Top);
+      cat_coor_is_min = (pos != Pos::Top);
+      cat_coor_is_max = (pos == Pos::Top);
     } else {
       if ( number_pos != Pos::Right && number_pos != Pos::Left ) {
         number_pos = Pos::Auto;
@@ -1533,8 +1538,8 @@ void Axis::Build(
       }
       if ( number_pos == Pos::Auto ) number_pos = pos;
       cat_coor = (pos == Pos::Right) ? orth_length : U( 0 );
-      orth_coor_is_min = (pos != Pos::Right);
-      orth_coor_is_max = (pos == Pos::Right);
+      cat_coor_is_min = (pos != Pos::Right);
+      cat_coor_is_max = (pos == Pos::Right);
     }
   } else {
     if ( angle == 0 ) {
@@ -1729,14 +1734,17 @@ void Axis::BuildLabel(
 
   if ( lab0 == nullptr && lab1 == nullptr ) return;
 
+  bool at_orth_min = category_axis ? cat_coor_is_min : orth_coor_is_min;
+  bool at_orth_max = category_axis ? cat_coor_is_max : orth_coor_is_max;
+
   Dir dir = Dir::Down;
   if ( angle == 0 ) {
-    if ( y_dual && orth_coor_is_max ) {
+    if ( y_dual && at_orth_max ) {
       dir = Dir::Up;
     }
   }
   if ( angle != 0 ) {
-    if ( orth_coor_is_max || (number_pos == Pos::Right && !orth_coor_is_min) ) {
+    if ( at_orth_max || (number_pos == Pos::Right && !at_orth_min) ) {
       dir = Dir::Right;
       if ( lab0 ) lab0->Rotate( -90 );
       if ( lab1 ) lab1->Rotate( -90 );

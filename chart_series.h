@@ -95,7 +95,7 @@ private:
 
   void Build(
     SVG::Group* main_g,
-    SVG::Group* stacked_area_fill_g,
+    SVG::Group* area_fill_g,
     Axis* x_axis,
     Axis* y_axis,
     std::vector< LegendBox >& lb_list,

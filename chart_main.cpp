@@ -1037,6 +1037,15 @@ void Main::AxisPrepare( void )
     axis_y[ i ]->orth_coor_is_max = CoorNear( axis_y[ i ]->orth_coor, axis_x->length );
   }
 
+  axis_x->cat_coor = axis_x->orth_coor;
+  axis_x->cat_coor_is_min = axis_x->orth_coor_is_min;
+  axis_x->cat_coor_is_max = axis_x->orth_coor_is_max;
+  for ( int i : { 0, 1 } ) {
+    axis_y[ i ]->cat_coor = axis_y[ i ]->orth_coor;
+    axis_y[ i ]->cat_coor_is_min = axis_y[ i ]->orth_coor_is_min;
+    axis_y[ i ]->cat_coor_is_max = axis_y[ i ]->orth_coor_is_max;
+  }
+
   if ( chart_box ) {
     if ( !axis_x->orth_coor_is_min && !axis_x->orth_coor_is_max ) {
       if ( axis_x->style == AxisStyle::Edge ) axis_x->style = AxisStyle::Line;
@@ -1177,10 +1186,8 @@ void Main::BuildSeries(
       std::vector< double > ofs_neg( category_list.size(), series->base );
       std::vector< Point > pts_pos;
       std::vector< Point > pts_neg;
-      Group* g2 = below_axes_g->AddNewGroup();
-      Group* g1 = below_axes_g->AddNewGroup();
       series->Build(
-        g1, g2,
+        below_axes_g, below_axes_g,
         axis_x, axis_y[ y_n ], lb_list,
         0, 1,
         &ofs_pos, &ofs_neg,
