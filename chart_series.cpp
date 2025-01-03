@@ -405,6 +405,8 @@ void Series::DetermineVisualProperties( void )
     type == SeriesType::XY ||
     type == SeriesType::Line ||
     type == SeriesType::Lollipop ||
+    type == SeriesType::Bar ||
+    type == SeriesType::StackedBar ||
     type == SeriesType::Area ||
     type == SeriesType::StackedArea
   ) {
