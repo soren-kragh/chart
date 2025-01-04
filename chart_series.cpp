@@ -595,6 +595,17 @@ void Series::BuildArea(
     }
   }
 
+  // Replace leading/trailing skipped data points in the series with invalid
+  // number.
+  for ( auto it = datum_list.begin(); it != datum_list.end(); ++it ) {
+    if ( y_axis->Valid( it->y ) ) break;
+    it->y = num_invalid;
+  }
+  for ( auto it = datum_list.rbegin(); it != datum_list.rend(); ++it ) {
+    if ( y_axis->Valid( it->y ) ) break;
+    it->y = num_invalid;
+  }
+
   Poly* fill_obj = nullptr;
   Poly* line_obj = nullptr;
 
@@ -604,6 +615,7 @@ void Series::BuildArea(
   // polygon, which are contained in pts_pos/pts_neg.
   if ( has_fill ) {
     fill_g->Add( fill_obj = new Poly() );
+    fill_obj->Close();
     if ( stack_dir < 0 ) {
       for ( auto it = pts_neg->rbegin(); it != pts_neg->rend(); ++it ) {
         fill_obj->Add( *it );
@@ -714,28 +726,16 @@ void Series::BuildArea(
     double prv_base = 0;
     bool prv_valid = false;
     bool first = true;
-
-    // Make sure trailing skipped data points in the series are
-    // regarded as non-skipped but invalid.
-    int valid_cnt = datum_list.size();
-    for ( auto it = datum_list.rbegin(); it != datum_list.rend(); ++it ) {
-      const Datum& datum = *it;
-      if ( y_axis->Valid( datum.y ) ) break;
-      valid_cnt--;
-    }
-
-    valid_cnt++;
     for ( const Datum& datum : datum_list ) {
-      valid_cnt--;
       size_t i = datum.x;
       double y = datum.y;
-      if ( y_axis->Skip( datum.y ) && valid_cnt > 0 ) {
+      if ( y_axis->Skip( datum.y ) ) {
         continue;
       }
       bool valid = y_axis->Valid( y );
       y -= base;
       if ( !first && prv_valid && !valid ) {
-        Point p{ x_axis->Coor( datum.x - 1 ), y_axis->Coor( prv_base ) };
+        Point p{ x_axis->Coor( datum.x - 1 ), y_axis->Coor( base ) };
         do_point( p, false );
       }
       if ( !valid ) y = 0;
@@ -749,7 +749,7 @@ void Series::BuildArea(
         ofs_pos->at( i ) = y;
       }
       if ( !first && !prv_valid && valid ) {
-        Point p{ x_axis->Coor( datum.x ), y_axis->Coor( prv_base ) };
+        Point p{ x_axis->Coor( datum.x ), y_axis->Coor( base ) };
         do_point( p, false );
       }
       Point p{ x_axis->Coor( datum.x ), y_axis->Coor( y ) };
