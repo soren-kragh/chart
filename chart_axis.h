@@ -112,43 +112,43 @@ private:
   void BuildTicksHelper(
     double v, SVG::U v_coor, int32_t sn, bool at_zero,
     SVG::U min_coor, SVG::U max_coor, SVG::U eps_coor,
-    std::vector< SVG::Object* >& axis_objects,
+    std::vector< SVG::Object* >& avoid_objects,
     std::vector< SVG::Object* >& num_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g
   );
   void BuildTicksNumsLinear(
-    std::vector< SVG::Object* >& axis_objects,
+    std::vector< SVG::Object* >& avoid_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g
   );
   void BuildTicksNumsLogarithmic(
-    std::vector< SVG::Object* >& axis_objects,
+    std::vector< SVG::Object* >& avoid_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g
   );
 
   void BuildCategories(
     const std::vector< std::string >& category_list,
-    std::vector< SVG::Object* >& axis_objects,
+    std::vector< SVG::Object* >& avoid_objects,
     SVG::Group* cat_g, SVG::Group* major_g
   );
 
   void BuildUnit(
     SVG::Group* unit_g,
-    std::vector< SVG::Object* >& axis_objects
+    std::vector< SVG::Object* >& avoid_objects
   );
 
   void Build(
     const std::vector< std::string >& category_list,
     uint32_t phase,
-    std::vector< SVG::Object* >& axis_objects,
+    std::vector< SVG::Object* >& avoid_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
   );
 
   void BuildLabel(
-    std::vector< SVG::Object* >& axis_objects,
+    std::vector< SVG::Object* >& avoid_objects,
     SVG::Group* label_g
   );
 

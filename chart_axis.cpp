@@ -755,7 +755,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 void Axis::BuildTicksHelper(
   double v, SVG::U v_coor, int32_t sn, bool at_zero,
   SVG::U min_coor, SVG::U max_coor, SVG::U eps_coor,
-  std::vector< SVG::Object* >& axis_objects,
+  std::vector< SVG::Object* >& avoid_objects,
   std::vector< SVG::Object* >& num_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
@@ -900,7 +900,7 @@ void Axis::BuildTicksHelper(
     }
     U mx = (angle == 0) ? 4 : 0;
     if (
-      Chart::Collides( obj, axis_objects, mx, 0 ) ||
+      Chart::Collides( obj, avoid_objects, mx, 0 ) ||
       Chart::Collides( obj, num_objects, mx, 0 )
     ) {
       num_g->DeleteFront();
@@ -915,7 +915,7 @@ void Axis::BuildTicksHelper(
 //------------------------------------------------------------------------------
 
 void Axis::BuildTicksNumsLinear(
-  std::vector< SVG::Object* >& axis_objects,
+  std::vector< SVG::Object* >& avoid_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
 )
@@ -986,7 +986,7 @@ void Axis::BuildTicksNumsLinear(
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
-        axis_objects, num_objects,
+        avoid_objects, num_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
@@ -998,7 +998,7 @@ void Axis::BuildTicksNumsLinear(
 //------------------------------------------------------------------------------
 
 void Axis::BuildTicksNumsLogarithmic(
-  std::vector< SVG::Object* >& axis_objects,
+  std::vector< SVG::Object* >& avoid_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
 )
@@ -1088,7 +1088,7 @@ void Axis::BuildTicksNumsLogarithmic(
       BuildTicksHelper(
         v, v_coor, sn, at_zero,
         min_coor, max_coor, eps_coor,
-        axis_objects, num_objects,
+        avoid_objects, num_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
@@ -1101,7 +1101,7 @@ void Axis::BuildTicksNumsLogarithmic(
 
 void Axis::BuildCategories(
   const std::vector< std::string >& category_list,
-  std::vector< SVG::Object* >& axis_objects,
+  std::vector< SVG::Object* >& avoid_objects,
   SVG::Group* cat_g, SVG::Group* major_g
 )
 {
@@ -1178,7 +1178,7 @@ void Axis::BuildCategories(
             cat_g->DeleteFront();
           } else {
             U mx = (angle == 0) ? 4 : 0;
-            bool aoc = Chart::Collides( obj, axis_objects, mx, 0 );
+            bool aoc = Chart::Collides( obj, avoid_objects, mx, 0 );
             if ( commit && aoc ) {
               cat_g->DeleteFront();
             } else {
@@ -1243,7 +1243,7 @@ void Axis::BuildCategories(
 
 void Axis::BuildUnit(
   SVG::Group* unit_g,
-  std::vector< SVG::Object* >& axis_objects
+  std::vector< SVG::Object* >& avoid_objects
 )
 {
   if ( unit == "" ) return;
@@ -1497,7 +1497,7 @@ void Axis::BuildUnit(
     }
   }
 
-  axis_objects.push_back( obj );
+  avoid_objects.push_back( obj );
 }
 
 //------------------------------------------------------------------------------
@@ -1505,7 +1505,7 @@ void Axis::BuildUnit(
 void Axis::Build(
   const std::vector< std::string >& category_list,
   uint32_t phase,
-  std::vector< SVG::Object* >& axis_objects,
+  std::vector< SVG::Object* >& avoid_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
 )
@@ -1556,7 +1556,7 @@ void Axis::Build(
   }
 
   if ( phase == 0 ) {
-    BuildUnit( unit_g, axis_objects );
+    BuildUnit( unit_g, avoid_objects );
     return;
   }
 
@@ -1626,9 +1626,9 @@ void Axis::Build(
       }
     }
     if ( angle == 0 ) {
-      axis_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
+      avoid_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
     } else {
-      axis_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
+      avoid_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
     }
     dmz_cnt++;
   }
@@ -1642,9 +1642,9 @@ void Axis::Build(
       U os = 0;
       U oe = orth_length;
       if ( angle == 0 ) {
-        axis_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
+        avoid_objects.push_back( new Rect( oc - zc, os, oc + zc, oe ) );
       } else {
-        axis_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
+        avoid_objects.push_back( new Rect( os, oc - zc, oe, oc + zc ) );
       }
       dmz_cnt++;
     }
@@ -1679,17 +1679,17 @@ void Axis::Build(
   }
 
   if ( category_axis ) {
-    BuildCategories( category_list, axis_objects, num_g, major_g );
+    BuildCategories( category_list, avoid_objects, num_g, major_g );
   } else {
     ComputeNumFormat();
     if ( log_scale ) {
       BuildTicksNumsLogarithmic(
-        axis_objects,
+        avoid_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     } else {
       BuildTicksNumsLinear(
-        axis_objects,
+        avoid_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
@@ -1697,13 +1697,13 @@ void Axis::Build(
 
   // Remove DMZ rectangles.
   while ( dmz_cnt > 0 ) {
-    delete axis_objects.back();
-    axis_objects.pop_back();
+    delete avoid_objects.back();
+    avoid_objects.pop_back();
     dmz_cnt--;
   }
 
-  axis_objects.push_back( line_g );
-  axis_objects.push_back( num_g );
+  avoid_objects.push_back( line_g );
+  avoid_objects.push_back( num_g );
 
   return;
 }
@@ -1711,7 +1711,7 @@ void Axis::Build(
 ////////////////////////////////////////////////////////////////////////////////
 
 void Axis::BuildLabel(
-  std::vector< SVG::Object* >& axis_objects,
+  std::vector< SVG::Object* >& avoid_objects,
   SVG::Group* label_g
 )
 {
@@ -1790,10 +1790,10 @@ void Axis::BuildLabel(
     }
   }
 
-  MoveObjs( dir, label_objs, axis_objects, space_x, space_y );
+  MoveObjs( dir, label_objs, avoid_objects, space_x, space_y );
 
-  if ( lab0 ) axis_objects.push_back( lab0 );
-  if ( lab1 ) axis_objects.push_back( lab1 );
+  if ( lab0 ) avoid_objects.push_back( lab0 );
+  if ( lab1 ) avoid_objects.push_back( lab1 );
 
   return;
 }

@@ -84,11 +84,11 @@ private:
   void CalcLegendDims( SVG::Group* g, LegendDims& legend_dims );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
-    const std::vector< SVG::Object* >& axis_objects
+    const std::vector< SVG::Object* >& avoid_objects
   );
   void BuildLegend( SVG::Group* g, int nx, bool framed );
-  void PlaceLegend(
-    const std::vector< SVG::Object* >& axis_objects,
+  void PlaceLegends(
+    std::vector< SVG::Object* >& avoid_objects,
     const std::vector< LegendBox >& lb_list,
     SVG::Group* legend_g
   );

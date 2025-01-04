@@ -261,7 +261,7 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 // Determine potential placement of series legends in chart interior.
 void Main::CalcLegendBoxes(
   Group* g, std::vector< LegendBox >& lb_list,
-  const std::vector< SVG::Object* >& axis_objects
+  const std::vector< SVG::Object* >& avoid_objects
 )
 {
   LegendDims legend_dims;
@@ -296,7 +296,7 @@ void Main::CalcLegendBoxes(
         while ( true ) {
           BoundaryBox obj_bb = obj->GetBB();
           U dy = 0;
-          for ( auto ao : axis_objects ) {
+          for ( auto ao : avoid_objects ) {
             if ( !SVG::Collides( obj, ao ) ) continue;
             BoundaryBox ao_bb = ao->GetBB();
             if ( anchor_y == AnchorY::Min ) {
@@ -320,7 +320,7 @@ void Main::CalcLegendBoxes(
         while ( true ) {
           BoundaryBox obj_bb = obj->GetBB();
           U dx = 0;
-          for ( auto ao : axis_objects ) {
+          for ( auto ao : avoid_objects ) {
             if ( !SVG::Collides( obj, ao ) ) continue;
             BoundaryBox ao_bb = ao->GetBB();
             if ( anchor_x == AnchorX::Min ) {
@@ -340,7 +340,7 @@ void Main::CalcLegendBoxes(
         }
       }
 
-      if ( !Collides( obj, axis_objects ) ) {
+      if ( !Collides( obj, avoid_objects ) ) {
         LegendBox lb;
         lb.bb = obj->GetBB();
         if (
@@ -554,8 +554,8 @@ void Main::BuildLegend( Group* g, int nx, bool framed )
 
 //-----------------------------------------------------------------------------
 
-void Main::PlaceLegend(
-  const std::vector< SVG::Object* >& axis_objects,
+void Main::PlaceLegends(
+  std::vector< SVG::Object* >& avoid_objects,
   const std::vector< LegendBox >& lb_list,
   Group* legend_g
 )
@@ -627,29 +627,29 @@ void Main::PlaceLegend(
     AnchorY best_anchor_y{ AnchorY::Max };
     U best_x{ 0 };
     U best_y{ 0 };
+    bool best_found = false;
     for ( auto anchor_y : { AnchorY::Max, AnchorY::Mid, AnchorY::Min } ) {
       U y = chart_h / 2;
       if ( anchor_y == AnchorY::Max ) y = chart_h;
       if ( anchor_y == AnchorY::Min ) y = 0;
       legend->MoveTo( anchor_x, anchor_y, x, y );
-      MoveObj( dir, legend, axis_objects, mx, my );
+      MoveObj( dir, legend, avoid_objects, mx, my );
       BoundaryBox bb = legend->GetBB();
       if (
-        anchor_y == AnchorY::Max ||
+        !best_found ||
         ((legend_pos == Pos::Right) ? (bb.min.x < best_x) : (bb.min.x > best_x))
       ) {
         best_anchor_y = anchor_y;
         best_x = bb.min.x;
         best_y = y;
+        best_found = true;
       }
     }
     legend->MoveTo( anchor_x, best_anchor_y, x, best_y );
-    MoveObj( dir, legend, axis_objects, mx, my );
+    MoveObj( dir, legend, avoid_objects, mx, my );
+    avoid_objects.push_back( legend );
 
   } else {
-
-    // TBD: Top placement does currently not work with title (bug).
-    legend_pos = Pos::Bottom;
 
     U mx = legend_dims.mx;
     U my = legend_dims.my / 2;
@@ -677,27 +677,30 @@ void Main::PlaceLegend(
       dir = Dir::Up;
       anchor_y = AnchorY::Min;
     }
-    AnchorX best_anchor_x{ AnchorX::Min };
+    AnchorX best_anchor_x{ AnchorX::Mid };
     U best_x{ 0 };
     U best_y{ 0 };
-    for ( auto anchor_x : { AnchorX::Min, AnchorX::Mid, AnchorX::Max } ) {
+    bool best_found = false;
+    for ( auto anchor_x : { AnchorX::Mid, AnchorX::Min, AnchorX::Max } ) {
       U x = chart_w / 2;
       if ( anchor_x == AnchorX::Max ) x = chart_w;
       if ( anchor_x == AnchorX::Min ) x = 0;
       legend->MoveTo( anchor_x, anchor_y, x, y );
-      MoveObj( dir, legend, axis_objects, mx, my );
+      MoveObj( dir, legend, avoid_objects, mx, my );
       BoundaryBox bb = legend->GetBB();
       if (
-        anchor_x == AnchorX::Min ||
+        !best_found ||
         ((legend_pos == Pos::Top) ? (bb.min.y < best_y) : (bb.min.y > best_y))
       ) {
         best_anchor_x = anchor_x;
         best_x = x;
         best_y = bb.min.y;
+        best_found = true;
       }
     }
     legend->MoveTo( best_anchor_x, anchor_y, best_x, y );
-    MoveObj( dir, legend, axis_objects, mx, my );
+    MoveObj( dir, legend, avoid_objects, mx, my );
+    avoid_objects.push_back( legend );
 
   }
 
@@ -1352,7 +1355,7 @@ Canvas* Main::Build( void )
 
   legend_g->Attr()->TextFont()->SetSize( 14 );
 
-  std::vector< SVG::Object* > axis_objects;
+  std::vector< SVG::Object* > avoid_objects;
 
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
@@ -1369,7 +1372,7 @@ Canvas* Main::Build( void )
     axis_x->Build(
       category_list,
       phase,
-      axis_objects,
+      avoid_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
@@ -1378,7 +1381,7 @@ Canvas* Main::Build( void )
       axis_y[ i ]->Build(
         empty,
         phase,
-        axis_objects,
+        avoid_objects,
         grid_minor_g, grid_major_g, grid_zero_g,
         axes_line_g, axes_num_g, axes_label_g
       );
@@ -1389,30 +1392,35 @@ Canvas* Main::Build( void )
     axes_line_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
   }
 
-  axis_x->BuildLabel( axis_objects, axes_label_g );
+  axis_x->BuildLabel( avoid_objects, axes_label_g );
   for ( auto a : axis_y ) {
-    a->BuildLabel( axis_objects, axes_label_g );
+    a->BuildLabel( avoid_objects, axes_label_g );
   }
-
-/*
-  {
-    for ( auto obj : axis_objects ) {
-      if ( obj->Empty() ) continue;
-      BoundaryBox bb = obj->GetBB();
-      chart_g->Add( new Rect( bb.min, bb.max ) );
-      chart_g->Last()->Attr()->FillColor()->Clear();
-      chart_g->Last()->Attr()->SetLineWidth( 1 );
-      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
-    }
-  }
-*/
 
   std::vector< LegendBox > lb_list;
-  CalcLegendBoxes( legend_g, lb_list, axis_objects );
+  CalcLegendBoxes( legend_g, lb_list, avoid_objects );
 
   BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, lb_list );
 
-  PlaceLegend( axis_objects, lb_list, legend_g );
+  PlaceLegends( avoid_objects, lb_list, legend_g );
+
+/*
+  {
+    for ( auto obj : avoid_objects ) {
+      if ( obj->Empty() ) continue;
+      BoundaryBox bb = obj->GetBB();
+      bb.min.x -= 0.1;
+      bb.min.y -= 0.1;
+      bb.max.x += 0.1;
+      bb.max.y += 0.1;
+      chart_g->Add( new Rect( bb.min, bb.max ) );
+      chart_g->Last()->Attr()->FillColor()->Clear();
+      chart_g->Last()->Attr()->SetLineWidth( 4 );
+      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
+      chart_g->Last()->Attr()->LineColor()->SetTransparency( 0.5 );
+    }
+  }
+*/
 
   // Do title.
   {
@@ -1441,7 +1449,7 @@ Canvas* Main::Build( void )
       BoundaryBox bb = obj->GetBB();
       y += bb.max.y - bb.min.y;
     }
-    MoveObjs( Dir::Up, title_objs, axis_objects, space_x, space_y );
+    MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
     y = 0;
     for ( auto obj : title_objs ) {
       y = std::max( y, obj->GetBB().max.y );
