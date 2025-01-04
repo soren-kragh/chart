@@ -86,7 +86,7 @@ private:
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& axis_objects
   );
-  void BuildLegend( SVG::Group* g, int nx );
+  void BuildLegend( SVG::Group* g, int nx, bool framed );
   void PlaceLegend(
     const std::vector< SVG::Object* >& axis_objects,
     const std::vector< LegendBox >& lb_list,

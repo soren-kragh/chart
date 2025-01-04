@@ -423,24 +423,34 @@ void Main::CalcLegendBoxes(
 
 //-----------------------------------------------------------------------------
 
-void Main::BuildLegend( Group* g, int nx )
+void Main::BuildLegend( Group* g, int nx, bool framed )
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
   LegendDims legend_dims;
   CalcLegendDims( g, legend_dims );
   int ny = (LegendCnt() + nx - 1) / nx;
 
-  Point r1{
-    -legend_dims.mx / 2 - legend_dims.ex, +legend_dims.my / 2
-  };
-  Point r2{
-    legend_dims.ex +
-    +(nx * legend_dims.sx + (nx - 1) * legend_dims.dx + legend_dims.mx / 2),
-    -(ny * legend_dims.sy + (ny - 1) * legend_dims.dy + legend_dims.my / 2)
-  };
-  g->Add( new Rect( r1, r2, 4 ) );
-  g->Last()->Attr()->LineColor()->Set( ColorName::black );
-  g->Last()->Attr()->SetLineWidth( 1 );
+  {
+    U mx = framed ? legend_dims.mx : U( 0 );
+    U my = framed ? legend_dims.my : U( 0 );
+    Point r1{
+      -mx / 2 - legend_dims.ex, +my / 2
+    };
+    Point r2{
+      legend_dims.ex +
+      +(nx * legend_dims.sx + (nx - 1) * legend_dims.dx + mx / 2),
+      -(ny * legend_dims.sy + (ny - 1) * legend_dims.dy + my / 2)
+    };
+    g->Add( new Rect( r1, r2, framed ? 4 : 0 ) );
+    if ( framed ) {
+      g->Last()->Attr()->LineColor()->Set( ColorName::black );
+      g->Last()->Attr()->SetLineWidth( 1 );
+    } else {
+      g->Last()->Attr()->FillColor()->Clear();
+      g->Last()->Attr()->LineColor()->Clear();
+      g->Last()->Attr()->SetLineWidth( 0 );
+    }
+  }
 
   int n = 0;
   for ( Series* series : series_list ) {
@@ -572,60 +582,61 @@ void Main::PlaceLegend(
       }
     }
     if ( best_lb_defined ) {
-      BuildLegend( legend_g->AddNewGroup(), best_lb.nx );
+      BuildLegend( legend_g->AddNewGroup(), best_lb.nx, true );
       legend_g->Last()->MoveTo(
         AnchorX::Mid, AnchorY::Mid,
         (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
         (best_lb.bb.min.y + best_lb.bb.max.y) / 2
       );
+      return;
     } else {
       legend_pos = Pos::Bottom;
     }
   }
-
-  if ( legend_pos == Pos::Auto ) return;
 
   LegendDims legend_dims;
   CalcLegendDims( legend_g, legend_dims );
 
   if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
 
+    U mx = legend_dims.mx;
+    U my = legend_dims.my;
+
     U avail_h = chart_h;
     uint32_t nx = 1;
     while ( 1 ) {
       uint32_t ny = (LegendCnt() + nx - 1) / nx;
-      U need_h =
-        ny * legend_dims.sy + (ny - 1) * legend_dims.dy + 2 * legend_dims.my;
+      U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
       if ( need_h > avail_h && ny > 1 ) {
         nx++;
         continue;
       }
       break;
     }
-    BuildLegend( legend_g->AddNewGroup(), nx );
+    BuildLegend( legend_g->AddNewGroup(), nx, false );
     Object* legend = legend_g->Last();
 
-    U x = 0 - legend_dims.mx;
+    U x = 0 - mx;
     Dir dir = Dir::Left;
     AnchorX anchor_x = AnchorX::Max;
     if ( legend_pos == Pos::Right ) {
-      x = chart_w + legend_dims.mx;
+      x = chart_w + mx;
       dir = Dir::Right;
       anchor_x = AnchorX::Min;
     }
-    AnchorY best_anchor_y{ AnchorY::Mid };
+    AnchorY best_anchor_y{ AnchorY::Max };
     U best_x{ 0 };
     U best_y{ 0 };
     for ( auto anchor_y : { AnchorY::Max, AnchorY::Mid, AnchorY::Min } ) {
       U y = chart_h / 2;
-      if ( anchor_y == AnchorY::Max ) y = chart_h - legend_dims.my;
-      if ( anchor_y == AnchorY::Min ) y = legend_dims.my;
+      if ( anchor_y == AnchorY::Max ) y = chart_h;
+      if ( anchor_y == AnchorY::Min ) y = 0;
       legend->MoveTo( anchor_x, anchor_y, x, y );
-      MoveObj( dir, legend, axis_objects, legend_dims.mx, legend_dims.my );
+      MoveObj( dir, legend, axis_objects, mx, my );
       BoundaryBox bb = legend->GetBB();
       if (
         anchor_y == AnchorY::Max ||
-        ((legend_pos == Pos::Left) ? (bb.min.x > best_x) : (bb.min.x < best_x))
+        ((legend_pos == Pos::Right) ? (bb.min.x < best_x) : (bb.min.x > best_x))
       ) {
         best_anchor_y = anchor_y;
         best_x = bb.min.x;
@@ -633,30 +644,60 @@ void Main::PlaceLegend(
       }
     }
     legend->MoveTo( anchor_x, best_anchor_y, x, best_y );
-    MoveObj( dir, legend, axis_objects, legend_dims.mx, legend_dims.my );
+    MoveObj( dir, legend, axis_objects, mx, my );
 
   } else {
+
+    // TBD: Top placement does currently not work with title (bug).
+    legend_pos = Pos::Bottom;
+
+    U mx = legend_dims.mx;
+    U my = legend_dims.my / 2;
 
     U avail_w = chart_w;
     uint32_t nx = LegendCnt();
     uint32_t ny = 1;
     while ( 1 ) {
       nx = (LegendCnt() + ny - 1) / ny;
-      U need_w =
-        nx * legend_dims.sx + (nx - 1) * legend_dims.dx + 2 * legend_dims.mx;
+      U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
       if ( need_w > avail_w && nx > 1 ) {
         ny++;
         continue;
       }
       break;
     }
-    BuildLegend( legend_g->AddNewGroup(), nx );
+    BuildLegend( legend_g->AddNewGroup(), nx, false );
     Object* legend = legend_g->Last();
 
-    U x = chart_w / 2;
-    U y = 0 - legend_dims.my;
-    legend->MoveTo( AnchorX::Mid, AnchorY::Max, x, y );
-    MoveObj( Dir::Down, legend, axis_objects, legend_dims.mx, legend_dims.my );
+    U y = 0 - my;
+    Dir dir = Dir::Down;
+    AnchorY anchor_y = AnchorY::Max;
+    if ( legend_pos == Pos::Top ) {
+      y = chart_h + my;
+      dir = Dir::Up;
+      anchor_y = AnchorY::Min;
+    }
+    AnchorX best_anchor_x{ AnchorX::Min };
+    U best_x{ 0 };
+    U best_y{ 0 };
+    for ( auto anchor_x : { AnchorX::Min, AnchorX::Mid, AnchorX::Max } ) {
+      U x = chart_w / 2;
+      if ( anchor_x == AnchorX::Max ) x = chart_w;
+      if ( anchor_x == AnchorX::Min ) x = 0;
+      legend->MoveTo( anchor_x, anchor_y, x, y );
+      MoveObj( dir, legend, axis_objects, mx, my );
+      BoundaryBox bb = legend->GetBB();
+      if (
+        anchor_x == AnchorX::Min ||
+        ((legend_pos == Pos::Top) ? (bb.min.y < best_y) : (bb.min.y > best_y))
+      ) {
+        best_anchor_x = anchor_x;
+        best_x = x;
+        best_y = bb.min.y;
+      }
+    }
+    legend->MoveTo( best_anchor_x, anchor_y, best_x, y );
+    MoveObj( dir, legend, axis_objects, mx, my );
 
   }
 
@@ -1353,6 +1394,26 @@ Canvas* Main::Build( void )
     a->BuildLabel( axis_objects, axes_label_g );
   }
 
+/*
+  {
+    for ( auto obj : axis_objects ) {
+      if ( obj->Empty() ) continue;
+      BoundaryBox bb = obj->GetBB();
+      chart_g->Add( new Rect( bb.min, bb.max ) );
+      chart_g->Last()->Attr()->FillColor()->Clear();
+      chart_g->Last()->Attr()->SetLineWidth( 1 );
+      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
+    }
+  }
+*/
+
+  std::vector< LegendBox > lb_list;
+  CalcLegendBoxes( legend_g, lb_list, axis_objects );
+
+  BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, lb_list );
+
+  PlaceLegend( axis_objects, lb_list, legend_g );
+
   // Do title.
   {
     U space_x = 40;
@@ -1392,26 +1453,6 @@ Canvas* Main::Build( void )
       }
     }
   }
-
-/*
-  {
-    for ( auto obj : axis_objects ) {
-      if ( obj->Empty() ) continue;
-      BoundaryBox bb = obj->GetBB();
-      chart_g->Add( new Rect( bb.min, bb.max ) );
-      chart_g->Last()->Attr()->FillColor()->Clear();
-      chart_g->Last()->Attr()->SetLineWidth( 1 );
-      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
-    }
-  }
-*/
-
-  std::vector< LegendBox > lb_list;
-  CalcLegendBoxes( legend_g, lb_list, axis_objects );
-
-  BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, lb_list );
-
-  PlaceLegend( axis_objects, lb_list, legend_g );
 
   if ( footnote != "" ) {
     BoundaryBox bb = chart_g->GetBB();
