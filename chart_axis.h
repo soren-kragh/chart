@@ -131,7 +131,7 @@ private:
   void BuildCategories(
     const std::vector< std::string >& category_list,
     std::vector< SVG::Object* >& avoid_objects,
-    SVG::Group* cat_g, SVG::Group* major_g
+    SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* cat_g
   );
 
   void BuildUnit(

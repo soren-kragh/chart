@@ -1102,7 +1102,7 @@ void Axis::BuildTicksNumsLogarithmic(
 void Axis::BuildCategories(
   const std::vector< std::string >& category_list,
   std::vector< SVG::Object* >& avoid_objects,
-  SVG::Group* cat_g, SVG::Group* major_g
+  SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* cat_g
 )
 {
   U cw;
@@ -1201,7 +1201,7 @@ void Axis::BuildCategories(
     }
   }
 
-  if ( major_grid_enable && major > 0 ) {
+  if ( (minor_grid_enable || major_grid_enable) && major > 0 ) {
     uint32_t mm = std::llround( major );
     if ( mm < 1 ) mm = 1;
     for ( uint32_t mn : mn_list ) {
@@ -1230,7 +1230,11 @@ void Axis::BuildCategories(
       bool near_chart_box_max = chart_box && CoorNear( v_coor, length );
       bool not_near_chart_box = !near_chart_box_min && !near_chart_box_max;
       if ( not_near_crossing_axis && not_near_chart_box ) {
-        major_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
+        if ( major_grid_enable ) {
+          major_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
+        } else {
+          minor_g->Add( new Line( gx2, gy2, gx1, gy1 ) );
+        }
       }
       mn++;
     }
@@ -1679,7 +1683,10 @@ void Axis::Build(
   }
 
   if ( category_axis ) {
-    BuildCategories( category_list, avoid_objects, num_g, major_g );
+    BuildCategories(
+      category_list, avoid_objects,
+      minor_g, major_g, num_g
+    );
   } else {
     ComputeNumFormat();
     if ( log_scale ) {
