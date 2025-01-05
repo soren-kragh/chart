@@ -280,10 +280,10 @@ int Series::ClipLine(
   };
 
   // The clip coordinate for the four sides and a flag telling if it is valid.
-  U bot_x; bool bot_v = false;
-  U top_x; bool top_v = false;
-  U lft_y; bool lft_v = false;
-  U rgt_y; bool rgt_v = false;
+  U bot_x{ 0 }; bool bot_v = false;
+  U top_x{ 0 }; bool top_v = false;
+  U lft_y{ 0 }; bool lft_v = false;
+  U rgt_y{ 0 }; bool rgt_v = false;
 
   // Detect bottom and top clippings.
   if ( p1.y > p2.y ) std::swap( p1, p2 );
