@@ -133,10 +133,6 @@ private:
 
   Axis* axis_x;
   Axis* axis_y[ 2 ];
-
-  // When shoving the legend ID for a series having an area, this defines the
-  // size relative to the characters.
-  double legend_area_id_fact = 1.2;
 };
 
 }

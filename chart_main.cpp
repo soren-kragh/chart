@@ -207,9 +207,15 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
         series->type == SeriesType::StackedArea
       ) {
         legend_dims.ss =
-          std::max( +legend_dims.ss, char_h * legend_area_id_fact / 2 );
+          std::max( +legend_dims.ss, (char_h + 8) / 2 );
         if ( !series->line_color.IsClear() ) {
           legend_dims.ss = std::max( +legend_dims.ss, 2 * series->line_width );
+        }
+        if ( series->line_dash > 0 ) {
+          legend_dims.ss =
+            std::max(
+              +legend_dims.ss, (series->line_dash + series->line_hole) * 0.75
+            );
         }
         md.x1 = md.y1 = -legend_dims.ss;
         md.x2 = md.y2 = +legend_dims.ss;

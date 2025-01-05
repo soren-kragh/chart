@@ -105,15 +105,15 @@ void Series::SetStyle( int style )
     }
     if ( style == 1 ) {
       SetLineWidth( 4 );
-      SetLineDash( 5, 3 );
+      SetLineDash( 4, 2 );
     }
     if ( style == 2 ) {
       SetLineWidth( 4 );
-      SetLineDash( 10, 6 );
+      SetLineDash( 8, 2 );
     }
     if ( style == 3 ) {
       SetLineWidth( 4 );
-      SetLineDash( 20, 12 );
+      SetLineDash( 16, 2 );
     }
     if ( style == 4 ) {
       SetLineWidth( 2 );
@@ -121,15 +121,15 @@ void Series::SetStyle( int style )
     }
     if ( style == 5 ) {
       SetLineWidth( 2 );
-      SetLineDash( 5, 3 );
+      SetLineDash( 4, 2 );
     }
     if ( style == 6 ) {
       SetLineWidth( 2 );
-      SetLineDash( 10, 6 );
+      SetLineDash( 8, 2 );
     }
     if ( style == 7 ) {
       SetLineWidth( 2 );
-      SetLineDash( 20, 12 );
+      SetLineDash( 16, 2 );
     }
   }
   SetMarkerSize(
