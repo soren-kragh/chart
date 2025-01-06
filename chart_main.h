@@ -67,8 +67,10 @@ private:
     SVG::U ch;  // Character height.
     SVG::U mw;  // Max outline width.
     SVG::U cr;  // Outline corner radius.
-    SVG::U ss;  // Symbol size.
-    SVG::U ex;  // Extra X caused by symbol left overhang.
+    SVG::U mh;  // Marker height,
+    SVG::U ss;  // Symbol size "radius" (including markers).
+    SVG::U lx;  // Left extra X caused by symbol left overhang.
+    SVG::U rx;  // Right extra X caused by symbol left overhang.
     SVG::U tx;  // Text indentation relative to center of symbol/marker.
     SVG::U dx;  // Delta between individual legends in X direction.
     SVG::U dy;  // Delta between individual legends in Y direction.
@@ -86,7 +88,7 @@ private:
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& avoid_objects
   );
-  void BuildLegend( SVG::Group* g, int nx, bool framed );
+  void BuildLegends( SVG::Group* g, int nx, bool framed );
   void PlaceLegends(
     std::vector< SVG::Object* >& avoid_objects,
     const std::vector< LegendBox >& lb_list,

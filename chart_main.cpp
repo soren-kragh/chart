@@ -126,8 +126,10 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   legend_dims.ch = 0;
   legend_dims.mw = 0;
   legend_dims.cr = 0;
+  legend_dims.mh = 0;
   legend_dims.ss = 0;
-  legend_dims.ex = 0;
+  legend_dims.lx = 0;
+  legend_dims.rx = 0;
   legend_dims.tx = 0;
   legend_dims.dx = gx;
   legend_dims.dy = gy;
@@ -142,7 +144,8 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   U char_w = bb.max.x - bb.min.x;
   U char_h = bb.max.y - bb.min.y;
 
-  legend_dims.ch = char_h;
+  U ox = char_h / 3;    // Text to outline X spacing.
+  U oy = char_h / 5;    // Text to outline Y spacing.
 
   for ( Series* series : series_list ) {
     if ( series->name.length() == 0 ) continue;
@@ -157,106 +160,97 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
     }
   }
 
-  U hw = legend_dims.mw / 2;
-  U ox = char_h / 3;    // Text to outline X spacing.
-  U oy = char_h / 5;    // Text to outline Y spacing.
+  U hmw = legend_dims.mw / 2;
 
-  if ( legend_dims.mw > 0 ) {
-    legend_dims.cr = hw + char_h / 4;
-  }
-
-  for ( int pass : { 1, 2, 3 } ) {
-    pass = pass;        // To avoid warning.
-    for ( Series* series : series_list ) {
-      if ( series->name.length() == 0 ) continue;
-
-      uint32_t max_lines = 1;
-      uint32_t max_chars = 1;
-      uint32_t cur_chars = 0;
-      for ( char c : series->name ) {
-        if ( c == '\n' ) {
-          max_lines++;
-          max_chars = std::max( max_chars, cur_chars );
-          cur_chars = 0;
-        } else {
-          cur_chars++;
-        }
+  for ( Series* series : series_list ) {
+    if ( series->name.length() == 0 ) continue;
+    if (
+      series->marker_show &&
+      series->type != SeriesType::Area &&
+      series->type != SeriesType::StackedArea
+    ) {
+      Series::MarkerDims md = series->marker_out;
+      legend_dims.mh = std::max( +legend_dims.mh, md.y2 - md.y1 );
+      legend_dims.ss = std::max( +legend_dims.ss, -md.x1 );
+      legend_dims.ss = std::max( +legend_dims.ss, +md.x2 );
+    }
+    if (
+      series->type == SeriesType::Bar ||
+      series->type == SeriesType::StackedBar ||
+      series->type == SeriesType::Area ||
+      series->type == SeriesType::StackedArea
+    ) {
+      legend_dims.ss =
+        std::max( +legend_dims.ss, (char_h + 8) / 2 );
+      if ( !series->line_color.IsClear() ) {
+        legend_dims.ss = std::max( +legend_dims.ss, 2 * series->line_width );
       }
-      max_chars = std::max( max_chars, cur_chars );
-      U text_w = char_w * max_chars;
-      U text_h = char_h * max_lines;
-
-      Series::MarkerDims md;
-      md.x1 = md.y1 = md.x2 = md.y2 = 0;
-      if (
-        series->marker_show &&
-        series->type != SeriesType::Area &&
-        series->type != SeriesType::StackedArea
-      ) {
-        md = series->marker_out;
+      if ( series->line_dash > 0 ) {
         legend_dims.ss =
           std::max(
-            +legend_dims.ss,
-            std::min( md.x2 - md.x1, md.y2 - md.y1 ) / 2
+            +legend_dims.ss, (series->line_dash + series->line_hole) * 0.75
           );
       }
-      if (
-        series->type == SeriesType::Bar ||
-        series->type == SeriesType::StackedBar ||
-        series->type == SeriesType::Area ||
-        series->type == SeriesType::StackedArea
-      ) {
-        legend_dims.ss =
-          std::max( +legend_dims.ss, (char_h + 8) / 2 );
-        if ( !series->line_color.IsClear() ) {
-          legend_dims.ss = std::max( +legend_dims.ss, 2 * series->line_width );
-        }
-        if ( series->line_dash > 0 ) {
-          legend_dims.ss =
-            std::max(
-              +legend_dims.ss, (series->line_dash + series->line_hole) * 0.75
-            );
-        }
-        md.x1 = md.y1 = -legend_dims.ss;
-        md.x2 = md.y2 = +legend_dims.ss;
-      }
-
-      bool has_outline =
-        series->has_line &&
-        series->type != SeriesType::Bar &&
-        series->type != SeriesType::StackedBar &&
-        series->type != SeriesType::Area &&
-        series->type != SeriesType::StackedArea;
-
-      legend_dims.tx = std::max( +legend_dims.tx, md.x2 + ox );
-      if ( has_outline ) {
-        legend_dims.tx =
-          std::max( +legend_dims.tx, series->line_width / 2 + ox );
-      }
-
-      legend_dims.ex = std::max( +legend_dims.ex, -md.x1 - hw );
-
-      legend_dims.dx = std::max( +legend_dims.dx, gx - md.x1 - hw );
-
-      legend_dims.sx =
-        std::max(
-          +legend_dims.sx,
-          hw + legend_dims.tx + text_w + ox +
-          (has_outline ? (series->line_width / 2 + hw) : 0)
-        );
-      legend_dims.sy =
-        std::max(
-          +legend_dims.sy,
-          text_h +
-          (has_outline ? (2 * (oy + series->line_width / 2 + hw)) : 0)
-        );
-      legend_dims.sy =
-        std::max(
-          +legend_dims.sy,
-          (md.y2 - md.y1) +
-          (has_outline ? (2 * (legend_dims.cr + hw)) : 0)
-        );
     }
+  }
+
+  legend_dims.ch = char_h;
+  legend_dims.lx = std::max( +legend_dims.lx, legend_dims.ss - hmw );
+  legend_dims.dx += legend_dims.lx;
+  legend_dims.tx = hmw + legend_dims.lx + ox;
+
+  if ( hmw > 0 ) {
+    legend_dims.cr = hmw + char_h / 4;
+  }
+
+  for ( Series* series : series_list ) {
+    if ( series->name.length() == 0 ) continue;
+
+    uint32_t max_lines = 1;
+    uint32_t max_chars = 1;
+    uint32_t cur_chars = 0;
+    for ( char c : series->name ) {
+      if ( c == '\n' ) {
+        max_lines++;
+        max_chars = std::max( max_chars, cur_chars );
+        cur_chars = 0;
+      } else {
+        cur_chars++;
+      }
+    }
+    max_chars = std::max( max_chars, cur_chars );
+    U text_w = char_w * max_chars;
+    U text_h = char_h * max_lines;
+
+    bool has_outline =
+      series->has_line &&
+      series->type != SeriesType::Bar &&
+      series->type != SeriesType::StackedBar &&
+      series->type != SeriesType::Area &&
+      series->type != SeriesType::StackedArea;
+
+    if ( has_outline ) legend_dims.rx = legend_dims.lx;
+
+    legend_dims.sx =
+      std::max(
+        +legend_dims.sx,
+        2 * hmw + legend_dims.lx + ox + text_w + ox +
+        (has_outline ? (2 * hmw) : 0)
+      );
+
+    legend_dims.sy =
+      std::max(
+        +legend_dims.sy,
+        text_h +
+        (has_outline ? (2 * (oy + series->line_width / 2 + hmw)) : 0)
+      );
+    legend_dims.sy =
+      std::max(
+        +legend_dims.sy,
+        has_outline
+        ? (legend_dims.mh + 2*(legend_dims.cr + hmw))
+        : (2 * legend_dims.ss)
+      );
   }
 
   return;
@@ -285,7 +279,7 @@ void Main::CalcLegendBoxes(
         new Rect(
           0, 0,
           nx * legend_dims.sx + (nx - 1) * legend_dims.dx + 2 * legend_dims.mx +
-          2 * legend_dims.ex,
+          legend_dims.lx + legend_dims.rx,
           ny * legend_dims.sy + (ny - 1) * legend_dims.dy + 2 * legend_dims.my
         )
       );
@@ -429,7 +423,7 @@ void Main::CalcLegendBoxes(
 
 //-----------------------------------------------------------------------------
 
-void Main::BuildLegend( Group* g, int nx, bool framed )
+void Main::BuildLegends( Group* g, int nx, bool framed )
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
   LegendDims legend_dims;
@@ -440,10 +434,10 @@ void Main::BuildLegend( Group* g, int nx, bool framed )
     U mx = framed ? legend_dims.mx : U( 0 );
     U my = framed ? legend_dims.my : U( 0 );
     Point r1{
-      -mx / 2 - legend_dims.ex, +my / 2
+      -mx / 2 - legend_dims.lx, +my / 2
     };
     Point r2{
-      legend_dims.ex +
+      legend_dims.rx +
       +(nx * legend_dims.sx + (nx - 1) * legend_dims.dx + mx / 2),
       -(ny * legend_dims.sy + (ny - 1) * legend_dims.dy + my / 2)
     };
@@ -588,7 +582,7 @@ void Main::PlaceLegends(
       }
     }
     if ( best_lb_defined ) {
-      BuildLegend( legend_g->AddNewGroup(), best_lb.nx, true );
+      BuildLegends( legend_g->AddNewGroup(), best_lb.nx, true );
       legend_g->Last()->MoveTo(
         AnchorX::Mid, AnchorY::Mid,
         (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
@@ -606,7 +600,7 @@ void Main::PlaceLegends(
   if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
 
     U mx = legend_dims.mx;
-    U my = legend_dims.my;
+    U my = 10;
 
     U avail_h = chart_h;
     uint32_t nx = 1;
@@ -619,7 +613,7 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegend( legend_g->AddNewGroup(), nx, false );
+    BuildLegends( legend_g->AddNewGroup(), nx, false );
     Object* legend = legend_g->Last();
 
     U x = 0 - mx;
@@ -657,7 +651,7 @@ void Main::PlaceLegends(
 
   } else {
 
-    U mx = legend_dims.mx;
+    U mx = 40;
     U my = legend_dims.my / 2;
 
     U avail_w = chart_w;
@@ -672,7 +666,7 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegend( legend_g->AddNewGroup(), nx, false );
+    BuildLegends( legend_g->AddNewGroup(), nx, false );
     Object* legend = legend_g->Last();
 
     U y = 0 - my;
