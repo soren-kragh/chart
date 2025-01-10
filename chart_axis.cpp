@@ -52,6 +52,7 @@ Axis::Axis( bool x_axis )
   major = 0;
   sub_divs = 0;
   number_pos = Pos::Auto;
+  grid_color.Set( ColorName::black );
   grid_style = GridStyle::Auto;
   major_grid_enable = true;
   minor_grid_enable = true;
@@ -1659,27 +1660,27 @@ void Axis::Build(
   zero_g  = zero_g->AddNewGroup();
   if ( grid_style == GridStyle::Solid ) {
     minor_g->Attr()
-      ->SetLineWidth( 0.50 )
-      ->LineColor()->Set( ColorName::black, 0.8 );
+      ->SetLineWidth( 0.25 )
+      ->LineColor()->Set( GridColor() );
     major_g->Attr()
-      ->SetLineWidth( 1.00 )
-      ->LineColor()->Set( ColorName::black, 0.7 );
+      ->SetLineWidth( 0.50 )
+      ->LineColor()->Set( GridColor() );
     zero_g->Attr()
-      ->SetLineWidth( 1.00 )
-      ->LineColor()->Set( ColorName::black, 0.5 );
+      ->SetLineWidth( 0.50 )
+      ->LineColor()->Set( GridColor() );
   } else {
     minor_g->Attr()
       ->SetLineWidth( 0.25 )
       ->SetLineDash( 2, 3 )
-      ->LineColor()->Set( ColorName::black );
+      ->LineColor()->Set( GridColor() );
     major_g->Attr()
       ->SetLineWidth( 0.50 )
       ->SetLineDash( 5, 3 )
-      ->LineColor()->Set( ColorName::black );
+      ->LineColor()->Set( GridColor() );
     zero_g->Attr()
       ->SetLineWidth( 1.00 )
       ->SetLineDash( 5, 3 )
-      ->LineColor()->Set( ColorName::black );
+      ->LineColor()->Set( GridColor() );
   }
 
   if ( category_axis ) {

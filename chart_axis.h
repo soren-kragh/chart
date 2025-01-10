@@ -49,6 +49,8 @@ public:
   // For logarithmic scale, major refers to the power, usually 10.
   void SetTick( double major, int sub_divs = 0 );
 
+  SVG::Color* GridColor( void ) { return &grid_color; }
+
   void SetGridStyle( GridStyle gs );
   void SetGrid( bool major_enable = true, bool minor_enable = false );
   void SetNumberPos( Pos pos );
@@ -158,8 +160,9 @@ private:
   bool chart_box;
 
   AxisStyle style;
-  Pos       pos;
-  GridStyle grid_style;
+  Pos        pos;
+  SVG::Color grid_color;
+  GridStyle  grid_style;
 
   // If pos is Pos::Base, this variable indicates which y-axis it refers to, in
   // which case orth_axis_cross of that y-axis is where the base is at.
