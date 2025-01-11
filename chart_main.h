@@ -37,7 +37,10 @@ public:
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
   void SetSubSubTitle( const std::string& txt );
-  void SetFootnote( std::string txt );
+
+  void AddFootnote( std::string& txt );
+
+  // Applies to the most recently added footnote.
   void SetFootnotePos( Pos pos );
 
   // Normally it will strive to place the series legends somewhere inside the
@@ -57,7 +60,7 @@ public:
   Series* AddSeries( SeriesType type );
 
   // Add categories for string based X-values.
-  void AddCategory( const std::string category );
+  void AddCategory( const std::string& category );
 
   SVG::Canvas* Build( void );
 
@@ -116,8 +119,12 @@ private:
   std::string title;
   std::string sub_title;
   std::string sub_sub_title;
-  std::string footnote;
-  Pos         footnote_pos;
+
+  struct footnote_t {
+    std::string txt;
+    Pos pos;
+  };
+  std::vector< footnote_t > footnotes;
 
   Pos legend_pos;
 

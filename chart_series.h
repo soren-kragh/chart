@@ -31,7 +31,7 @@ public:
   Series( SeriesType type );
   ~Series( void );
 
-  void SetName( const std::string name );
+  void SetName( const std::string& name );
 
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );

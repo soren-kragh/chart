@@ -21,7 +21,6 @@ using namespace Chart;
 Main::Main( void )
 {
   SetLegendPos( Pos::Auto );
-  SetFootnotePos( Pos::Auto );
   axis_x = new Axis( true );
   axis_y[ 0 ] = new Axis( false );
   axis_y[ 1 ] = new Axis( false );
@@ -70,14 +69,16 @@ void Main::SetSubSubTitle( const std::string& txt )
   sub_sub_title = txt;
 }
 
-void Main::SetFootnote( std::string txt )
+void Main::AddFootnote(std::string& txt)
 {
-  footnote = txt;
+  footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
 }
 
 void Main::SetFootnotePos( Pos pos )
 {
-  footnote_pos = pos;
+  if ( !footnotes.empty() ) {
+    footnotes.back().pos = pos;
+  }
 }
 
 void Main::SetLegendPos( Pos pos )
@@ -100,7 +101,7 @@ Series* Main::AddSeries( SeriesType type )
   return series;
 }
 
-void Main::AddCategory( const std::string category )
+void Main::AddCategory( const std::string& category )
 {
   category_list.push_back( category );
 }
@@ -1462,21 +1463,27 @@ Canvas* Main::Build( void )
     }
   }
 
-  if ( footnote != "" ) {
-    BoundaryBox bb = chart_g->GetBB();
-    U x = bb.min.x + 15;
-    U y = bb.min.y - 15;
-    AnchorX a = AnchorX::Min;
-    MultiLineText( chart_g, footnote, 14 );
-    if ( footnote_pos == Pos::Center ) {
-      x = chart_w / 2;
-      a = AnchorX::Mid;
+  {
+    bool first = true;
+    for ( auto footnote : footnotes ) {
+      if ( footnote.txt != "" ) {
+        BoundaryBox bb = chart_g->GetBB();
+        U x = bb.min.x + 15;
+        U y = bb.min.y - (first ? 15 : 2);
+        AnchorX a = AnchorX::Min;
+        MultiLineText( chart_g, footnote.txt, 14 );
+        if ( footnote.pos == Pos::Center ) {
+          x = chart_w / 2;
+          a = AnchorX::Mid;
+        }
+        if ( footnote.pos == Pos::Right ) {
+          x = bb.max.x - 15;
+          a = AnchorX::Max;
+        }
+        chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
+      }
+      first = false;
     }
-    if ( footnote_pos == Pos::Right ) {
-      x = bb.max.x - 15;
-      a = AnchorX::Max;
-    }
-    chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
   }
 
   AddChartMargin( chart_g );

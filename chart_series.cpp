@@ -63,7 +63,7 @@ Series::~Series( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::SetName( const std::string name )
+void Series::SetName( const std::string& name )
 {
   this->name = name;
 }
