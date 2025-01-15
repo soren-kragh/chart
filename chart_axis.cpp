@@ -612,6 +612,8 @@ std::string Axis::NumToStr( double v )
 
 SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 {
+  static const char magnitude_sym[] = "qryzafpnum kMGTPEZYRQ";
+
   if ( std::abs( v ) < num_lo ) v = 0;
   double num = v;
   int32_t exp = NormalizeExponent( num );
@@ -624,9 +626,14 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   std::string s = NumToStr( num );
 
   if ( number_format == NumberFormat::Magnitude ) {
-    const char sym[] = "qryzafpn\xE6m kMGTPEZYRQ";
-    exp = exp / 3;
-    if ( exp != 0 ) s += sym[ exp + 10 ];
+    int i = exp / 3;
+    if ( i != 0 ) {
+      if ( i == -2 ) {
+        s += "μ";
+      } else {
+        s += magnitude_sym[ i + 10 ];
+      }
+    }
     s += number_unit;
     g = Label( g, s );
     if ( bold ) g->Attr()->TextFont()->SetBold();
@@ -714,7 +721,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     );
   } while ( false );
 
-  if ( number_unit != "" ) {
+  if ( !number_unit.empty() ) {
     bb = num_g->GetBB();
     U y = bb.min.y;
     bb = exp_g->GetBB();
@@ -731,7 +738,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   TextBG( g, bb, bb.max.y - bb.min.y );
   if ( leading_ws > 0 ) {
     g->Last()->Attr()->FillColor()->Clear();
-    bb.min.x += attr.TextFont()->GetWidth( leading_ws );
+    bb.min.x += attr.TextFont()->GetWidth() * leading_ws;
     TextBG( g, bb, bb.max.y - bb.min.y );
   }
 
@@ -742,7 +749,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
   if ( trailing_ws > 0 || num == 0 ) {
     g->Last()->Attr()->FillColor()->Clear();
     if ( num != 0 ) {
-      bb.max.x -= attr.TextFont()->GetWidth( trailing_ws );
+      bb.max.x -= attr.TextFont()->GetWidth() * trailing_ws;
       TextBG( g, bb, bb.max.y - bb.min.y );
     }
   }
@@ -1151,7 +1158,7 @@ void Axis::BuildCategories(
       bool collision = false;
       uint32_t n = 0;
       for ( auto cat : category_list ) {
-        if ( cat != "" ) {
+        if ( !cat.empty() ) {
           Object* obj = cat_g->Add( new Text( cat ) );
           U x = (angle == 0) ? Coor( n ) : cat_coor;
           U y = (angle != 0) ? Coor( n ) : cat_coor;
@@ -1191,7 +1198,7 @@ void Axis::BuildCategories(
         n++;
       }
       if ( commit ) break;
-      while ( cat_objects.size() > 0 ) {
+      while ( !cat_objects.empty() ) {
         cat_g->DeleteFront();
         cat_objects.pop_back();
       }
@@ -1251,7 +1258,7 @@ void Axis::BuildUnit(
   std::vector< SVG::Object* >& avoid_objects
 )
 {
-  if ( unit == "" ) return;
+  if ( unit.empty() ) return;
 
   bool at_orth_min = category_axis ? cat_coor_is_min : orth_coor_is_min;
   bool at_orth_max = category_axis ? cat_coor_is_max : orth_coor_is_max;
@@ -1731,11 +1738,11 @@ void Axis::BuildLabel(
 
   Object* lab0 = nullptr;
   Object* lab1 = nullptr;
-  if ( label != "" ) {
+  if ( !label.empty() ) {
     lab0 = MultiLineText( label_g, label, 24 );
     label_objs.push_back( lab0 );
   }
-  if ( sub_label != "" ) {
+  if ( !sub_label.empty() ) {
     lab1 = MultiLineText( label_g, sub_label, 16 );
     label_objs.push_back( lab1 );
   }

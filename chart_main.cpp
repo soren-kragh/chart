@@ -209,17 +209,23 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 
     uint32_t max_lines = 1;
     uint32_t max_chars = 1;
-    uint32_t cur_chars = 0;
-    for ( char c : series->name ) {
-      if ( c == '\n' ) {
-        max_lines++;
-        max_chars = std::max( max_chars, cur_chars );
-        cur_chars = 0;
-      } else {
-        cur_chars++;
+    {
+      uint32_t cur_chars = 0;
+      auto it = series->name.cbegin();
+      while ( it != series->name.cend() ) {
+        auto c = *it;
+        if ( Text::UTF8_CharAdv( series->name, it ) ) {
+          if ( c == '\n' ) {
+            max_lines++;
+            max_chars = std::max( max_chars, cur_chars );
+            cur_chars = 0;
+          } else {
+            cur_chars++;
+          }
+        }
       }
+      max_chars = std::max( max_chars, cur_chars );
     }
-    max_chars = std::max( max_chars, cur_chars );
     U text_w = char_w * max_chars;
     U text_h = char_h * max_lines;
 
@@ -537,18 +543,21 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     px += legend_dims.mw / 2 + legend_dims.tx;
     py -= (legend_dims.sy - lines * legend_dims.ch) / 2;
     std::string s;
-    for ( char c : series->name ) {
-      if ( c == '\n' ) {
-        g->Add( new Text( px, py, s ) );
-        py -= legend_dims.ch;
-        s = "";
-      } else {
-        s += c;
+    auto cit = series->name.cbegin();
+    while ( cit != series->name.cend() ) {
+      auto oit = cit;
+      if ( Text::UTF8_CharAdv( series->name, cit ) ) {
+        if ( *oit != '\n' ) s.append( oit, cit );
+        if ( *oit == '\n' || cit == series->name.cend() ) {
+          if ( !s.empty() ) {
+            g->Add( new Text( px, py, s ) );
+          }
+          py -= legend_dims.ch;
+          s = "";
+        }
       }
     }
-    if ( s.length() > 0 ) {
-      g->Add( new Text( px, py, s ) );
-    }
+
     n++;
   }
 }
@@ -722,7 +731,7 @@ void Main::AxisPrepare( void )
     axis_y[ 1 ]->angle = 0;
   }
 
-  if ( category_list.size() > 0 ) {
+  if ( !category_list.empty() ) {
     bool no_bar = true;
     for ( Series* series : series_list ) {
       if (
@@ -1153,7 +1162,7 @@ int Main::CategoryStride( void )
   {
     int s = 1;
     for ( auto cat : category_list ) {
-      if ( cat == "" ) {
+      if ( cat.empty() ) {
         s++;
       } else {
         if ( stride < 0 ) {
@@ -1429,21 +1438,21 @@ Canvas* Main::Build( void )
     U space_y = 10;
     std::vector< SVG::Object* > title_objs;
     U y = chart_h + space_y;
-    if ( sub_sub_title != "" ) {
+    if ( !sub_sub_title.empty() ) {
       Object* obj = MultiLineText( chart_g, sub_sub_title, 14 );
       obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
       title_objs.push_back( obj );
       BoundaryBox bb = obj->GetBB();
       y += bb.max.y - bb.min.y + 3;
     }
-    if ( sub_title != "" ) {
+    if ( !sub_title.empty() ) {
       Object* obj = MultiLineText( chart_g, sub_title, 20 );
       obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
       title_objs.push_back( obj );
       BoundaryBox bb = obj->GetBB();
       y += bb.max.y - bb.min.y + 3;
     }
-    if ( title != "" ) {
+    if ( !title.empty() ) {
       Object* obj = MultiLineText( chart_g, title, 36 );
       obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
       title_objs.push_back( obj );
@@ -1463,10 +1472,11 @@ Canvas* Main::Build( void )
     }
   }
 
+  // Do footnotes.
   {
     bool first = true;
     for ( auto footnote : footnotes ) {
-      if ( footnote.txt != "" ) {
+      if ( !footnote.txt.empty() ) {
         BoundaryBox bb = chart_g->GetBB();
         U x = bb.min.x + 15;
         U y = bb.min.y - (first ? 15 : 2);

@@ -55,56 +55,60 @@ SVG::Group* Chart::MultiLineText(
   BoundaryBox bb_all;
   BoundaryBox bb_trc;;
   BoundaryBox bb;
-  auto draw_bg = [&]( void )
-  {
-    TextBG( g, bb, h );
-  };
 
   U y = 0;
   std::string s;
-  for ( uint32_t n = 0; n < txt.length(); n++ ) {
-    char c = txt[ n ];
-    if ( c != '\n' ) s += c;
-    if ( c == '\n' || n == txt.length() - 1 ) {
-      uint32_t x0 = 0;
-      uint32_t x1 = 0;
-      uint32_t x2 = 0;
-      for ( const char c : s ) {
-        x2++;
-        if ( c == ' ' ) {
-          if ( x1 == 0 ) x0 = x2;
-        } else {
-          x1 = x2;
+  auto cit = txt.cbegin();
+  while ( cit != txt.cend() ) {
+    auto oit = cit;
+    if ( Text::UTF8_CharAdv( txt, cit ) ) {
+      if ( *oit != '\n' ) {
+        s.append( oit, cit );
+      }
+      if ( *oit == '\n' || cit == txt.cend() ) {
+        uint32_t x0 = 0;
+        uint32_t x1 = 0;
+        uint32_t x2 = 0;
+        auto it = s.cbegin();
+        while ( it != s.cend() ) {
+          auto c = *it;
+          if ( Text::UTF8_CharAdv( s, it ) ) {
+            x2++;
+            if ( c == ' ' ) {
+              if ( x1 == 0 ) x0 = x2;
+            } else {
+              x1 = x2;
+            }
+          }
         }
+        g->Add( new Text( 0, y, s ) );
+        if ( size > 0 && !new_g ) {
+          g->Last()->Attr()->TextFont()->SetSize( size );
+        }
+        {
+          bb = g->Last()->GetBB();
+          if ( bg && bg_per_line && !bg_truncate ) TextBG( g, bb, h );
+          bb_all.Update( bb.min );
+          bb_all.Update( bb.max );
+          bb.min.x += w * x0;
+          bb.max.x -= w * (x2 - x1 );
+          if ( bg && bg_per_line && bg_truncate ) TextBG( g, bb, h );
+          bb_trc.Update( bb.min );
+          bb_trc.Update( bb.max );
+        }
+        y -= h;
+        s = "";
       }
-      g->Add( new Text( 0, y, s ) );
-      if ( size > 0 && !new_g ) {
-        g->Last()->Attr()->TextFont()->SetSize( size );
-      }
-      {
-        bb = g->Last()->GetBB();
-        if ( bg && bg_per_line && !bg_truncate ) draw_bg();
-        bb_all.Update( bb.min );
-        bb_all.Update( bb.max );
-        bb.min.x += w * x0;
-        bb.max.x -= w * (x2 - x1 );
-        if ( bg && bg_per_line && bg_truncate ) draw_bg();
-        bb_trc.Update( bb.min );
-        bb_trc.Update( bb.max );
-      }
-      y -= h;
-      s = "";
     }
   }
+
   if ( bg ) {
-    bb = bb_all;
-    draw_bg();
+    TextBG( g, bb_all, h );
     if ( bg_truncate || bg_per_line ) {
       g->Last()->Attr()->FillColor()->Clear();
     }
     if ( bg_truncate && !bg_per_line ) {
-      bb = bb_trc;
-      draw_bg();
+      TextBG( g, bb_trc, h );
     }
   }
 
