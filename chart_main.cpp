@@ -20,6 +20,9 @@ using namespace Chart;
 
 Main::Main( void )
 {
+  width_adj    = 1.0;
+  height_adj   = 1.0;
+  baseline_adj = 1.0;
   SetLegendPos( Pos::Auto );
   axis_x = new Axis( true );
   axis_y[ 0 ] = new Axis( false );
@@ -52,6 +55,15 @@ void Main::SetChartArea( SVG::U width, SVG::U height )
 void Main::SetChartBox( bool chart_box )
 {
   this->chart_box = chart_box;
+}
+
+void Main::SetLetterSpacing(
+  float width_adj, float height_adj, float baseline_adj
+)
+{
+  this->width_adj    = width_adj;
+  this->height_adj   = height_adj;
+  this->baseline_adj = baseline_adj;
 }
 
 void Main::SetTitle( const std::string& txt )
@@ -111,7 +123,7 @@ void Main::AddCategory( const std::string& category )
 uint32_t Main::LegendCnt( void )
 {
   uint32_t n = 0;
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     if ( series->name.length() > 0 ) n++;
   }
   return n;
@@ -148,7 +160,7 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   U ox = char_h / 3;    // Text to outline X spacing.
   U oy = char_h / 5;    // Text to outline Y spacing.
 
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     if ( series->name.length() == 0 ) continue;
     bool has_outline =
       series->has_line &&
@@ -163,7 +175,7 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 
   U hmw = legend_dims.mw / 2;
 
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     if ( series->name.length() == 0 ) continue;
     if (
       series->marker_show &&
@@ -204,7 +216,7 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
     legend_dims.cr = hmw + char_h / 4;
   }
 
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     if ( series->name.length() == 0 ) continue;
 
     uint32_t max_lines = 1;
@@ -460,7 +472,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
   }
 
   int n = 0;
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     if ( series->name.length() == 0 ) continue;
     U px = (n % nx) * +(legend_dims.sx + legend_dims.dx);
     U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
@@ -731,9 +743,18 @@ void Main::AxisPrepare( void )
     axis_y[ 1 ]->angle = 0;
   }
 
-  if ( !category_list.empty() ) {
+  bool category_axis = false;
+  for ( auto series : series_list ) {
+    if (
+      series->type != SeriesType::XY &&
+      series->type != SeriesType::Scatter
+    )
+      category_axis = true;
+  }
+
+  if ( category_axis ) {
     bool no_bar = true;
-    for ( Series* series : series_list ) {
+    for ( auto series : series_list ) {
       if (
         series->type == SeriesType::Bar ||
         series->type == SeriesType::StackedBar ||
@@ -765,7 +786,7 @@ void Main::AxisPrepare( void )
     std::vector< double > ofs_pos[ 2 ][ 2 ];
     std::vector< double > ofs_neg[ 2 ][ 2 ];
     bool first[ 2 ][ 2 ] = { { true, true }, { true, true } };
-    for ( Series* series : series_list ) {
+    for ( auto series : series_list ) {
       bool stackable =
         series->type == SeriesType::Bar ||
         series->type == SeriesType::StackedBar ||
@@ -855,7 +876,7 @@ void Main::AxisPrepare( void )
   // If we only show the secondary axis, then swap the roles.
   if ( !axis_y[ 0 ]->show && axis_y[ 1 ]->show ) {
     std::swap( axis_y[ 0 ], axis_y[ 1 ] );
-    for ( Series* series : series_list ) {
+    for ( auto series : series_list ) {
       series->axis_y_n = 0;
     }
     axis_x->pos_base_axis_y_n = 0;
@@ -882,7 +903,7 @@ void Main::AxisPrepare( void )
     if ( axis_x->pos == Pos::Auto || axis_x->pos == Pos::Base ) {
       int base_def[ 2 ] = { 0, 0 };
       double base[ 2 ];
-      for ( Series* series : series_list ) {
+      for ( auto series : series_list ) {
         if (
           series->type == SeriesType::Lollipop ||
           series->type == SeriesType::Bar ||
@@ -1161,7 +1182,7 @@ int Main::CategoryStride( void )
   int stride = -1;
   {
     int s = 1;
-    for ( auto cat : category_list ) {
+    for ( const auto& cat : category_list ) {
       if ( cat.empty() ) {
         s++;
       } else {
@@ -1188,7 +1209,7 @@ void Main::BuildSeries(
 {
   uint32_t bar_tmp[ 2 ] = { 0, 0 };
   uint32_t lol_tot = 0;
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     series->bar_one_width = bar_one_width;
     series->bar_all_width = bar_all_width;
     if ( series->type == SeriesType::Lollipop ) {
@@ -1220,7 +1241,7 @@ void Main::BuildSeries(
   Group* stacked_area_fill_g = below_axes_g->AddNewGroup();
   Group* stacked_area_line_g = below_axes_g->AddNewGroup();
 
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     int y_n = series->axis_y_n;
     if ( series->type == SeriesType::StackedArea ) {
       if ( sa_first[ y_n ] ) {
@@ -1302,7 +1323,7 @@ void Main::AddChartMargin(
 )
 {
   U margin = 0;
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     if (
       series->has_line &&
       series->type != SeriesType::Bar &&
@@ -1329,7 +1350,7 @@ void Main::AddChartMargin(
 
 Canvas* Main::Build( void )
 {
-  for ( Series* series : series_list ) {
+  for ( auto series : series_list ) {
     series->DetermineVisualProperties();
   }
 
@@ -1339,6 +1360,10 @@ Canvas* Main::Build( void )
   chart_g->Attr()->TextFont()->SetFamily(
     "DejaVu Sans Mono,Consolas,Menlo,Courier New"
   );
+  chart_g->Attr()->TextFont()
+    ->SetWidthFactor( width_adj )
+    ->SetHeightFactor( height_adj )
+    ->SetBaselineFactor( baseline_adj );
   chart_g->Attr()->FillColor()->Set( ColorName::white );
   chart_g->Attr()->LineColor()->Clear();
   chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
@@ -1475,7 +1500,7 @@ Canvas* Main::Build( void )
   // Do footnotes.
   {
     bool first = true;
-    for ( auto footnote : footnotes ) {
+    for ( const auto& footnote : footnotes ) {
       if ( !footnote.txt.empty() ) {
         BoundaryBox bb = chart_g->GetBB();
         U x = bb.min.x + 15;

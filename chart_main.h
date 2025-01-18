@@ -34,6 +34,10 @@ public:
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
+  void SetLetterSpacing(
+    float width_adj, float height_adj = 1.0, float baseline_adj = 1.0
+  );
+
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
   void SetSubSubTitle( const std::string& txt );
@@ -115,6 +119,10 @@ private:
   void AddChartMargin(
     SVG::Group* chart_g
   );
+
+  float width_adj;
+  float height_adj;
+  float baseline_adj;
 
   std::string title;
   std::string sub_title;

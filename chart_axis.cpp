@@ -1113,6 +1113,19 @@ void Axis::BuildCategories(
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* cat_g
 )
 {
+  bool ascii_letters_only = true;
+  for ( const auto& cat : category_list ) {
+    for ( const auto c : cat ) {
+      if ( uint8_t( c ) >= 0x80 ) ascii_letters_only = false;
+    }
+  }
+  if ( ascii_letters_only ) {
+    cat_g->Attr()->TextFont()
+      ->SetWidthFactor( 1.0 )
+      ->SetHeightFactor( 1.0 )
+      ->SetBaselineFactor( 1.0 );
+  }
+
   U cw;
   U ch;
   {
@@ -1157,7 +1170,7 @@ void Axis::BuildCategories(
     while ( true ) {
       bool collision = false;
       uint32_t n = 0;
-      for ( auto cat : category_list ) {
+      for ( const auto& cat : category_list ) {
         if ( !cat.empty() ) {
           Object* obj = cat_g->Add( new Text( cat ) );
           U x = (angle == 0) ? Coor( n ) : cat_coor;
@@ -1587,6 +1600,12 @@ void Axis::Build(
 
   line_g = line_g->AddNewGroup();
   num_g  = num_g->AddNewGroup();
+  if ( !category_axis ) {
+    num_g->Attr()->TextFont()
+      ->SetWidthFactor( 1.0 )
+      ->SetHeightFactor( 1.0 )
+      ->SetBaselineFactor( 1.0 );
+  }
 
   bool axis_at_chart_box = chart_box && (orth_coor_is_min || orth_coor_is_max);
 
