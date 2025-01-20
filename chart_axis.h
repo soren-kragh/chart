@@ -40,6 +40,7 @@ public:
 
   void SetLogScale( bool log_scale = true );
   void SetNumberFormat( NumberFormat number_format );
+  void SetNumberSign( bool number_sign = true );
   void SetNumberUnit( const std::string& txt );
   void ShowMinorNumbers( bool show_minor_mumbers = true );
 
@@ -89,7 +90,7 @@ private:
   int32_t NormalizeExponent( double& num );
   void ComputeNumFormat( void );
 
-  std::string NumToStr( double v );
+  std::string NumToStr( double v, bool showpos = false );
   SVG::Group* BuildNum( SVG::Group* g, double v, bool bold );
 
   void LegalizeMinor( void );
@@ -185,6 +186,7 @@ private:
 
   bool         log_scale;
   NumberFormat number_format;
+  bool         number_sign;
   std::string  number_unit;
   bool         show_minor_mumbers;
   bool         show_minor_mumbers_auto;

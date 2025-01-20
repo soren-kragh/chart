@@ -39,6 +39,7 @@ Axis::Axis( bool x_axis )
   exp_max_len = 0;
   log_scale = false;
   number_format = NumberFormat::Auto;
+  number_sign = false;
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
   data_def = false;
@@ -110,6 +111,12 @@ void Axis::SetLogScale( bool log_scale )
 void Axis::SetNumberFormat( NumberFormat number_format )
 {
   this->number_format = number_format;
+  show = true;
+}
+
+void Axis::SetNumberSign( bool number_sign )
+{
+  this->number_sign = number_sign;
   show = true;
 }
 
@@ -600,10 +607,11 @@ void Axis::ComputeNumFormat( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-std::string Axis::NumToStr( double v )
+std::string Axis::NumToStr( double v, bool showpos )
 {
   int32_t dec = std::max( ComputeDecimals( v ), decimals );
   std::ostringstream oss;
+  if ( showpos && v > 0 ) oss << '+';
   oss << std::fixed << std::setprecision( dec ) << v;
   return oss.str();
 }
@@ -623,7 +631,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     number_format = NumberFormat::Scientific;
   }
 
-  std::string s = NumToStr( num );
+  std::string s = NumToStr( num, number_sign );
 
   if ( number_format == NumberFormat::Magnitude ) {
     int i = exp / 3;
@@ -670,7 +678,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       break;
     }
     if ( std::abs( num ) == 1 && (angle == 0 || number_pos == Pos::Left) ) {
-      num_g->Add( new Text( (num < 0) ? "-10" : "10" ) );
+      num_g->Add( new Text( (num < 0) ? "-10" : number_sign ? "+10" : "10" ) );
       leading_ws = 0;
       break;
     }
