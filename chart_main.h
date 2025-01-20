@@ -34,6 +34,11 @@ public:
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
+  SVG::Color* BackgroundColor( void ) { return &background_color; }
+  SVG::Color* ChartAreaColor( void ) { return &chart_area_color; }
+  SVG::Color* AxisColor( void ) { return &axis_color; }
+  SVG::Color* TextColor( void ) { return &text_color; }
+
   void SetLetterSpacing(
     float width_adj, float height_adj = 1.0, float baseline_adj = 1.0
   );
@@ -119,6 +124,11 @@ private:
   void AddChartMargin(
     SVG::Group* chart_g
   );
+
+  SVG::Color background_color;
+  SVG::Color chart_area_color;
+  SVG::Color axis_color;
+  SVG::Color text_color;
 
   float width_adj;
   float height_adj;

@@ -20,6 +20,10 @@ using namespace Chart;
 
 Main::Main( void )
 {
+  background_color.Set( ColorName::white );
+  chart_area_color.Clear();
+  axis_color.Set( ColorName::black );
+  text_color.Set( ColorName::black );
   width_adj    = 1.0;
   height_adj   = 1.0;
   baseline_adj = 1.0;
@@ -462,7 +466,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     };
     g->Add( new Rect( r1, r2, framed ? 4 : 0 ) );
     if ( framed ) {
-      g->Last()->Attr()->LineColor()->Set( ColorName::black );
+      g->Last()->Attr()->LineColor()->Set( &axis_color );
       g->Last()->Attr()->SetLineWidth( 1 );
     } else {
       g->Last()->Attr()->FillColor()->Clear();
@@ -1342,7 +1346,7 @@ void Main::AddChartMargin(
     new Rect( -margin, -margin, chart_w + margin, chart_h + margin )
   );
   chart_g->Last()->Attr()->FillColor()->Clear();
-  chart_g->Last()->Attr()->LineColor()->Set( SVG::ColorName::black );
+  chart_g->Last()->Attr()->LineColor()->Clear();
   chart_g->Last()->Attr()->SetLineWidth( 0 );
 }
 
@@ -1364,9 +1368,13 @@ Canvas* Main::Build( void )
     ->SetWidthFactor( width_adj )
     ->SetHeightFactor( height_adj )
     ->SetBaselineFactor( baseline_adj );
-  chart_g->Attr()->FillColor()->Set( ColorName::white );
+  chart_g->Attr()->FillColor()->Set( &background_color );
+  chart_g->Attr()->TextColor()->Set( &text_color );
   chart_g->Attr()->LineColor()->Clear();
   chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
+  if ( !chart_area_color.IsClear() ) {
+    chart_g->Last()->Attr()->FillColor()->Set( &chart_area_color );
+  }
 
   Group* grid_minor_g          = chart_g->AddNewGroup();
   Group* grid_major_g          = chart_g->AddNewGroup();
@@ -1378,7 +1386,7 @@ Canvas* Main::Build( void )
   Group* axes_label_g          = chart_g->AddNewGroup();
   Group* legend_g              = chart_g->AddNewGroup();
 
-  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( ColorName::black );
+  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( &axis_color );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
   axes_line_g->Attr()->FillColor()->Clear();
 
@@ -1391,6 +1399,7 @@ Canvas* Main::Build( void )
   legend_g->Attr()->TextFont()->SetSize( 14 );
 
   std::vector< SVG::Object* > avoid_objects;
+  std::vector< SVG::Object* > text_objects;
 
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
@@ -1407,7 +1416,7 @@ Canvas* Main::Build( void )
     axis_x->Build(
       category_list,
       phase,
-      avoid_objects,
+      avoid_objects, text_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
@@ -1416,7 +1425,7 @@ Canvas* Main::Build( void )
       axis_y[ i ]->Build(
         empty,
         phase,
-        avoid_objects,
+        avoid_objects, text_objects,
         grid_minor_g, grid_major_g, grid_zero_g,
         axes_line_g, axes_num_g, axes_label_g
       );
@@ -1522,6 +1531,26 @@ Canvas* Main::Build( void )
   }
 
   AddChartMargin( chart_g );
+
+  // Set the background color of text objects to match the background they are
+  // on if possible, otherwise just clear the background color.
+  for ( auto obj : text_objects ) {
+    BoundaryBox bb = obj->GetBB();
+    bool inside =
+      bb.min.x > 0 && bb.max.x < chart_w &&
+      bb.min.y > 0 && bb.max.y < chart_h;
+    bool outside =
+      bb.max.x < 0 || bb.min.x > chart_w ||
+      bb.max.y < 0 || bb.min.y > chart_h;
+    if ( outside || chart_area_color.IsClear() ) {
+      obj->Attr()->FillColor()->Set( &background_color );
+    } else
+    if ( inside ) {
+      obj->Attr()->FillColor()->Set( &chart_area_color );
+    } else {
+      obj->Attr()->FillColor()->Clear();
+    }
+  }
 
   BoundaryBox bb = chart_g->GetBB();
   chart_g->Add(

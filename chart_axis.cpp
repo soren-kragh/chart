@@ -924,6 +924,7 @@ void Axis::BuildTicksHelper(
 
 void Axis::BuildTicksNumsLinear(
   std::vector< SVG::Object* >& avoid_objects,
+  std::vector< SVG::Object* >& text_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
 )
@@ -1000,6 +1001,10 @@ void Axis::BuildTicksNumsLinear(
     }
   }
 
+  for ( auto obj : num_objects ) {
+    text_objects.push_back( obj );
+  }
+
   return;
 }
 
@@ -1007,6 +1012,7 @@ void Axis::BuildTicksNumsLinear(
 
 void Axis::BuildTicksNumsLogarithmic(
   std::vector< SVG::Object* >& avoid_objects,
+  std::vector< SVG::Object* >& text_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
 )
@@ -1100,6 +1106,10 @@ void Axis::BuildTicksNumsLogarithmic(
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
+  }
+
+  for ( auto obj : num_objects ) {
+    text_objects.push_back( obj );
   }
 
   return;
@@ -1208,7 +1218,7 @@ void Axis::BuildCategories(
             }
           }
         }
-        n++;
+        ++n;
       }
       if ( commit ) break;
       while ( !cat_objects.empty() ) {
@@ -1218,7 +1228,7 @@ void Axis::BuildCategories(
       if ( !collision ) break;
       if ( angle != 0 ) break;
       if ( trial == 2 ) break;
-      trial++;
+      ++trial;
     }
   }
 
@@ -1268,7 +1278,8 @@ void Axis::BuildCategories(
 
 void Axis::BuildUnit(
   SVG::Group* unit_g,
-  std::vector< SVG::Object* >& avoid_objects
+  std::vector< SVG::Object* >& avoid_objects,
+  std::vector< SVG::Object* >& text_objects
 )
 {
   if ( unit.empty() ) return;
@@ -1523,6 +1534,9 @@ void Axis::BuildUnit(
   }
 
   avoid_objects.push_back( obj );
+  text_objects.push_back( obj );
+
+  return;
 }
 
 //------------------------------------------------------------------------------
@@ -1531,6 +1545,7 @@ void Axis::Build(
   const std::vector< std::string >& category_list,
   uint32_t phase,
   std::vector< SVG::Object* >& avoid_objects,
+  std::vector< SVG::Object* >& text_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
 )
@@ -1581,7 +1596,7 @@ void Axis::Build(
   }
 
   if ( phase == 0 ) {
-    BuildUnit( unit_g, avoid_objects );
+    BuildUnit( unit_g, avoid_objects, text_objects );
     return;
   }
 
@@ -1718,12 +1733,12 @@ void Axis::Build(
     ComputeNumFormat();
     if ( log_scale ) {
       BuildTicksNumsLogarithmic(
-        avoid_objects,
+        avoid_objects, text_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     } else {
       BuildTicksNumsLinear(
-        avoid_objects,
+        avoid_objects, text_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
