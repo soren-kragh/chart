@@ -24,7 +24,8 @@ int main()
     std::ostringstream oss;
     oss << "Footnote" << '\n';
     oss << "More" << '\n';
-    chart.SetFootnote( oss.str() );
+    std::string footnote = oss.str();
+    chart.AddFootnote( footnote );
   }
 
 //  chart.AxisX()->SetLogScale();
