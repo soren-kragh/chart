@@ -46,6 +46,8 @@ public:
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
   void SetSubSubTitle( const std::string& txt );
+  void SetTitlePos( Pos pos );
+  void SetTitleInside( bool inside = true );
 
   void AddFootnote( std::string& txt );
 
@@ -117,6 +119,15 @@ private:
     std::vector< LegendBox >& lb_list
   );
 
+  void AddTitle(
+    SVG::Group* chart_g,
+    std::vector< SVG::Object* >& avoid_objects
+  );
+
+  void AddFootnotes(
+    SVG::Group* chart_g
+  );
+
   // Create an invisible rectangle around the chart area with extra margin to
   // account for markers and/or lines which due to their width may spill out of
   // of the chart area. Doing this ensures consistent chart dimensions
@@ -137,6 +148,8 @@ private:
   std::string title;
   std::string sub_title;
   std::string sub_sub_title;
+  Pos         title_pos;
+  bool        title_inside;
 
   struct footnote_t {
     std::string txt;

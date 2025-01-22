@@ -85,6 +85,16 @@ void Main::SetSubSubTitle( const std::string& txt )
   sub_sub_title = txt;
 }
 
+void Main::SetTitlePos( Pos pos )
+{
+  this->title_pos = pos;
+}
+
+void Main::SetTitleInside( bool inside )
+{
+  this->title_inside = inside;
+}
+
 void Main::AddFootnote(std::string& txt)
 {
   footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
@@ -464,7 +474,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
       +(nx * legend_dims.sx + (nx - 1) * legend_dims.dx + mx / 2),
       -(ny * legend_dims.sy + (ny - 1) * legend_dims.dy + my / 2)
     };
-    g->Add( new Rect( r1, r2, framed ? 4 : 0 ) );
+    g->Add( new Rect( r1, r2, framed ? 8 : 0 ) );
     if ( framed ) {
       g->Last()->Attr()->LineColor()->Set( &axis_color );
       g->Last()->Attr()->SetLineWidth( 1 );
@@ -1322,6 +1332,126 @@ void Main::BuildSeries(
 
 //------------------------------------------------------------------------------
 
+void Main::AddTitle(
+  SVG::Group* chart_g,
+  std::vector< SVG::Object* >& avoid_objects
+)
+{
+  U space_x = 40;
+  U space_y = 10;
+  BoundaryBox bb;
+  std::vector< SVG::Object* > title_objs;
+
+  Group* text_g = chart_g->AddNewGroup();
+
+  U x = chart_w / 2;
+  AnchorX a = AnchorX::Mid;
+  if ( title_pos == Pos::Left ) {
+    x = 0;
+    a = AnchorX::Min;
+  }
+  if ( title_pos == Pos::Right ) {
+    x = chart_w;
+    a = AnchorX::Max;
+  }
+  U y = chart_h + space_y;
+  if ( !sub_sub_title.empty() ) {
+    Object* obj = MultiLineText( text_g, sub_sub_title, 14 );
+    obj->MoveTo( a, AnchorY::Min, x, y );
+    title_objs.push_back( obj );
+    bb = obj->GetBB();
+    y += bb.max.y - bb.min.y + 3;
+  }
+  if ( !sub_title.empty() ) {
+    Object* obj = MultiLineText( text_g, sub_title, 20 );
+    obj->MoveTo( a, AnchorY::Min, x, y );
+    title_objs.push_back( obj );
+    bb = obj->GetBB();
+    y += bb.max.y - bb.min.y + 3;
+  }
+  if ( !title.empty() ) {
+    Object* obj = MultiLineText( text_g, title, 36 );
+    obj->MoveTo( a, AnchorY::Min, x, y );
+    title_objs.push_back( obj );
+    bb = obj->GetBB();
+    y += bb.max.y - bb.min.y;
+  }
+  MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
+  y = 0;
+  for ( auto obj : title_objs ) {
+    y = std::max( y, obj->GetBB().max.y );
+  }
+  y = text_g->GetBB().max.y - y;
+  if ( y > 0 ) {
+    for ( auto obj : title_objs ) {
+      obj->Move( 0, y );
+    }
+  }
+
+  if ( title_inside ) {
+    bb = text_g->GetBB();
+    U mx = 8;
+    U my = 8;
+    text_g->Add(
+      new Rect(
+        bb.min.x - mx, bb.min.y - my,
+        bb.max.x + mx, bb.max.y + my,
+        8
+      )
+    );
+    text_g->Last()->Attr()->LineColor()->Set( &axis_color );
+    text_g->Last()->Attr()->SetLineWidth( 1 );
+    text_g->FrontToBack();
+
+    if ( title_pos == Pos::Left ) {
+      text_g->MoveTo( AnchorX::Min, AnchorY::Max, mx, chart_h - my );
+    } else
+    if ( title_pos == Pos::Right ) {
+      text_g->MoveTo( AnchorX::Max, AnchorY::Max, chart_w - mx, chart_h - my );
+    } else
+    {
+      text_g->MoveTo( AnchorX::Mid, AnchorY::Max, chart_w / 2, chart_h - my );
+    }
+
+    avoid_objects.push_back( text_g );
+  }
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
+void Main::AddFootnotes(
+  SVG::Group* chart_g
+)
+{
+  bool first = true;
+
+  for ( const auto& footnote : footnotes ) {
+    if ( !footnote.txt.empty() ) {
+      BoundaryBox bb = chart_g->GetBB();
+      U x = bb.min.x + 15;
+      U y = bb.min.y - (first ? 15 : 2);
+      AnchorX a = AnchorX::Min;
+      MultiLineText( chart_g, footnote.txt, 14 );
+      if ( footnote.pos == Pos::Center ) {
+        x = chart_w / 2;
+        a = AnchorX::Mid;
+      }
+      if ( footnote.pos == Pos::Right ) {
+        x = bb.max.x - 15;
+        a = AnchorX::Max;
+      }
+      chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
+    }
+    first = false;
+  }
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
 void Main::AddChartMargin(
   SVG::Group* chart_g
 )
@@ -1441,12 +1571,20 @@ Canvas* Main::Build( void )
     a->BuildLabel( avoid_objects, axes_label_g );
   }
 
+  if ( title_inside ) {
+    AddTitle( chart_g, avoid_objects );
+  }
+
   std::vector< LegendBox > lb_list;
   CalcLegendBoxes( legend_g, lb_list, avoid_objects );
 
   BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, lb_list );
 
   PlaceLegends( avoid_objects, lb_list, legend_g );
+
+  if ( !title_inside ) {
+    AddTitle( chart_g, avoid_objects );
+  }
 
 /*
   {
@@ -1466,69 +1604,7 @@ Canvas* Main::Build( void )
   }
 */
 
-  // Do title.
-  {
-    U space_x = 40;
-    U space_y = 10;
-    std::vector< SVG::Object* > title_objs;
-    U y = chart_h + space_y;
-    if ( !sub_sub_title.empty() ) {
-      Object* obj = MultiLineText( chart_g, sub_sub_title, 14 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
-      title_objs.push_back( obj );
-      BoundaryBox bb = obj->GetBB();
-      y += bb.max.y - bb.min.y + 3;
-    }
-    if ( !sub_title.empty() ) {
-      Object* obj = MultiLineText( chart_g, sub_title, 20 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
-      title_objs.push_back( obj );
-      BoundaryBox bb = obj->GetBB();
-      y += bb.max.y - bb.min.y + 3;
-    }
-    if ( !title.empty() ) {
-      Object* obj = MultiLineText( chart_g, title, 36 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Min, chart_w / 2, y );
-      title_objs.push_back( obj );
-      BoundaryBox bb = obj->GetBB();
-      y += bb.max.y - bb.min.y;
-    }
-    MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
-    y = 0;
-    for ( auto obj : title_objs ) {
-      y = std::max( y, obj->GetBB().max.y );
-    }
-    y = chart_g->GetBB().max.y - y;
-    if ( y > 0 ) {
-      for ( auto obj : title_objs ) {
-        obj->Move( 0, y );
-      }
-    }
-  }
-
-  // Do footnotes.
-  {
-    bool first = true;
-    for ( const auto& footnote : footnotes ) {
-      if ( !footnote.txt.empty() ) {
-        BoundaryBox bb = chart_g->GetBB();
-        U x = bb.min.x + 15;
-        U y = bb.min.y - (first ? 15 : 2);
-        AnchorX a = AnchorX::Min;
-        MultiLineText( chart_g, footnote.txt, 14 );
-        if ( footnote.pos == Pos::Center ) {
-          x = chart_w / 2;
-          a = AnchorX::Mid;
-        }
-        if ( footnote.pos == Pos::Right ) {
-          x = bb.max.x - 15;
-          a = AnchorX::Max;
-        }
-        chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
-      }
-      first = false;
-    }
-  }
+  AddFootnotes( chart_g );
 
   AddChartMargin( chart_g );
 
