@@ -1337,6 +1337,8 @@ void Main::AddTitle(
   std::vector< SVG::Object* >& avoid_objects
 )
 {
+  if ( title.empty() && sub_title.empty() && sub_sub_title.empty() ) return;
+
   U space_x = 40;
   U space_y = 10;
   BoundaryBox bb;
