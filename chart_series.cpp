@@ -448,6 +448,12 @@ void Series::DetermineVisualProperties( void )
       case MarkerShape::Triangle :
         m.x1 = -1.7320 * (0.7 * radius + delta);
         m.x2 = +1.7320 * (0.7 * radius + delta);
+        m.y1 = -1.0000 * (0.7 * radius + delta);
+        m.y2 = +2.0000 * (0.7 * radius + delta);
+        break;
+      case MarkerShape::InvTriangle :
+        m.x1 = -1.7320 * (0.7 * radius + delta);
+        m.x2 = +1.7320 * (0.7 * radius + delta);
         m.y1 = -2.0000 * (0.7 * radius + delta);
         m.y2 = +1.0000 * (0.7 * radius + delta);
         break;
@@ -508,6 +514,17 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
       ) );
       break;
     case MarkerShape::Triangle :
+      poly =
+        new Poly(
+          { p.x, p.y + m.y2,
+            p.x + m.x2, p.y + m.y1,
+            p.x + m.x1, p.y + m.y1
+          }
+        );
+      poly->Close();
+      g->Add( poly );
+      break;
+    case MarkerShape::InvTriangle :
       poly =
         new Poly(
           { p.x, p.y + m.y1,
