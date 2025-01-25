@@ -30,10 +30,12 @@ public:
   Main( void );
   ~Main( void );
 
+  void SetFrameWidth( SVG::U width );
   void SetMargin( SVG::U margin );
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
+  SVG::Color* FrameColor( void ) { return &frame_color; }
   SVG::Color* BackgroundColor( void ) { return &background_color; }
   SVG::Color* ChartAreaColor( void ) { return &chart_area_color; }
   SVG::Color* AxisColor( void ) { return &axis_color; }
@@ -136,6 +138,7 @@ private:
     SVG::Group* chart_g
   );
 
+  SVG::Color frame_color;
   SVG::Color background_color;
   SVG::Color chart_area_color;
   SVG::Color axis_color;
@@ -159,10 +162,11 @@ private:
 
   Pos legend_pos;
 
-  SVG::U margin    = 5;
-  SVG::U chart_w   = 1000;
-  SVG::U chart_h   = 700;
-  bool   chart_box = false;
+  SVG::U frame_width = 0;
+  SVG::U margin      = 5;
+  SVG::U chart_w     = 1000;
+  SVG::U chart_h     = 700;
+  bool   chart_box   = false;
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;

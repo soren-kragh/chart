@@ -20,6 +20,7 @@ using namespace Chart;
 
 Main::Main( void )
 {
+  frame_color.Set( ColorName::maroon );
   background_color.Set( ColorName::white );
   chart_area_color.Clear();
   axis_color.Set( ColorName::black );
@@ -44,6 +45,11 @@ Main::~Main( void )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void Main::SetFrameWidth( SVG::U width )
+{
+  this->frame_width = width;
+}
 
 void Main::SetMargin( SVG::U margin )
 {
@@ -1458,28 +1464,53 @@ void Main::AddChartMargin(
   SVG::Group* chart_g
 )
 {
-  U margin = 0;
+  BoundaryBox bb = chart_g->GetBB();
+
+  U delta = 0;
   for ( auto series : series_list ) {
     if (
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar
     ) {
-      margin = std::max( +margin, series->line_width / 2 );
+      delta = std::max( +delta, series->line_width / 2 );
     }
     if ( series->marker_show ) {
-      margin = std::max( +margin, -series->marker_out.x1 );
-      margin = std::max( +margin, -series->marker_out.y1 );
-      margin = std::max( +margin, +series->marker_out.x2 );
-      margin = std::max( +margin, +series->marker_out.y2 );
+      delta = std::max( +delta, -series->marker_out.x1 );
+      delta = std::max( +delta, -series->marker_out.y1 );
+      delta = std::max( +delta, +series->marker_out.x2 );
+      delta = std::max( +delta, +series->marker_out.y2 );
     }
   }
-  chart_g->Add(
-    new Rect( -margin, -margin, chart_w + margin, chart_h + margin )
-  );
+
+  bb.min.x = std::min( +bb.min.x, -delta );
+  bb.max.x = std::max( +bb.max.x, chart_w + delta );
+  bb.min.y = std::min( +bb.min.y, -delta );
+  bb.max.y = std::max( +bb.max.y, chart_h + delta );
+
+  bb.min.x -= margin + frame_width;
+  bb.max.x += margin + frame_width;
+  bb.min.y -= margin + frame_width;
+  bb.max.y += margin + frame_width;
+
+  chart_g->Add( new Rect( bb.min, bb.max ) );
   chart_g->Last()->Attr()->FillColor()->Clear();
   chart_g->Last()->Attr()->LineColor()->Clear();
   chart_g->Last()->Attr()->SetLineWidth( 0 );
+
+  bb.min.x += frame_width / 2;
+  bb.max.x -= frame_width / 2;
+  bb.min.y += frame_width / 2;
+  bb.max.y -= frame_width / 2;
+
+  chart_g->Add( new Rect( bb.min, bb.max ) );
+  chart_g->Last()->Attr()->SetLineWidth( frame_width );
+  if ( frame_width > 0 ) {
+    chart_g->Last()->Attr()->LineColor()->Set( &frame_color );
+  } else {
+    chart_g->Last()->Attr()->LineColor()->Clear();
+  }
+  chart_g->FrontToBack();
 }
 
 //------------------------------------------------------------------------------
@@ -1608,8 +1639,6 @@ Canvas* Main::Build( void )
 
   AddFootnotes( chart_g );
 
-  AddChartMargin( chart_g );
-
   // Set the background color of text objects to match the background they are
   // on if possible, otherwise just clear the background color.
   for ( auto obj : text_objects ) {
@@ -1630,15 +1659,7 @@ Canvas* Main::Build( void )
     }
   }
 
-  BoundaryBox bb = chart_g->GetBB();
-  chart_g->Add(
-    new Rect(
-      bb.min.x - margin, bb.min.y - margin,
-      bb.max.x + margin, bb.max.y + margin
-    )
-  );
-  chart_g->Last()->Attr()->LineColor()->Clear();
-  chart_g->FrontToBack();
+  AddChartMargin( chart_g );
 
   return canvas;
 }
