@@ -113,6 +113,11 @@ void Main::SetFootnotePos( Pos pos )
   }
 }
 
+void Main::SetFootnoteLine( bool footnote_line )
+{
+  this->footnote_line = footnote_line;
+}
+
 void Main::SetLegendPos( Pos pos )
 {
   legend_pos = pos;
@@ -1433,26 +1438,38 @@ void Main::AddFootnotes(
   SVG::Group* chart_g
 )
 {
-  bool first = true;
+  U dx = 16;
+  U dy = 16;
+
+  BoundaryBox bb = chart_g->GetBB();
+  if ( footnote_line ) {
+    dy = dy / 2;
+    chart_g->Add( new Line(
+      bb.min.x + dx, bb.min.y - dy, bb.max.x - dx, bb.min.y - dy
+    ) );
+    chart_g->Last()->Attr()->LineColor()->Set( &text_color );
+    chart_g->Last()->Attr()->SetLineWidth( 1 );
+  }
 
   for ( const auto& footnote : footnotes ) {
-    if ( !footnote.txt.empty() ) {
-      BoundaryBox bb = chart_g->GetBB();
-      U x = bb.min.x + 15;
-      U y = bb.min.y - (first ? 15 : 2);
-      AnchorX a = AnchorX::Min;
-      MultiLineText( chart_g, footnote.txt, 14 );
-      if ( footnote.pos == Pos::Center ) {
-        x = chart_w / 2;
-        a = AnchorX::Mid;
-      }
-      if ( footnote.pos == Pos::Right ) {
-        x = bb.max.x - 15;
-        a = AnchorX::Max;
-      }
-      chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
+    if ( footnote.txt.empty() ) continue;
+
+    bb = chart_g->GetBB();
+    U x = bb.min.x + dx;
+    U y = bb.min.y - dy;
+    AnchorX a = AnchorX::Min;
+    MultiLineText( chart_g, footnote.txt, 14 );
+    if ( footnote.pos == Pos::Center ) {
+      x = chart_w / 2;
+      a = AnchorX::Mid;
     }
-    first = false;
+    if ( footnote.pos == Pos::Right ) {
+      x = bb.max.x - dx;
+      a = AnchorX::Max;
+    }
+    chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
+
+    dy = 2;
   }
 
   return;

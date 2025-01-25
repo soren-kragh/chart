@@ -56,6 +56,9 @@ public:
   // Applies to the most recently added footnote.
   void SetFootnotePos( Pos pos );
 
+  // A line above the footnotes.
+  void SetFootnoteLine( bool footnote_line = true );
+
   // Normally it will strive to place the series legends somewhere inside the
   // chart area, but if the legends obscure too much of the charts you may
   // specify a location outside the chart area.
@@ -159,6 +162,7 @@ private:
     Pos pos;
   };
   std::vector< footnote_t > footnotes;
+  bool footnote_line = false;
 
   Pos legend_pos;
 
