@@ -64,6 +64,9 @@ public:
   // specify a location outside the chart area.
   void SetLegendPos( Pos pos );
 
+  // Specify alternative background color of legend box.
+  SVG::Color* LegendColor( void ) { return &legend_color; }
+
   // Specify the relative width of bars (0.0 to 1.0) and the relative width (0.0
   // to 1.0) of all bars belonging to the same X-value.
   void SetBarWidth( float one_width, float all_width );
@@ -165,6 +168,7 @@ private:
   bool footnote_line = false;
 
   Pos legend_pos;
+  SVG::Color legend_color;
 
   SVG::U frame_width = 0;
   SVG::U margin      = 5;

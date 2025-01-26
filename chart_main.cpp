@@ -29,6 +29,7 @@ Main::Main( void )
   height_adj   = 1.0;
   baseline_adj = 1.0;
   SetLegendPos( Pos::Auto );
+  legend_color.Clear();
   axis_x = new Axis( true );
   axis_y[ 0 ] = new Axis( false );
   axis_y[ 1 ] = new Axis( false );
@@ -489,6 +490,9 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     if ( framed ) {
       g->Last()->Attr()->LineColor()->Set( &axis_color );
       g->Last()->Attr()->SetLineWidth( 1 );
+      if ( !LegendColor()->IsClear() ) {
+        g->Last()->Attr()->FillColor()->Set( LegendColor() );
+      }
     } else {
       g->Last()->Attr()->FillColor()->Clear();
       g->Last()->Attr()->LineColor()->Clear();
@@ -1414,6 +1418,9 @@ void Main::AddTitle(
     );
     text_g->Last()->Attr()->LineColor()->Set( &axis_color );
     text_g->Last()->Attr()->SetLineWidth( 1 );
+    if ( !LegendColor()->IsClear() ) {
+      text_g->Last()->Attr()->FillColor()->Set( LegendColor() );
+    }
     text_g->FrontToBack();
 
     if ( title_pos == Pos::Left ) {
