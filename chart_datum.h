@@ -23,10 +23,15 @@ class Datum
 public:
 
   Datum() {}
-  Datum( double x, double y ) : x( x ), y( y ) {}
+  Datum( double x, double y )
+    : x( x ), y( y ) {}
+  Datum( double x, double y, std::string_view tag_x, std::string_view tag_y )
+    : x( x ), y( y ), tag_x( tag_x ), tag_y( tag_y ) {}
 
   double x;
   double y;
+  std::string_view tag_x;
+  std::string_view tag_y;
 
 };
 

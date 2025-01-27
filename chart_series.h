@@ -17,6 +17,7 @@
 #include <chart_common.h>
 #include <chart_datum.h>
 #include <chart_legend_box.h>
+#include <chart_tag.h>
 
 namespace Chart {
 
@@ -25,6 +26,8 @@ class Axis;
 class Series
 {
   friend class Main;
+  friend class Axis;
+  friend class Tag;
 
 public:
 
@@ -52,12 +55,40 @@ public:
   void SetMarkerSize( SVG::U size );
   void SetMarkerShape( MarkerShape shape );
 
+  // Enables tags on data points; will not look good if there are many
+  // data points.
+  void SetTagEnable( bool enable = true ) { tag_enable = enable; }
+
+  // Position of the tag relative to the data point.
+  void SetTagPos( Pos pos ) { tag_pos = pos; }
+
+  // Tag size scaling factor.
+  void SetTagSize( float size ) { tag_size = size; }
+
+  // Show the tag in a small box.
+  void SetTagBox( bool enable = true ) { tag_box = enable; }
+
+  // Tag text color, the fill color of the tag box (if any), and the color of
+  // the line around the tag box (if any).
+  SVG::Color* TagTextColor( void ) { return &tag_text_color; }
+  SVG::Color* TagFillColor( void ) { return &tag_fill_color; }
+  SVG::Color* TagLineColor( void ) { return &tag_line_color; }
+
   // For series types where the X-value is a string (all but XY and Scatter),
   // the X-value below is an index into Chart::Main::categoty_list. You should
   // never add numbers with a magnitude larger than mum_hi, as they could
   // otherwise be mistaken for the special values num_invalid and num_skip.
   // You can however explicitly add the special numbers num_invalid and num_skip.
   void Add( double x, double y );
+
+  // Use this method to add tags to the data value. Note that it is the
+  // responsibility of the caller to ensure that the underlying string_view data
+  // is not deallocated.
+  void Add(
+    double x, double y,
+    const std::string_view tag_x,
+    const std::string_view tag_y
+  );
 
   uint32_t Size( void ) { return datum_list.size(); }
 
@@ -67,22 +98,27 @@ private:
   void ApplyLineStyle( SVG::Object* obj );
   void ApplyMarkStyle( SVG::Object* obj );
   void ApplyHoleStyle( SVG::Object* obj );
+  void ApplyTagStyle ( SVG::Object* obj );
 
-  bool Inside(
-    const SVG::Point p, const SVG::BoundaryBox& clip_box
-  );
+  bool Inside( const SVG::Point p, const SVG::BoundaryBox& bb );
+  bool Inside( const SVG::Point p )
+  {
+    return Inside( p, chart_area );
+  }
 
   int ClipLine(
     SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2,
-    const SVG::BoundaryBox& clip_box
+    const SVG::BoundaryBox& bb
   );
+  int ClipLine(
+    SVG::Point& c1, SVG::Point& c2, SVG::Point p1, SVG::Point p2
+  ) {
+    return ClipLine( c1, c2, p1, p2, chart_area );
+  }
 
-  SVG::Point MoveInside(
-    SVG::Point p, const SVG::BoundaryBox& clip_box
-  );
+  SVG::Point MoveInside( SVG::Point p );
 
   void UpdateLegendBoxes(
-    std::vector< LegendBox >& lb_list,
     SVG::Point p1, SVG::Point p2,
     bool p1_inc = true, bool p2_inc = true
   );
@@ -91,30 +127,14 @@ private:
   //    +1 : Stack above base.
   //    -1 : Stack below base.
   //     0 : No preferred stack direction.
-  int GetStackDir( Axis* y_axis );
+  int GetStackDir( void );
 
-  void Build(
-    SVG::Group* main_g,
-    SVG::Group* area_fill_g,
-    Axis* x_axis,
-    Axis* y_axis,
-    std::vector< LegendBox >& lb_list,
-    uint32_t bar_num,
-    uint32_t bar_tot,
-    std::vector< double >* ofs_pos = nullptr,
-    std::vector< double >* ofs_neg = nullptr,
-    std::vector< SVG::Point >* pts_pos = nullptr,
-    std::vector< SVG::Point >* pts_neg = nullptr
-  );
   void BuildArea(
-    const SVG::BoundaryBox& clip_box,
     SVG::Group* fill_g,
     SVG::Group* line_g,
     SVG::Group* mark_g,
     SVG::Group* hole_g,
-    Axis* x_axis,
-    Axis* y_axis,
-    std::vector< LegendBox >& lb_list,
+    SVG::Group* tag_g,
     uint32_t bar_num,
     uint32_t bar_tot,
     std::vector< double >* ofs_pos,
@@ -123,34 +143,58 @@ private:
     std::vector< SVG::Point >* pts_neg
   );
   void BuildBar(
-    const SVG::BoundaryBox& clip_box,
     SVG::Group* fill_g,
     SVG::Group* tbar_g,         // Used for thin bars
     SVG::Group* line_g,
     SVG::Group* mark_g,
     SVG::Group* hole_g,
-    Axis* x_axis,
-    Axis* y_axis,
-    std::vector< LegendBox >& lb_list,
+    SVG::Group* tag_g,
     uint32_t bar_num,
     uint32_t bar_tot,
     std::vector< double >* ofs_pos,
     std::vector< double >* ofs_neg
   );
   void BuildLine(
-    const SVG::BoundaryBox& clip_box,
     SVG::Group* line_g,
     SVG::Group* mark_g,
     SVG::Group* hole_g,
-    Axis* x_axis,
-    Axis* y_axis,
-    std::vector< LegendBox >& lb_list
+    SVG::Group* tag_g
   );
+  void Build(
+    SVG::Group* main_g,
+    SVG::Group* area_fill_g,
+    SVG::Group* marker_g,
+    SVG::Group* tag_g,
+    uint32_t bar_num,
+    uint32_t bar_tot,
+    std::vector< double >* ofs_pos = nullptr,
+    std::vector< double >* ofs_neg = nullptr,
+    std::vector< SVG::Point >* pts_pos = nullptr,
+    std::vector< SVG::Point >* pts_neg = nullptr
+  );
+
+  // The area within which the graphs are plotted.
+  SVG::BoundaryBox chart_area;
+
+  Axis* axis_x;
+  Axis* axis_y;
+  int axis_y_n;
 
   SeriesType type;
   std::string name;
-  int axis_y_n;
   double base;
+
+  std::vector< LegendBox >* lb_list;
+
+  Tag* tag;
+  bool tag_enable;
+  Pos tag_pos;
+  float tag_size;
+  bool tag_box;
+  SVG::Color tag_text_color;
+  SVG::Color tag_fill_color;
+  SVG::Color tag_line_color;
+  SVG::U tag_dist;
 
   std::vector< SVG::Color > color_list;
   SVG::Color line_color;
@@ -194,6 +238,25 @@ private:
 
   // Build marker based on marker_* variables.
   void BuildMarker( SVG::Group* g, const MarkerDims& m, SVG::Point p );
+
+  // Determine min/max data values.
+  void DetermineMinMax(
+    std::vector< double >& ofs_pos,
+    std::vector< double >& ofs_neg
+  );
+
+  bool   def_x = false;
+  double min_x;
+  double max_x;
+
+  bool   def_y = false;
+  double min_y;
+  double max_y;
+  bool   min_y_is_base = false;
+  bool   max_y_is_base = false;
+
+  size_t max_tag_x_size = 0;
+  size_t max_tag_y_size = 0;
 };
 
 }

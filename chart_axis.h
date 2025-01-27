@@ -14,6 +14,7 @@
 #pragma once
 
 #include <chart_common.h>
+#include <chart_series.h>
 
 namespace Chart {
 
@@ -21,6 +22,7 @@ class Axis
 {
   friend class Main;
   friend class Series;
+  friend class Tag;
 
 public:
 
@@ -95,7 +97,10 @@ private:
 
   void LegalizeMinor( void );
   void LegalizeMajor( void );
-  void LegalizeMinMax( void );
+  void LegalizeMinMax(
+    SVG::Group* tag_g,
+    std::vector< Series* >* series_list
+  );
 
   // Convert a value to an SVG coordinate.
   SVG::U Coor( double v );

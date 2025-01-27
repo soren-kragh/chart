@@ -16,6 +16,7 @@
 #include <list>
 
 #include <chart_common.h>
+#include <chart_tag.h>
 #include <chart_series.h>
 #include <chart_axis.h>
 #include <chart_legend_box.h>
@@ -102,8 +103,6 @@ private:
     SVG::U my;  // Legend box margin in Y direction.
   } LegendDims;
 
-  void AxisPrepare( void );
-
   uint32_t LegendCnt( void );
   void CalcLegendDims( SVG::Group* g, LegendDims& legend_dims );
   void CalcLegendBoxes(
@@ -121,10 +120,16 @@ private:
   // string categories.
   int CategoryStride( void );
 
+  void AxisPrepare( SVG::Group* tag_g );
+
+  void SeriesPrepare(
+    std::vector< LegendBox >* lb_list
+  );
+
   void BuildSeries(
     SVG::Group* below_axes_g,
     SVG::Group* above_axes_g,
-    std::vector< LegendBox >& lb_list
+    SVG::Group* tag_g
   );
 
   void AddTitle(
@@ -160,6 +165,9 @@ private:
   Pos         title_pos;
   bool        title_inside;
 
+  uint32_t bar_tot = 0;
+  uint32_t lol_tot = 0;
+
   struct footnote_t {
     std::string txt;
     Pos pos;
@@ -178,6 +186,8 @@ private:
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;
+
+  Tag tag;
 
   std::vector< Series* > series_list;
 

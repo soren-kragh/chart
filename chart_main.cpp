@@ -174,8 +174,8 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   legend_dims.dy = gy;
   legend_dims.sx = 0;
   legend_dims.sy = 0;
-  legend_dims.mx = 16;
-  legend_dims.my = 16;
+  legend_dims.mx = 2 * box_spacing;
+  legend_dims.my = 2 * box_spacing;
 
   g->Add( new Text( "X" ) );
   BoundaryBox bb = g->Last()->GetBB();
@@ -486,7 +486,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
       +(nx * legend_dims.sx + (nx - 1) * legend_dims.dx + mx / 2),
       -(ny * legend_dims.sy + (ny - 1) * legend_dims.dy + my / 2)
     };
-    g->Add( new Rect( r1, r2, framed ? 8 : 0 ) );
+    g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
     if ( framed ) {
       g->Last()->Attr()->LineColor()->Set( &axis_color );
       g->Last()->Attr()->SetLineWidth( 1 );
@@ -760,7 +760,31 @@ void Main::PlaceLegends(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Main::AxisPrepare( void )
+int Main::CategoryStride( void )
+{
+  int stride = -1;
+  {
+    int s = 1;
+    for ( const auto& cat : category_list ) {
+      if ( cat.empty() ) {
+        s++;
+      } else {
+        if ( stride < 0 ) {
+          stride = 0;
+        } else {
+          if ( stride == 0 || s < stride ) stride = s;
+        }
+        s = 1;
+      }
+    }
+  }
+  if ( stride < 1 ) stride = 1;
+  return stride;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Main::AxisPrepare( SVG::Group* tag_g )
 {
   if ( axis_x->angle == 0 ) {
     axis_x->angle = 0;
@@ -829,55 +853,30 @@ void Main::AxisPrepare( void )
         }
         first[ type_n ][ axis_n ] = false;
       }
-      Axis* ax = axis_x;
-      Axis* ay = axis_y[ axis_n ];
-      int stack_dir = series->GetStackDir( ay );
-      if (
-        stackable ||
-        series->type == SeriesType::Lollipop ||
-        series->type == SeriesType::Area
-      ) {
-        double y = series->base;
-        if ( ay->Valid( y ) ) {
-          if ( !ay->data_def || ay->data_min > y ) {
-            ay->data_min = y;
-            ay->data_min_is_base = true;
-          }
-          if ( !ay->data_def || ay->data_max < y ) {
-            ay->data_max = y;
-            ay->data_max_is_base = true;
-          }
-          ay->data_def = true;
+      series->DetermineMinMax(
+        ofs_pos[ type_n ][ axis_n ],
+        ofs_neg[ type_n ][ axis_n ]
+      );
+      if ( series->def_x ) {
+        Axis* ax = series->axis_x;
+        if ( !ax->data_def || ax->data_min > series->min_x ) {
+          ax->data_min = series->min_x;
         }
-      }
-      for ( auto& datum : series->datum_list ) {
-        double x = datum.x;
-        double y = datum.y;
-        if ( !ax->Valid( x ) ) continue;
-        if ( !ay->Valid( y ) ) continue;
-        if ( stackable ) {
-          size_t i = x;
-          y -= series->base;
-          if ( stack_dir < 0 || (stack_dir == 0 && y < 0) ) {
-            y += ofs_neg[ type_n ][ axis_n ].at( i );
-            ofs_neg[ type_n ][ axis_n ][ i ] = y;
-          } else {
-            y += ofs_pos[ type_n ][ axis_n ].at( i );
-            ofs_pos[ type_n ][ axis_n ][ i ] = y;
-          }
-          if ( !ay->Valid( y ) ) continue;
-        }
-        if ( !ax->data_def || ax->data_min > x ) ax->data_min = x;
-        if ( !ax->data_def || ax->data_max < x ) ax->data_max = x;
-        if ( !ay->data_def || ay->data_min > y ) {
-          ay->data_min = y;
-          ay->data_min_is_base = false;
-        }
-        if ( !ay->data_def || ay->data_max < y ) {
-          ay->data_max = y;
-          ay->data_max_is_base = false;
+        if ( !ax->data_def || ax->data_max < series->max_x ) {
+          ax->data_max = series->max_x;
         }
         ax->data_def = true;
+      }
+      if ( series->def_y ) {
+        Axis* ay = series->axis_y;
+        if ( !ay->data_def || ay->data_min > series->min_y ) {
+          ay->data_min = series->min_y;
+          ay->data_min_is_base = series->min_y_is_base;
+        }
+        if ( !ay->data_def || ay->data_max < series->max_y ) {
+          ay->data_max = series->max_y;
+          ay->data_max_is_base = series->max_y_is_base;
+        }
         ay->data_def = true;
       }
     }
@@ -1023,8 +1022,8 @@ void Main::AxisPrepare( void )
     axis_y[ i ]->orth_reverse[ 1 ] = axis_x->reverse;
   }
 
-  axis_x->LegalizeMinMax();
-  for ( auto a : axis_y ) a->LegalizeMinMax();
+  axis_x->LegalizeMinMax( nullptr, nullptr );
+  for ( auto a : axis_y ) a->LegalizeMinMax( tag_g, &series_list );
 
   if ( axis_x->pos == Pos::Base ) {
     int i = axis_x->pos_base_axis_y_n;
@@ -1206,26 +1205,73 @@ void Main::AxisPrepare( void )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int Main::CategoryStride( void )
+void Main::SeriesPrepare(
+  std::vector< LegendBox >* lb_list
+)
 {
-  int stride = -1;
-  {
-    int s = 1;
-    for ( const auto& cat : category_list ) {
-      if ( cat.empty() ) {
-        s++;
-      } else {
-        if ( stride < 0 ) {
-          stride = 0;
-        } else {
-          if ( stride == 0 || s < stride ) stride = s;
-        }
-        s = 1;
-      }
+  bar_tot = 0;
+  lol_tot = 0;
+
+  uint32_t bar_tmp[ 2 ] = { 0, 0 };
+  for ( auto series : series_list ) {
+    series->chart_area.min.x = 0;
+    series->chart_area.max.x = chart_w;
+    series->chart_area.min.y = 0;
+    series->chart_area.max.y = chart_h;
+    series->bar_one_width = bar_one_width;
+    series->bar_all_width = bar_all_width;
+    series->axis_x = axis_x;
+    series->axis_y = axis_y[ series->axis_y_n ];
+    series->lb_list = lb_list;
+    series->tag = &tag;
+
+    if ( series->type == SeriesType::Lollipop ) {
+      lol_tot++;
     }
+
+    if ( series->type == SeriesType::Bar ) {
+      bar_tmp[ series->axis_y_n ]++;
+    }
+
+    if ( series->type == SeriesType::StackedBar ) {
+      if ( bar_tmp[ series->axis_y_n ] == 0 ) bar_tmp[ series->axis_y_n ]++;
+    }
+
+    if ( !series->tag_text_color.IsDefined() ) {
+      series->tag_text_color.Set( &text_color );
+    }
+
+    if ( !series->tag_fill_color.IsDefined() ) {
+      if ( series->line_color.IsClear() ) {
+        if ( series->fill_color.IsClear() ) {
+          series->tag_fill_color.Clear();
+        } else {
+          series->tag_fill_color.Set( &series->fill_color );
+        }
+      } else {
+        series->tag_fill_color.Set( &series->line_color );
+      }
+      series->tag_fill_color.SetTransparency( 0.5 );
+    }
+
+    if ( !series->tag_line_color.IsDefined() ) {
+      if ( series->line_color.IsClear() ) {
+        if ( series->fill_color.IsClear() ) {
+          series->tag_line_color.Clear();
+        } else {
+          series->tag_line_color.Set( &series->fill_color );
+        }
+      } else {
+        series->tag_line_color.Set( &series->line_color );
+      }
+      series->tag_line_color.SetTransparency( 0.0 );
+    }
+
+    series->DetermineVisualProperties();
   }
-  if ( stride < 1 ) stride = 1;
-  return stride;
+  bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1233,26 +1279,9 @@ int Main::CategoryStride( void )
 void Main::BuildSeries(
   SVG::Group* below_axes_g,
   SVG::Group* above_axes_g,
-  std::vector< LegendBox >& lb_list
+  SVG::Group* tag_g
 )
 {
-  uint32_t bar_tmp[ 2 ] = { 0, 0 };
-  uint32_t lol_tot = 0;
-  for ( auto series : series_list ) {
-    series->bar_one_width = bar_one_width;
-    series->bar_all_width = bar_all_width;
-    if ( series->type == SeriesType::Lollipop ) {
-      lol_tot++;
-    }
-    if ( series->type == SeriesType::Bar ) {
-      bar_tmp[ series->axis_y_n ]++;
-    }
-    if ( series->type == SeriesType::StackedBar ) {
-      if ( bar_tmp[ series->axis_y_n ] == 0 ) bar_tmp[ series->axis_y_n ]++;
-    }
-  }
-  uint32_t bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
-
   std::vector< double > sa_ofs_pos[ 2 ];
   std::vector< double > sa_ofs_neg[ 2 ];
   std::vector< Point > sa_pts_pos[ 2 ];
@@ -1269,6 +1298,8 @@ void Main::BuildSeries(
 
   Group* stacked_area_fill_g = below_axes_g->AddNewGroup();
   Group* stacked_area_line_g = below_axes_g->AddNewGroup();
+  Group* bar_area_g          = below_axes_g->AddNewGroup();
+  Group* lollipop_stem_g     = below_axes_g->AddNewGroup();
 
   for ( auto series : series_list ) {
     int y_n = series->axis_y_n;
@@ -1279,8 +1310,7 @@ void Main::BuildSeries(
       }
       sa_first[ y_n ] = false;
       series->Build(
-        stacked_area_line_g, stacked_area_fill_g,
-        axis_x, axis_y[ y_n ], lb_list,
+        stacked_area_line_g, stacked_area_fill_g, above_axes_g, tag_g,
         0, 1,
         &sa_ofs_pos[ y_n ], &sa_ofs_neg[ y_n ],
         &sa_pts_pos[ y_n ], &sa_pts_neg[ y_n ]
@@ -1292,8 +1322,7 @@ void Main::BuildSeries(
       std::vector< Point > pts_pos;
       std::vector< Point > pts_neg;
       series->Build(
-        below_axes_g, below_axes_g,
-        axis_x, axis_y[ y_n ], lb_list,
+        bar_area_g, bar_area_g, above_axes_g, tag_g,
         0, 1,
         &ofs_pos, &ofs_neg,
         &pts_pos, &pts_neg
@@ -1314,8 +1343,7 @@ void Main::BuildSeries(
         }
       }
       series->Build(
-        below_axes_g, nullptr,
-        axis_x, axis_y[ y_n ], lb_list,
+        bar_area_g, nullptr, nullptr, tag_g,
         bar_num[ y_n ], bar_tot,
         &bar_ofs_pos[ y_n ], &bar_ofs_neg[ y_n ]
       );
@@ -1323,8 +1351,7 @@ void Main::BuildSeries(
     }
     if ( series->type == SeriesType::Lollipop ) {
       series->Build(
-        above_axes_g, nullptr,
-        axis_x, axis_y[ series->axis_y_n ], lb_list,
+        lollipop_stem_g, nullptr, above_axes_g, tag_g,
         lol_num, lol_tot
       );
       lol_num++;
@@ -1336,8 +1363,8 @@ void Main::BuildSeries(
       series->type == SeriesType::Point
     ) {
       series->Build(
-        above_axes_g, nullptr,
-        axis_x, axis_y[ y_n ], lb_list, 0, 1
+        above_axes_g, nullptr, above_axes_g, tag_g,
+        0, 1
       );
     }
   }
@@ -1407,13 +1434,13 @@ void Main::AddTitle(
 
   if ( title_inside ) {
     bb = text_g->GetBB();
-    U mx = 8;
-    U my = 8;
+    U mx = box_spacing;
+    U my = box_spacing;
     text_g->Add(
       new Rect(
         bb.min.x - mx, bb.min.y - my,
         bb.max.x + mx, bb.max.y + my,
-        8
+        box_spacing
       )
     );
     text_g->Last()->Attr()->LineColor()->Set( &axis_color );
@@ -1541,10 +1568,6 @@ void Main::AddChartMargin(
 
 Canvas* Main::Build( void )
 {
-  for ( auto series : series_list ) {
-    series->DetermineVisualProperties();
-  }
-
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
@@ -1571,6 +1594,7 @@ Canvas* Main::Build( void )
   Group* chartbox_above_axes_g = chart_g->AddNewGroup();
   Group* axes_num_g            = chart_g->AddNewGroup();
   Group* axes_label_g          = chart_g->AddNewGroup();
+  Group* tag_g                 = chart_g->AddNewGroup();
   Group* legend_g              = chart_g->AddNewGroup();
 
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( &axis_color );
@@ -1583,10 +1607,12 @@ Canvas* Main::Build( void )
   axes_num_g->Attr()->TextFont()->SetSize( 14 );
   axes_num_g->Attr()->LineColor()->Clear();
 
-  legend_g->Attr()->TextFont()->SetSize( 14 );
+  tag_g->Attr()->TextFont()
+    ->SetWidthFactor( 1.0 )
+    ->SetHeightFactor( 1.0 )
+    ->SetBaselineFactor( 1.0 );
 
-  std::vector< SVG::Object* > avoid_objects;
-  std::vector< SVG::Object* > text_objects;
+  legend_g->Attr()->TextFont()->SetSize( 14 );
 
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
@@ -1597,7 +1623,13 @@ Canvas* Main::Build( void )
     a->chart_box   = chart_box;
   }
 
-  AxisPrepare();
+  std::vector< LegendBox > lb_list;
+
+  SeriesPrepare( &lb_list );
+  AxisPrepare( tag_g );
+
+  std::vector< SVG::Object* > avoid_objects;
+  std::vector< SVG::Object* > text_objects;
 
   for ( uint32_t phase : {0, 1} ) {
     axis_x->Build(
@@ -1632,10 +1664,9 @@ Canvas* Main::Build( void )
     AddTitle( chart_g, avoid_objects );
   }
 
-  std::vector< LegendBox > lb_list;
   CalcLegendBoxes( legend_g, lb_list, avoid_objects );
 
-  BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, lb_list );
+  BuildSeries( chartbox_below_axes_g, chartbox_above_axes_g, tag_g );
 
   PlaceLegends( avoid_objects, lb_list, legend_g );
 

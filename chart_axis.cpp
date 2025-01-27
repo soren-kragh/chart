@@ -356,7 +356,10 @@ void Axis::LegalizeMajor( void ) {
   return;
 }
 
-void Axis::LegalizeMinMax( void )
+void Axis::LegalizeMinMax(
+  SVG::Group* tag_g,
+  std::vector< Series* >* series_list
+)
 {
   bool min_is_base = false;
   bool max_is_base = false;
@@ -400,7 +403,9 @@ void Axis::LegalizeMinMax( void )
 
   if ( automatic ) {
     double p;
+
     if ( major > 0 ) {
+
       if ( log_scale ) {
         int32_t u = std::lround( std::log10( major ) );
         if ( !min_is_base ) {
@@ -423,7 +428,63 @@ void Axis::LegalizeMinMax( void )
           max = std::ceil( p ) * major;
         }
       }
+
+      // Possibly expand min/max to make room for series tag.
+      if ( !x_axis && show ) {
+        double saved_min = min;
+        double saved_max = max;
+        int trial = 0;
+        while ( ++trial ) {
+          bool ok = true;
+          for ( auto series : *series_list ) {
+            if (
+              series->axis_y != this ||
+              !series->tag_enable ||
+              ( series->type != SeriesType::Bar &&
+                series->type != SeriesType::StackedBar &&
+                series->type != SeriesType::Lollipop
+              )
+            )
+              continue;
+            U tag_beyond = series->tag->GetBeyond( series, tag_g );
+            if ( !series->def_y || tag_beyond == 0 ) continue;
+            if ( Valid( series->min_y ) && !series->min_y_is_base ) {
+              U coor =
+                Coor( series->min_y ) + (reverse ? +tag_beyond : -tag_beyond);
+              if ( coor < 0 || coor > length ) {
+                if ( log_scale ) {
+                  min = min / major;
+                } else {
+                  min = min - major;
+                }
+                ok = false;
+              }
+            }
+            if ( Valid( series->max_y ) && !series->max_y_is_base ) {
+              U coor =
+                Coor( series->max_y ) + (reverse ? -tag_beyond : +tag_beyond);
+              if ( coor < 0 || coor > length ) {
+                if ( log_scale ) {
+                  max = max * major;
+                } else {
+                  max = max + major;
+                }
+                ok = false;
+              }
+            }
+          }
+          if ( ok ) break;
+          if ( trial == 3 ) {
+            // No success, restore.
+            min = saved_min;
+            max = saved_max;
+            break;
+          }
+        }
+      }
+
     }
+
     if ( x_axis && orth_style[ 0 ] == AxisStyle::None ) {
       orth_axis_cross = min;
     } else {
@@ -1334,6 +1395,7 @@ void Axis::BuildUnit(
     AnchorY ay = AnchorY::Mid;
     U cx = length / 2;
     U cy = length / 2;
+
     if ( px == Pos::Left ) {
       if ( angle == 0 ) {
         cx = (py == Pos::Center) ? outer_min : inner_min;
@@ -1351,12 +1413,12 @@ void Axis::BuildUnit(
         cx = coor + tick_major_len + num_space_x;
         ax = AnchorX::Min;
       }
-
     }
     if ( px == Pos::Center ) {
       cx = (angle == 0) ? U( length / 2 ) : coor;
       ax = AnchorX::Mid;
     }
+
     if ( py == Pos::Bottom ) {
       if ( angle == 0 ) {
         cy = coor - tick_major_len - num_space_y;
@@ -1379,6 +1441,21 @@ void Axis::BuildUnit(
       cy = (angle == 0) ? coor : U( length / 2 );
       ay = AnchorY::Mid;
     }
+
+    if ( chart_box ) {
+      if ( angle == 0 ) {
+        if ( cy < 0 || cy > orth_length ) {
+          if ( cx == inner_max ) cx = outer_max;
+          if ( cx == inner_min ) cx = outer_min;
+        }
+      } else {
+        if ( cx < 0 || cx > orth_length ) {
+          if ( cy == inner_max ) cy = outer_max;
+          if ( cy == inner_min ) cy = outer_min;
+        }
+      }
+    }
+
     obj->MoveTo( ax, ay, cx, cy );
     BoundaryBox bb = obj->GetBB();
     collision = false;
@@ -1439,6 +1516,7 @@ void Axis::BuildUnit(
         if ( bb.min.x < cb.max.x && bb.max.x > cb.min.x ) collision = true;
       }
     }
+
     return collision;
   };
 

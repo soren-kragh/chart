@@ -26,7 +26,15 @@ namespace Chart {
   // Correction factor for floating point precision issues in comparisons etc.
   const double epsilon = 1e-6;
 
-  enum class Pos { Auto, Center, Left, Right, Top, Bottom, Base };
+  // Spacing around various boxes.
+  const SVG::U box_spacing = 8;
+
+  // Spacing from series to tag.
+  const SVG::U tag_spacing = box_spacing / 2;
+
+  enum class Pos {
+    Auto, Center, Right, Left, Top, Bottom, Base, End, Beyond
+  };
 
   enum class Dir { Right, Left, Up, Down };
 
