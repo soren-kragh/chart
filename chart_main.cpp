@@ -338,8 +338,11 @@ void Main::CalcLegendBoxes(
       obj->MoveTo( anchor_x, anchor_y, x, y );
 
       if ( can_move_y && anchor_y != AnchorY::Mid ) {
+        U old_y = coor_hi;
         while ( true ) {
           BoundaryBox obj_bb = obj->GetBB();
+          if ( obj_bb.min.y == old_y ) break;
+          old_y = obj_bb.min.y;
           U dy = 0;
           for ( auto ao : avoid_objects ) {
             if ( !SVG::Collides( obj, ao ) ) continue;
@@ -362,8 +365,11 @@ void Main::CalcLegendBoxes(
       }
 
       if ( can_move_x && anchor_x != AnchorX::Mid ) {
+        U old_x = coor_hi;
         while ( true ) {
           BoundaryBox obj_bb = obj->GetBB();
+          if ( obj_bb.min.x == old_x ) break;
+          old_x = obj_bb.min.x;
           U dx = 0;
           for ( auto ao : avoid_objects ) {
             if ( !SVG::Collides( obj, ao ) ) continue;
