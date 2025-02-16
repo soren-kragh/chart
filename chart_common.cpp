@@ -174,7 +174,7 @@ void Chart::MoveObjs(
         break;
       }
     }
-    if ( dx == 0 && dy == 0 ) break;
+    if ( std::abs( dx ) < epsilon && std::abs( dy ) < epsilon ) break;
     for ( auto obj : move_objs ) {
       obj->Move( dx, dy );
     }
