@@ -187,7 +187,7 @@ private:
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;
 
-  Tag tag;
+  Tag* tag_db;
 
   std::vector< Series* > series_list;
 

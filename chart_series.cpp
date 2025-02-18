@@ -787,7 +787,7 @@ void Series::BuildArea(
       if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
     }
     if ( tag_enable ) {
-      tag->LineTag(
+      tag_db->LineTag(
         this, tag_g, p, datum, is_datum,
         has_line && on_line && ap_line_cnt > 0, tag_direction
       );
@@ -1015,7 +1015,7 @@ void Series::BuildBar(
       if ( p2.x < p1.x ) direction = Pos::Left;
       if ( p2.y > p1.y ) direction = Pos::Top;
       if ( p2.y < p1.y ) direction = Pos::Bottom;
-      tag->BarTag( this, tag_g, p1, p2, datum, direction );
+      tag_db->BarTag( this, tag_g, p1, p2, datum, direction );
     }
 
     if ( type == SeriesType::Lollipop ) {
@@ -1171,7 +1171,7 @@ void Series::BuildLine(
       if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
     }
     if ( tag_enable ) {
-      tag->LineTag(
+      tag_db->LineTag(
         this, tag_g, p, datum, !clipped,
         adding_segments && has_line, tag_direction
       );
@@ -1183,7 +1183,7 @@ void Series::BuildLine(
   {
     poly = nullptr;
     adding_segments = false;
-    tag->EndLineTag();
+    tag_db->EndLineTag();
   };
 
   bool first = true;

@@ -446,7 +446,7 @@ void Axis::LegalizeMinMax(
               )
             )
               continue;
-            U tag_beyond = series->tag->GetBeyond( series, tag_g );
+            U tag_beyond = series->tag_db->GetBeyond( series, tag_g );
             if ( !series->def_y || tag_beyond == 0 ) continue;
             if ( Valid( series->min_y ) && !series->min_y_is_base ) {
               U coor =

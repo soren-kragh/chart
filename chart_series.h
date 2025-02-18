@@ -185,7 +185,7 @@ private:
 
   std::vector< LegendBox >* lb_list;
 
-  Tag* tag;
+  Tag* tag_db;
   bool tag_enable;
   Pos tag_pos;
   float tag_size;

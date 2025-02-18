@@ -30,6 +30,7 @@ Main::Main( void )
   baseline_adj = 1.0;
   SetLegendPos( Pos::Auto );
   legend_color.Clear();
+  tag_db = new Tag();
   axis_x = new Axis( true );
   axis_y[ 0 ] = new Axis( false );
   axis_y[ 1 ] = new Axis( false );
@@ -1229,7 +1230,7 @@ void Main::SeriesPrepare(
     series->axis_x = axis_x;
     series->axis_y = axis_y[ series->axis_y_n ];
     series->lb_list = lb_list;
-    series->tag = &tag;
+    series->tag_db = tag_db;
 
     if ( series->type == SeriesType::Lollipop ) {
       lol_tot++;
