@@ -30,10 +30,11 @@ Main::Main( void )
   baseline_adj = 1.0;
   SetLegendPos( Pos::Auto );
   legend_color.Clear();
+  label_db = new Label();
   tag_db = new Tag();
-  axis_x = new Axis( true );
-  axis_y[ 0 ] = new Axis( false );
-  axis_y[ 1 ] = new Axis( false );
+  axis_x      = new Axis( true , label_db );
+  axis_y[ 0 ] = new Axis( false, label_db );
+  axis_y[ 1 ] = new Axis( false, label_db );
 }
 
 Main::~Main( void )
@@ -44,6 +45,8 @@ Main::~Main( void )
   delete axis_x;
   delete axis_y[ 0 ];
   delete axis_y[ 1 ];
+  delete tag_db;
+  delete label_db;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

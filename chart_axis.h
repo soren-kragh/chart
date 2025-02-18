@@ -14,6 +14,7 @@
 #pragma once
 
 #include <chart_common.h>
+#include <chart_label.h>
 #include <chart_series.h>
 
 namespace Chart {
@@ -26,7 +27,7 @@ class Axis
 
 public:
 
-  Axis( bool x_axis );
+  Axis( bool is_x_axis, Label* label_db );
 
   // The angle may be 0 or 90 and the X- and Y-axes must be orthogonal.
   void SetAngle( int angle );
@@ -67,7 +68,9 @@ private:
   // Should axis be shown.
   bool show;
 
-  bool x_axis;
+  Label* label_db;
+
+  bool is_x_axis;
   int  angle;
   bool category_axis;
   bool reverse;

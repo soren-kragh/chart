@@ -19,11 +19,12 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Axis::Axis( bool x_axis )
+Axis::Axis( bool is_x_axis, Label* label_db )
 {
   show = false;
-  this->x_axis = x_axis;
-  angle = x_axis ? 0 : 90;
+  this->is_x_axis = is_x_axis;
+  this->label_db = label_db;
+  angle = is_x_axis ? 0 : 90;
   category_axis = false;
   reverse = false;
   y_dual = false;
@@ -394,7 +395,7 @@ void Axis::LegalizeMinMax(
     }
   }
 
-  if ( automatic && !log_scale && !x_axis ) {
+  if ( automatic && !log_scale && !is_x_axis ) {
     if ( min > 0 && (max - min) / max > 0.5 && !min_is_base ) min = 0;
     if ( max < 0 && (min - max) / min > 0.5 && !max_is_base ) max = 0;
   }
@@ -430,7 +431,7 @@ void Axis::LegalizeMinMax(
       }
 
       // Possibly expand min/max to make room for series tag.
-      if ( !x_axis && show ) {
+      if ( !is_x_axis && show ) {
         double saved_min = min;
         double saved_max = max;
         int trial = 0;
@@ -485,7 +486,7 @@ void Axis::LegalizeMinMax(
 
     }
 
-    if ( x_axis && orth_style[ 0 ] == AxisStyle::None ) {
+    if ( is_x_axis && orth_style[ 0 ] == AxisStyle::None ) {
       orth_axis_cross = min;
     } else {
       orth_axis_cross = (max <= 0) ? max : min;

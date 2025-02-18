@@ -16,6 +16,7 @@
 #include <list>
 
 #include <chart_common.h>
+#include <chart_label.h>
 #include <chart_tag.h>
 #include <chart_series.h>
 #include <chart_axis.h>
@@ -187,6 +188,7 @@ private:
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;
 
+  Label* label_db;
   Tag* tag_db;
 
   std::vector< Series* > series_list;
