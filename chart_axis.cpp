@@ -699,7 +699,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     int i = exp / 3;
     if ( i != 0 ) {
       if ( i == -2 ) {
-        s += "μ";
+        s += "µ";
       } else {
         s += magnitude_sym[ i + 10 ];
       }
@@ -744,21 +744,8 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       leading_ws = 0;
       break;
     }
+    s += "×10";
     num_g->Add( new Text( s ) );
-    bb = num_g->GetBB();
-    U cr = (bb.max.y - bb.min.y) * 0.15;
-    U dx = cr * 0.75;
-    U cx = bb.max.x + dx + cr;
-    U cy = (bb.max.y - bb.min.y) * 0.45 + cr * 0.5;
-    SVG::Group* x_g = num_g->AddNewGroup();
-    x_g->Attr()->SetLineWidth(
-      cr * (bold ? 0.75 : 0.5)
-    )->LineColor()->Set( ColorName::black );
-    x_g->Add( new Line( cx - cr, cy - cr, cx + cr, cy + cr ) );
-    x_g->Add( new Line( cx - cr, cy + cr, cx + cr, cy - cr ) );
-    bb = num_g->GetBB();
-    num_g->Add( new Text( "10" ) );
-    num_g->Last()->MoveTo( AnchorX::Min, AnchorY::Min, bb.max.x + dx, bb.min.y );
   } while ( false );
 
   int32_t trailing_ws = 0;
