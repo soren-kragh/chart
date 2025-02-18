@@ -13,7 +13,6 @@
 
 #pragma once
 
-#include <svg_canvas.h>
 #include <chart_common.h>
 #include <chart_datum.h>
 #include <chart_legend_box.h>

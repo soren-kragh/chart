@@ -122,7 +122,7 @@ SVG::Group* Chart::MultiLineText(
   return MultiLineText( g, true, txt, size, false, false, false );
 }
 
-SVG::Group* Chart::Label(
+SVG::Group* Chart::LabelText(
   SVG::Group* g, const std::string txt, SVG::U size
 )
 {

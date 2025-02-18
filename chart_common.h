@@ -76,7 +76,7 @@ namespace Chart {
     SVG::Group* g, const std::string txt, SVG::U size = 0
   );
 
-  SVG::Group* Label(
+  SVG::Group* LabelText(
     SVG::Group* g, const std::string txt, SVG::U size = 0
   );
 

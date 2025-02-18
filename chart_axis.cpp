@@ -704,7 +704,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       }
     }
     s += number_unit;
-    g = Label( g, s );
+    g = LabelText( g, s );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
@@ -718,7 +718,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 
   if ( number_format == NumberFormat::Fixed ) {
     s += number_unit;
-    g = Label( g, s );
+    g = LabelText( g, s );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
@@ -1385,7 +1385,7 @@ void Axis::BuildUnit(
     inner_min = outer_min;
   }
 
-  Object* obj = Label( unit_g, unit, 16 );
+  Object* obj = LabelText( unit_g, unit, 16 );
   obj->Attr()->TextFont()->SetBold();
   bool collision = false;
 
