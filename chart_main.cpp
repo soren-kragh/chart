@@ -1599,6 +1599,7 @@ Canvas* Main::Build( void )
   Group* grid_minor_g          = chart_g->AddNewGroup();
   Group* grid_major_g          = chart_g->AddNewGroup();
   Group* grid_zero_g           = chart_g->AddNewGroup();
+  Group* label_bg_g            = chart_g->AddNewGroup();
   Group* chartbox_below_axes_g = chart_g->AddNewGroup();
   Group* axes_line_g           = chart_g->AddNewGroup();
   Group* chartbox_above_axes_g = chart_g->AddNewGroup();
@@ -1703,6 +1704,20 @@ Canvas* Main::Build( void )
 */
 
   AddFootnotes( chart_g );
+
+  {
+    if ( chart_area_color.IsClear() ) {
+      label_bg_g->Attr()->FillColor()->Set( &background_color );
+    } else {
+      label_bg_g->Attr()->FillColor()->Set( &chart_area_color );
+    }
+    BoundaryBox area;
+    area.min.x = 0;
+    area.max.x = chart_w;
+    area.min.y = 0;
+    area.max.y = chart_h;
+    label_db->AddBackground( label_bg_g, area );
+  }
 
   // Set the background color of text objects to match the background they are
   // on if possible, otherwise just clear the background color.
