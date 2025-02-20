@@ -30,29 +30,41 @@ public:
 
 private:
 
-  struct LabelEntry {
+  struct Entry {
+    SVG::Object* link;
     SVG::U leading_space;
     SVG::U trailing_space;
-    SVG::Object* prv;
   };
 
-  std::unordered_map< SVG::Object*, LabelEntry > obj_map;
+  struct Container {
+    SVG::Object* link;
+    SVG::BoundaryBox bb;
+  };
 
-  // Add the given text, which might be multi-line text. Return the created
-  // object, which is a group of text objects (one per line). If prv is given,
-  // then this text is associated with that text object.
-  SVG::Group* AddText(
-    SVG::Group* g, bool add_to_db,
-    const std::string& txt, SVG::U size = 0, SVG::Object* prv = nullptr
+  std::unordered_map< SVG::Object*, Entry > entries;
+  std::unordered_map< SVG::Group*, Container > containers;
+
+  // Create the given label, which might be multi-line text. Return the created
+  // container, which is a group of text objects (one per line). If append is
+  // true (implies add_to_db), then this text is instead appended to the
+  // previously created container given by g.
+  SVG::Group* Create(
+    SVG::Group* g, const std::string& txt,
+    SVG::U size = 0, bool add_to_db = false, bool append = false
   );
 
-  // Delete the text object from the data base; obj is a group returned from
-  // AddText().
-  void DelText( SVG::Group* obj );
+  // If the text objects inside the container has been moved, then this must be
+  // called. This must be done before the container itself is moved.
+  void Update( SVG::Group* container );
 
-  // Add a background rectangle for all text objects in the data base provided
-  // the background rectangle fits fully inside the given area.
-  void AddBackground( SVG::Group* bg_g, const SVG::BoundaryBox& area );
+  // Delete the label container from the data base.
+  void Delete( SVG::Group* container );
+
+  // Add a background rectangle for all label objects in the data base provided
+  // the background rectangle fits fully (or partially) inside the given area.
+  void AddBackground(
+    SVG::Group* bg_g, const SVG::BoundaryBox& area, bool partial_ok
+  );
 
 };
 

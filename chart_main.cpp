@@ -1706,17 +1706,17 @@ Canvas* Main::Build( void )
   AddFootnotes( chart_g );
 
   {
+    bool partial_ok = true;
     if ( chart_area_color.IsClear() ) {
       label_bg_g->Attr()->FillColor()->Set( &background_color );
     } else {
       label_bg_g->Attr()->FillColor()->Set( &chart_area_color );
+      partial_ok = false;
     }
     BoundaryBox area;
-    area.min.x = 0;
-    area.max.x = chart_w;
-    area.min.y = 0;
-    area.max.y = chart_h;
-    label_db->AddBackground( label_bg_g, area );
+    area.min.x = 0; area.max.x = chart_w;
+    area.min.y = 0; area.max.y = chart_h;
+    label_db->AddBackground( label_bg_g, area, partial_ok );
   }
 
   // Set the background color of text objects to match the background they are
