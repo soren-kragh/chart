@@ -182,7 +182,7 @@ private:
   SVG::U frame_width = 0;
   SVG::U margin      = 5;
   SVG::U chart_w     = 1000;
-  SVG::U chart_h     = 700;
+  SVG::U chart_h     = 600;
   bool   chart_box   = false;
 
   float bar_one_width = 1.00;
