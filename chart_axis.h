@@ -130,13 +130,11 @@ private:
   );
   void BuildTicksNumsLinear(
     std::vector< SVG::Object* >& avoid_objects,
-    std::vector< SVG::Object* >& text_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g
   );
   void BuildTicksNumsLogarithmic(
     std::vector< SVG::Object* >& avoid_objects,
-    std::vector< SVG::Object* >& text_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g
   );
@@ -149,15 +147,13 @@ private:
 
   void BuildUnit(
     SVG::Group* unit_g,
-    std::vector< SVG::Object* >& avoid_objects,
-    std::vector< SVG::Object* >& text_objects
+    std::vector< SVG::Object* >& avoid_objects
   );
 
   void Build(
     const std::vector< std::string >& category_list,
     uint32_t phase,
     std::vector< SVG::Object* >& avoid_objects,
-    std::vector< SVG::Object* >& text_objects,
     SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
     SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
   );

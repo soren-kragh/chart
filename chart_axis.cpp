@@ -705,53 +705,45 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       }
     }
     s += number_unit;
-    g = LabelText( g, s );
+    g = label_db->Create( g, s, 0, true );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
 
-  int32_t leading_ws = num_max_len - s.length();
-  if ( angle == 90 && leading_ws > 0 ) {
-    s.insert( 0, leading_ws, ' ' );
-  } else {
-    leading_ws = 0;
+  {
+    int32_t leading_ws = num_max_len - s.length();
+    if ( angle == 90 && leading_ws > 0 ) {
+      s.insert( 0, leading_ws, ' ' );
+    }
   }
 
   if ( number_format == NumberFormat::Fixed ) {
     s += number_unit;
-    g = LabelText( g, s );
+    g = label_db->Create( g, s, 0, true );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
 
   // number_format is NumberFormat::Scientific.
+  SVG::Group* container;
   BoundaryBox bb;
 
-  g = g->AddNewGroup();
-  SVG::Group* num_g = g->AddNewGroup();
-  SVG::Group* exp_g = g->AddNewGroup();
-
   // Build non-exponent part,
-  do {
+  {
     if ( num == 0 ) {
       size_t pos = s.find( '.' );
       if ( pos != std::string::npos ) s.erase( pos );
-      num_g->Add( new Text( s ) );
-      break;
-    }
+    } else
     if ( std::abs( num ) == 1 && (angle == 0 || number_pos == Pos::Left) ) {
-      num_g->Add( new Text( (num < 0) ? "-10" : number_sign ? "+10" : "10" ) );
-      leading_ws = 0;
-      break;
+      s = (num < 0) ? "-10" : number_sign ? "+10" : "10";
+    } else {
+      s += "×10";
     }
-    s += "×10";
-    num_g->Add( new Text( s ) );
-  } while ( false );
-
-  int32_t trailing_ws = 0;
+    container = label_db->Create( g, s, 0, true );
+  }
 
   // Build exponent part,
-  do {
+  {
     if ( num == 0 ) {
       s = "";
     } else {
@@ -760,59 +752,33 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       s = oss.str();
     }
     if ( angle != 0 || num != 0 ) {
-      trailing_ws = exp_max_len - s.length();
+      int32_t trailing_ws = exp_max_len - s.length();
       if ( trailing_ws > 0 ) {
         s.insert( s.length(), trailing_ws, ' ' );
-      } else {
-        trailing_ws = 0;
       }
     }
-    bb = num_g->GetBB();
+    bb = container->GetBB();
     U h = bb.max.y - bb.min.y;
-    exp_g->Attr()->TextFont()->SetSize( h * 0.9 );
-    exp_g->Add( new Text( s ) );
-    bool center = num == 0 && angle == 0;
-    exp_g->MoveTo(
+    label_db->Create( container, s, h * 0.8, true, true );
+    bool center = (num == 0 && angle == 0);
+    container->Last()->MoveTo(
       center ? AnchorX::Mid : AnchorX::Min, AnchorY::Max,
-      center ? (bb.max.x - bb.min.x)/2 : bb.max.x/1, bb.max.y + h * 0.3
+      center ? (bb.max.x - bb.min.x)/2 : bb.max.x + h * 0.1, bb.max.y + h * 0.3
     );
-  } while ( false );
+    label_db->Update( container );
+  }
 
   if ( !number_unit.empty() ) {
-    bb = num_g->GetBB();
-    U y = bb.min.y;
-    bb = exp_g->GetBB();
-    U x = bb.max.x;
-    num_g->Add( new Text( number_unit ) );
-    num_g->Last()->MoveTo( AnchorX::Min, AnchorY::Min, x, y );
+    bb = container->GetBB();
+    label_db->Create( container, number_unit, 0, true, true );
+    container->Last()->MoveTo(
+      AnchorX::Min, AnchorY::Min, bb.max.x, bb.min.y
+    );
+    label_db->Update( container );
   }
 
-  Attributes attr;
-
-  // Add number background.
-  num_g->Attr()->Collect( attr );
-  bb = num_g->GetBB();
-  TextBG( g, bb, bb.max.y - bb.min.y );
-  if ( leading_ws > 0 ) {
-    g->Last()->Attr()->FillColor()->Clear();
-    bb.min.x += attr.TextFont()->GetWidth() * leading_ws;
-    TextBG( g, bb, bb.max.y - bb.min.y );
-  }
-
-  // Add exponent background.
-  exp_g->Attr()->Collect( attr );
-  bb = exp_g->GetBB();
-  TextBG( g, bb, bb.max.y - bb.min.y );
-  if ( trailing_ws > 0 || num == 0 ) {
-    g->Last()->Attr()->FillColor()->Clear();
-    if ( num != 0 ) {
-      bb.max.x -= attr.TextFont()->GetWidth() * trailing_ws;
-      TextBG( g, bb, bb.max.y - bb.min.y );
-    }
-  }
-
-  if ( bold ) g->Attr()->TextFont()->SetBold();
-  return g;
+  if ( bold ) container->Attr()->TextFont()->SetBold();
+  return container;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -949,7 +915,7 @@ void Axis::BuildTicksHelper(
   )
   {
     U d = tick_major_len;
-    Object* obj = BuildNum( num_g, v, sn == 0 );
+    Group* obj = BuildNum( num_g, v, sn == 0 );
     if ( angle == 0 ) {
       if ( number_pos == Pos::Top ) {
         obj->MoveTo( AnchorX::Mid, AnchorY::Min, x, y + d + num_space_y );
@@ -968,6 +934,7 @@ void Axis::BuildTicksHelper(
       Chart::Collides( obj, avoid_objects, mx, 0 ) ||
       Chart::Collides( obj, num_objects, mx, 0 )
     ) {
+      label_db->Delete( obj );
       num_g->DeleteFront();
     } else {
       num_objects.push_back( obj );
@@ -981,7 +948,6 @@ void Axis::BuildTicksHelper(
 
 void Axis::BuildTicksNumsLinear(
   std::vector< SVG::Object* >& avoid_objects,
-  std::vector< SVG::Object* >& text_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
 )
@@ -1058,10 +1024,6 @@ void Axis::BuildTicksNumsLinear(
     }
   }
 
-  for ( auto obj : num_objects ) {
-    text_objects.push_back( obj );
-  }
-
   return;
 }
 
@@ -1069,7 +1031,6 @@ void Axis::BuildTicksNumsLinear(
 
 void Axis::BuildTicksNumsLogarithmic(
   std::vector< SVG::Object* >& avoid_objects,
-  std::vector< SVG::Object* >& text_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g
 )
@@ -1163,10 +1124,6 @@ void Axis::BuildTicksNumsLogarithmic(
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
-  }
-
-  for ( auto obj : num_objects ) {
-    text_objects.push_back( obj );
   }
 
   return;
@@ -1335,8 +1292,7 @@ void Axis::BuildCategories(
 
 void Axis::BuildUnit(
   SVG::Group* unit_g,
-  std::vector< SVG::Object* >& avoid_objects,
-  std::vector< SVG::Object* >& text_objects
+  std::vector< SVG::Object* >& avoid_objects
 )
 {
   if ( unit.empty() ) return;
@@ -1373,7 +1329,7 @@ void Axis::BuildUnit(
     inner_min = outer_min;
   }
 
-  Object* obj = LabelText( unit_g, unit, 16 );
+  Object* obj = label_db->Create( unit_g, unit, 16, true );
   obj->Attr()->TextFont()->SetBold();
   bool collision = false;
 
@@ -1608,7 +1564,6 @@ void Axis::BuildUnit(
   }
 
   avoid_objects.push_back( obj );
-  text_objects.push_back( obj );
 
   return;
 }
@@ -1619,7 +1574,6 @@ void Axis::Build(
   const std::vector< std::string >& category_list,
   uint32_t phase,
   std::vector< SVG::Object* >& avoid_objects,
-  std::vector< SVG::Object* >& text_objects,
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* zero_g,
   SVG::Group* line_g, SVG::Group* num_g, SVG::Group* unit_g
 )
@@ -1670,7 +1624,7 @@ void Axis::Build(
   }
 
   if ( phase == 0 ) {
-    BuildUnit( unit_g, avoid_objects, text_objects );
+    BuildUnit( unit_g, avoid_objects );
     return;
   }
 
@@ -1690,10 +1644,14 @@ void Axis::Build(
   line_g = line_g->AddNewGroup();
   num_g  = num_g->AddNewGroup();
   if ( !category_axis ) {
+    // Reset letter spacing to default, but offset the baseline such that
+    // numbers are vertically centered in their boundary box. Numbers have no
+    // glyph below the baseline and will therefore appear vertically un-centered
+    // without this adjustment.
     num_g->Attr()->TextFont()
       ->SetWidthFactor( 1.0 )
       ->SetHeightFactor( 1.0 )
-      ->SetBaselineFactor( 1.0 );
+      ->SetBaselineFactor( 0.6 );
   }
 
   bool axis_at_chart_box = chart_box && (orth_coor_is_min || orth_coor_is_max);
@@ -1807,12 +1765,12 @@ void Axis::Build(
     ComputeNumFormat();
     if ( log_scale ) {
       BuildTicksNumsLogarithmic(
-        avoid_objects, text_objects,
+        avoid_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     } else {
       BuildTicksNumsLinear(
-        avoid_objects, text_objects,
+        avoid_objects,
         minor_g, major_g, zero_g, line_g, num_g
       );
     }
@@ -1847,11 +1805,11 @@ void Axis::BuildLabel(
   Object* lab0 = nullptr;
   Object* lab1 = nullptr;
   if ( !label.empty() ) {
-    lab0 = MultiLineText( label_g, label, 24 );
+    lab0 = label_db->Create( label_g, label, 24 );
     label_objs.push_back( lab0 );
   }
   if ( !sub_label.empty() ) {
-    lab1 = MultiLineText( label_g, sub_label, 16 );
+    lab1 = label_db->Create( label_g, sub_label, 16 );
     label_objs.push_back( lab1 );
   }
 

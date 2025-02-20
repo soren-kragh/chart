@@ -1410,21 +1410,21 @@ void Main::AddTitle(
   }
   U y = chart_h + space_y;
   if ( !sub_sub_title.empty() ) {
-    Object* obj = MultiLineText( text_g, sub_sub_title, 14 );
+    Object* obj = label_db->Create( text_g, sub_sub_title, 14 );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + 3;
   }
   if ( !sub_title.empty() ) {
-    Object* obj = MultiLineText( text_g, sub_title, 20 );
+    Object* obj = label_db->Create( text_g, sub_title, 20 );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + 3;
   }
   if ( !title.empty() ) {
-    Object* obj = MultiLineText( text_g, title, 36 );
+    Object* obj = label_db->Create( text_g, title, 36 );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
@@ -1502,7 +1502,7 @@ void Main::AddFootnotes(
     U x = bb.min.x + dx;
     U y = bb.min.y - dy;
     AnchorX a = AnchorX::Min;
-    MultiLineText( chart_g, footnote.txt, 14 );
+    label_db->Create( chart_g, footnote.txt, 14 );
     if ( footnote.pos == Pos::Center ) {
       x = chart_w / 2;
       a = AnchorX::Mid;
@@ -1640,13 +1640,12 @@ Canvas* Main::Build( void )
   AxisPrepare( tag_g );
 
   std::vector< SVG::Object* > avoid_objects;
-  std::vector< SVG::Object* > text_objects;
 
   for ( uint32_t phase : {0, 1} ) {
     axis_x->Build(
       category_list,
       phase,
-      avoid_objects, text_objects,
+      avoid_objects,
       grid_minor_g, grid_major_g, grid_zero_g,
       axes_line_g, axes_num_g, axes_label_g
     );
@@ -1655,7 +1654,7 @@ Canvas* Main::Build( void )
       axis_y[ i ]->Build(
         empty,
         phase,
-        avoid_objects, text_objects,
+        avoid_objects,
         grid_minor_g, grid_major_g, grid_zero_g,
         axes_line_g, axes_num_g, axes_label_g
       );
@@ -1705,6 +1704,7 @@ Canvas* Main::Build( void )
 
   AddFootnotes( chart_g );
 
+  // Add background for text objects in the Label data base.
   {
     bool partial_ok = true;
     if ( chart_area_color.IsClear() ) {
@@ -1717,26 +1717,6 @@ Canvas* Main::Build( void )
     area.min.x = 0; area.max.x = chart_w;
     area.min.y = 0; area.max.y = chart_h;
     label_db->AddBackground( label_bg_g, area, partial_ok );
-  }
-
-  // Set the background color of text objects to match the background they are
-  // on if possible, otherwise just clear the background color.
-  for ( auto obj : text_objects ) {
-    BoundaryBox bb = obj->GetBB();
-    bool inside =
-      bb.min.x > 0 && bb.max.x < chart_w &&
-      bb.min.y > 0 && bb.max.y < chart_h;
-    bool outside =
-      bb.max.x < 0 || bb.min.x > chart_w ||
-      bb.max.y < 0 || bb.min.y > chart_h;
-    if ( outside || chart_area_color.IsClear() ) {
-      obj->Attr()->FillColor()->Set( &background_color );
-    } else
-    if ( inside ) {
-      obj->Attr()->FillColor()->Set( &chart_area_color );
-    } else {
-      obj->Attr()->FillColor()->Clear();
-    }
   }
 
   AddChartMargin( chart_g );

@@ -48,12 +48,13 @@ SVG::Group* Label::Create(
   }
 
   Attributes attr;
-  g->Attr()->Collect( attr );
   if ( append && size > 0 ) {
-    g->Add( new Text( "" ) );
+    g->AddNewGroup();
     g->Last()->Attr()->TextFont()->SetSize( size );
     g->Last()->Attr()->Collect( attr );
     g->DeleteFront();
+  } else {
+    g->Attr()->Collect( attr );
   }
   U h = attr.TextFont()->GetHeight();
   U w = attr.TextFont()->GetWidth();
@@ -63,6 +64,19 @@ SVG::Group* Label::Create(
   auto it = txt.cbegin();
   while ( it != txt.cend() ) {
     auto c = *(it++);
+    if ( c != '\n' ) {
+      if ( c == ' ' ) {
+        if ( non_space_seen ) {
+          e.trailing_space += w;
+        } else {
+          e.leading_space += w;
+        }
+      } else {
+        non_space_seen = true;
+        e.trailing_space = 0;
+      }
+      s += c;
+    }
     if ( c == '\n' || it == txt.cend() ) {
       g->Add( new Text( 0, y, s ) );
       if ( append && size > 0 ) {
@@ -75,18 +89,6 @@ SVG::Group* Label::Create(
       e.trailing_space = 0;
       non_space_seen = false;
       s.clear();
-    } else {
-      if ( c == ' ' ) {
-        if ( non_space_seen ) {
-          e.trailing_space += w;
-        } else {
-          e.leading_space += w;
-        }
-      } else {
-        non_space_seen = true;
-        e.trailing_space = 0;
-      }
-      s += c;
     }
   }
 
@@ -141,7 +143,8 @@ void Label::AddBackground(
       bb.max.x -= e.trailing_space;
       bb.min.x -= r/2;
       bb.max.x += r/2;
-      bb.max.y += r/3;
+      bb.min.y -= r/5;
+      bb.max.y += r/5;
       bool inside =
         bb.min.x > area.min.x && bb.max.x < area.max.x &&
         bb.min.y > area.min.y && bb.max.y < area.max.y;

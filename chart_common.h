@@ -57,29 +57,6 @@ namespace Chart {
     return std::abs( c1 - c2 ) < epsilon;
   }
 
-  void TextBG(
-    SVG::Group* g, const SVG::BoundaryBox& bb, SVG::U h
-  );
-
-  // Return newly created group object or nullptr if new_g is false.
-  SVG::Group* MultiLineText(
-    SVG::Group* g,
-    bool new_g,
-    const std::string txt,
-    SVG::U size,
-    bool bg,              // Add background.
-    bool bg_truncate,     // Truncate leading/trailing white-space.
-    bool bg_per_line      // Per line background.
-  );
-
-  SVG::Group* MultiLineText(
-    SVG::Group* g, const std::string txt, SVG::U size = 0
-  );
-
-  SVG::Group* LabelText(
-    SVG::Group* g, const std::string txt, SVG::U size = 0
-  );
-
   SVG::Object* Collides(
     SVG::Object* obj, const std::vector< SVG::Object* >& objects,
     SVG::U margin_x = 0, SVG::U margin_y = 0
