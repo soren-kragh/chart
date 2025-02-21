@@ -1618,10 +1618,12 @@ Canvas* Main::Build( void )
   axes_num_g->Attr()->TextFont()->SetSize( 14 );
   axes_num_g->Attr()->LineColor()->Clear();
 
+  // This group only has numbers so optimize baseline to ensure vertical
+  // centering within boundary box.
   tag_g->Attr()->TextFont()
     ->SetWidthFactor( 1.0 )
-    ->SetHeightFactor( 1.0 )
-    ->SetBaselineFactor( 1.0 );
+    ->SetHeightFactor( 0.80 )
+    ->SetBaselineFactor( 0.30 );
 
   legend_g->Attr()->TextFont()->SetSize( 14 );
 

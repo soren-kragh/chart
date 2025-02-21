@@ -87,9 +87,10 @@ SVG::Group* Tag::BuildTag(
   BoundaryBox bb = g->Last()->GetBB();
   r = (bb.max.y - bb.min.y) / 3;
 
+  U d = r * 0.75;
   if ( series->tag_box ) {
     g->Add(
-      new Rect( bb.min.x - r, bb.min.y - r/2, bb.max.x + r, bb.max.y + r, r )
+      new Rect( bb.min.x - d, bb.min.y - d, bb.max.x + d, bb.max.y + d, r )
     );
     g->FrontToBack();
   }
@@ -145,8 +146,6 @@ SVG::Group* Tag::AddLineTag( void )
   U r;
   Group* g = BuildTag( tag.series, tag.tag_g, tag.datum, r );
 
-  U k = tag.series->tag_box ? 0 : (r * 0.5);
-
   BoundaryBox bb;
 
   auto place = [&]( int dir, bool check_tag_collosion )
@@ -160,25 +159,16 @@ SVG::Group* Tag::AddLineTag( void )
     U f = (dir % 2 == 1) ? 0.7 : 1.0;
     U x = tag.p.x;
     U y = tag.p.y;
+    U d = (tag.series->tag_dist + tag_spacing) * f;
     if ( tag.series->tag_box ) {
-      U a = (dir % 2 == 1) ? (r * 0.3) : 0.0;
-      U d = (tag.series->tag_dist + tag_spacing) * f - a;
-      if ( ax == AnchorX::Min ) x += d;
-      if ( ax == AnchorX::Max ) x -= d;
-      if ( ay == AnchorY::Min ) y += d;
-      if ( ay == AnchorY::Max ) y -= d;
-    } else {
-      U d = tag.series->tag_dist * f;
-      if ( ax == AnchorX::Min ) x += d + f * tag_spacing;
-      if ( ax == AnchorX::Max ) x -= d + f * tag_spacing;
-      if ( ay == AnchorY::Min ) y += d;
-      if ( ay == AnchorY::Max ) y -= d;
+      d -= (dir % 2 == 1) ? (r * 0.3) : 0.0;
     }
-    U y_adj = (ay == AnchorY::Max) ? +k : (ay == AnchorY::Mid) ? (k / 2) : 0.0;
-    g->MoveTo( ax, ay, x, y - y_adj );
+    if ( ax == AnchorX::Min ) x += d;
+    if ( ax == AnchorX::Max ) x -= d;
+    if ( ay == AnchorY::Min ) y += d;
+    if ( ay == AnchorY::Max ) y -= d;
+    g->MoveTo( ax, ay, x, y );
     bb = g->GetBB();
-    bb.min.y += y_adj;
-    bb.max.y += y_adj;
     bool ok =
       bb.min.x > tag.series->chart_area.min.x &&
       bb.max.x < tag.series->chart_area.max.x &&
@@ -378,9 +368,8 @@ SVG::Group* Tag::AddBarTag(
     beyond_dist = series->tag_dist;
   }
 
-  U k = series->tag_box ? 0 : (r * 0.5);
   U spc_x = tag_spacing;
-  U spc_y = series->tag_box ? tag_spacing : U( 0 );
+  U spc_y = tag_spacing;
 
   BoundaryBox bb;
 
@@ -429,11 +418,8 @@ SVG::Group* Tag::AddBarTag(
         if ( pos == Pos::Beyond ) y -= spc_y + beyond_dist;
       }
     }
-    U y_adj = (ay == AnchorY::Max) ? +k : (ay == AnchorY::Mid) ? (k / 2) : 0.0;
-    g->MoveTo( ax, ay, x, y - y_adj );
+    g->MoveTo( ax, ay, x, y );
     bb = g->GetBB();
-    bb.min.y += y_adj;
-    bb.max.y += y_adj;
     return
       ( direction == Pos::Top || direction == Pos::Bottom ||
         ( bb.min.x > series->chart_area.min.x &&
