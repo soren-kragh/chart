@@ -1004,6 +1004,9 @@ void Main::AxisPrepare( SVG::Group* tag_g )
       axis_x->style =
         (axis_x->pos == Pos::Base) ? AxisStyle::Line : AxisStyle::None;
     }
+    if ( axis_x->style == AxisStyle::Edge ) {
+      axis_x->style = AxisStyle::Line;
+    }
     if ( axis_x->style != AxisStyle::Line ) {
       axis_x->style = AxisStyle::None;
     }
