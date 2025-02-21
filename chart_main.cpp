@@ -134,6 +134,11 @@ void Main::SetBarWidth( float one_width, float all_width )
   bar_all_width = all_width;
 }
 
+void Main::SetBarMargin( float margin )
+{
+  bar_margin = margin;
+}
+
 Series* Main::AddSeries( SeriesType type )
 {
   Series* series = new Series( type );
@@ -832,6 +837,8 @@ void Main::AxisPrepare( SVG::Group* tag_g )
       axis_x->min
       + std::max( category_list.size(), size_t( 1 ) )
       - ((axis_x->min < 0) ? 0 : 1);
+    axis_x->min -= bar_margin;
+    axis_x->max += bar_margin;
     axis_x->orth_axis_cross = axis_x->min;
     axis_x->reverse = axis_x->reverse ^ (axis_x->angle != 0);
     axis_x->category_stride = CategoryStride();

@@ -73,6 +73,9 @@ public:
   // to 1.0) of all bars belonging to the same X-value.
   void SetBarWidth( float one_width, float all_width );
 
+  // Set extra start/end margin in units of bar buckets.
+  void SetBarMargin( float margin );
+
   Axis* AxisX( void ) { return axis_x; }
   Axis* AxisY( int n = 0 ) { return axis_y[ n ]; }
 
@@ -187,6 +190,7 @@ private:
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;
+  float bar_margin    = 0.00;
 
   Label* label_db;
   Tag* tag_db;

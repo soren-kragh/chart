@@ -1173,7 +1173,11 @@ void Axis::BuildCategories(
       ay = AnchorY::Max;
       dy = 0 - tick_major_len - num_space_y;
     }
-    if ( length < category_list.size() * ch * 1.5 / category_stride ) {
+    U x1 = Coor( 0 );
+    U x2 = Coor( category_list.size() );
+    if (
+      std::abs( x2 - x1 ) < category_list.size() * ch * 1.5 / category_stride
+    ) {
       text_angle = 90;
     }
   } else {
