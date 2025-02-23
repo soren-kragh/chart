@@ -929,7 +929,7 @@ void Axis::BuildTicksHelper(
         obj->MoveTo( AnchorX::Max, AnchorY::Mid, x - d - num_space_x, y );
       }
     }
-    U mx = (angle == 0) ? 4 : 0;
+    U mx = num_char_w;
     if (
       Chart::Collides( obj, avoid_objects, mx, 0 ) ||
       Chart::Collides( obj, num_objects, mx, 0 )
@@ -1150,14 +1150,14 @@ void Axis::BuildCategories(
       ->SetBaselineFactor( 1.0 );
   }
 
-  U cw;
-  U ch;
+  U cat_char_w;
+  U cat_char_h;
   {
     cat_g->Add( new Text( "X" ) );
     BoundaryBox bb = cat_g->Last()->GetBB();
     cat_g->DeleteFront();
-    cw = bb.max.x - bb.min.x;
-    ch = bb.max.y - bb.min.y;
+    cat_char_w = bb.max.x - bb.min.x;
+    cat_char_h = bb.max.y - bb.min.y;
   }
 
   int text_angle = 45;
@@ -1176,7 +1176,8 @@ void Axis::BuildCategories(
     U x1 = Coor( 0 );
     U x2 = Coor( category_list.size() );
     if (
-      std::abs( x2 - x1 ) < category_list.size() * ch * 1.5 / category_stride
+      std::abs( x2 - x1 ) <
+      category_list.size() * cat_char_h * 1.5 / category_stride
     ) {
       text_angle = 90;
     }
@@ -1207,7 +1208,7 @@ void Axis::BuildCategories(
             obj->MoveTo( ax, ay, x + dx, y + dy );
           }
           if ( trial == 1 ) {
-            U sy = (n % 2) ? (ch + num_space_y) : 0;
+            U sy = (n % 2) ? (cat_char_h + num_space_y) : 0;
             if ( dy < 0 ) sy = -sy;
             obj->MoveTo( ax, ay, x + dx, y + dy + sy );
           }
@@ -1220,7 +1221,7 @@ void Axis::BuildCategories(
           if (
             (trial < 2 || (text_angle % 90 == 0)) &&
             Chart::Collides(
-              obj, cat_objects, ((trial < 2) ? (1.5 * cw) : 0), 0
+              obj, cat_objects, ((trial < 2) ? (1.5 * cat_char_w) : 0), 0
             )
           ) {
             collision = true;
@@ -1583,6 +1584,14 @@ void Axis::Build(
 )
 {
   if ( !show ) return;
+
+  if ( phase == 0 ) {
+    num_g->Add( new Text( "X" ) );
+    BoundaryBox bb = num_g->Last()->GetBB();
+    num_g->DeleteFront();
+    num_char_w = bb.max.x - bb.min.x;
+    num_char_h = bb.max.y - bb.min.y;
+  }
 
   // Limit for when axes are near min or max.
   double near = 0.3;

@@ -188,6 +188,9 @@ private:
   SVG::U num_space_x = 3;
   SVG::U num_space_y = 3;
 
+  SVG::U num_char_w;
+  SVG::U num_char_h;
+
   bool         log_scale;
   NumberFormat number_format;
   bool         number_sign;
