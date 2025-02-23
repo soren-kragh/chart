@@ -1446,10 +1446,12 @@ void Main::AddTitle(
   }
   MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
   y = 0;
-  for ( auto obj : title_objs ) {
-    y = std::max( y, obj->GetBB().max.y );
+  for ( auto obj : avoid_objects ) {
+    if ( !obj->Empty() ) {
+      y = std::max( y, obj->GetBB().max.y );
+    }
   }
-  y = text_g->GetBB().max.y - y;
+  y = y - text_g->GetBB().max.y;
   if ( y > 0 ) {
     for ( auto obj : title_objs ) {
       obj->Move( 0, y );
@@ -1476,11 +1478,19 @@ void Main::AddTitle(
 
     if ( title_pos == Pos::Left ) {
       text_g->MoveTo( AnchorX::Min, AnchorY::Max, mx, chart_h - my );
-    } else
+      MoveObj( Dir::Right, text_g, avoid_objects, mx, 0 );
+    }
+
     if ( title_pos == Pos::Right ) {
       text_g->MoveTo( AnchorX::Max, AnchorY::Max, chart_w - mx, chart_h - my );
-    } else
-    {
+      MoveObj( Dir::Left, text_g, avoid_objects, mx, 0 );
+    }
+
+    bb = text_g->GetBB();
+    if (
+      !(title_pos == Pos::Left && bb.max.x < chart_w - mx) &&
+      !(title_pos == Pos::Right && bb.min.x > mx)
+    ) {
       text_g->MoveTo( AnchorX::Mid, AnchorY::Max, chart_w / 2, chart_h - my );
     }
 
