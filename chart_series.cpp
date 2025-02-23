@@ -212,6 +212,7 @@ void Series::ApplyMarkStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
   if (
+    marker_shape == MarkerShape::Cross ||
     marker_shape == MarkerShape::HorLine ||
     marker_shape == MarkerShape::VerLine
   ) {
@@ -471,6 +472,7 @@ void Series::DetermineVisualProperties( void )
   {
     switch ( marker_shape ) {
       case MarkerShape::Square :
+      case MarkerShape::Cross :
         m.x1 = -1.0000 * (0.9 * radius + delta);
         m.x2 = +1.0000 * (0.9 * radius + delta);
         m.y1 = -1.0000 * (0.9 * radius + delta);
@@ -522,6 +524,7 @@ void Series::DetermineVisualProperties( void )
     marker_show_out = !line_color.IsClear() && line_width > 0;
     marker_show_int = !fill_color.IsClear();
     if (
+      marker_shape == MarkerShape::Cross ||
       marker_shape == MarkerShape::HorLine ||
       marker_shape == MarkerShape::VerLine
     ) {
@@ -605,6 +608,21 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
         );
       poly->Close();
       g->Add( poly );
+      break;
+    case MarkerShape::Cross :
+      g = g->AddNewGroup();
+      g->Add(
+        new Line(
+          p.x + m.x1, p.y + m.y1,
+          p.x + m.x2, p.y + m.y2
+        )
+      );
+      g->Add(
+        new Line(
+          p.x + m.x2, p.y + m.y1,
+          p.x + m.x1, p.y + m.y2
+        )
+      );
       break;
     case MarkerShape::HorLine :
     case MarkerShape::VerLine :

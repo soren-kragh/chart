@@ -50,7 +50,7 @@ namespace Chart {
   };
 
   enum class MarkerShape {
-    Circle, Square, Triangle, InvTriangle, Diamond, HorLine, VerLine
+    Circle, Square, Triangle, InvTriangle, Diamond, Cross, HorLine, VerLine
   };
 
   // Determines if coordinates are so near as to be considered the same.
