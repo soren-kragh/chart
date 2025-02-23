@@ -49,7 +49,9 @@ namespace Chart {
     Bar, StackedBar, Area, StackedArea
   };
 
-  enum class MarkerShape { Circle, Square, Triangle, InvTriangle, Diamond };
+  enum class MarkerShape {
+    Circle, Square, Triangle, InvTriangle, Diamond, HorLine, VerLine
+  };
 
   // Determines if coordinates are so near as to be considered the same.
   inline bool CoorNear( SVG::U c1, SVG::U c2 )

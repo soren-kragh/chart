@@ -130,7 +130,10 @@ SVG::U Tag::GetBeyond( Series* series, SVG::Group* tag_g )
       : (bb.max.x - bb.min.x)
     ) + tag_spacing;
   if ( series->type == SeriesType::Lollipop ) {
-    beyond += series->tag_dist;
+    beyond +=
+      (series->axis_x->angle == 0)
+      ? series->tag_dist_y
+      : series->tag_dist_x;
   }
 
   return beyond + min_base_dist;
@@ -156,18 +159,25 @@ SVG::Group* Tag::AddLineTag( void )
     AnchorY ay =
       (dir < 0 || dir == 0 || dir == 4) ? AnchorY::Mid :
       (dir > 4) ? AnchorY::Max : AnchorY::Min;
-    U f = (dir % 2 == 1) ? 0.7 : 1.0;
     U x = tag.p.x;
     U y = tag.p.y;
-    U d = (tag.series->tag_dist + tag_spacing) * f;
-    if ( tag.series->tag_box ) {
-      d -= (dir % 2 == 1) ? (r * 0.3) : 0.0;
+
+    U dx = tag.series->tag_dist_x + tag_spacing;
+    U dy = tag.series->tag_dist_y + tag_spacing;
+    if ( dir % 2 ) {
+      dx = dy = dx * dy / std::sqrt( dx * dx + dy * dy );
     }
-    if ( ax == AnchorX::Min ) x += d;
-    if ( ax == AnchorX::Max ) x -= d;
-    if ( ay == AnchorY::Min ) y += d;
-    if ( ay == AnchorY::Max ) y -= d;
+    if ( tag.series->tag_box ) {
+      dx -= (dir % 2 == 1) ? (r * 0.3) : 0.0;
+      dy -= (dir % 2 == 1) ? (r * 0.3) : 0.0;
+    }
+
+    if ( ax == AnchorX::Min ) x += dx;
+    if ( ax == AnchorX::Max ) x -= dx;
+    if ( ay == AnchorY::Min ) y += dy;
+    if ( ay == AnchorY::Max ) y -= dy;
     g->MoveTo( ax, ay, x, y );
+
     bb = g->GetBB();
     bool ok =
       bb.min.x > tag.series->chart_area.min.x &&
@@ -359,13 +369,18 @@ SVG::Group* Tag::AddBarTag(
     default: break;
   }
 
-  U base_dist = std::max( 2 * series->tag_dist, +min_base_dist );
-  U end_dist = 2 * series->tag_dist;
+  U tag_dist =
+    (direction == Pos::Left || direction == Pos::Right)
+    ? series->tag_dist_x
+    : series->tag_dist_y;
+
+  U base_dist = std::max( 2 * tag_dist, +min_base_dist );
+  U end_dist = 2 * tag_dist;
   U beyond_dist = 0;
   if ( series->type == SeriesType::Lollipop ) {
     base_dist = min_base_dist;
-    end_dist = series->tag_dist;
-    beyond_dist = series->tag_dist;
+    end_dist = tag_dist;
+    beyond_dist = tag_dist;
   }
 
   U spc_x = tag_spacing;

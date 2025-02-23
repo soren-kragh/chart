@@ -211,13 +211,21 @@ void Series::ApplyLineStyle( SVG::Object* obj )
 void Series::ApplyMarkStyle( SVG::Object* obj )
 {
   obj->Attr()->LineColor()->Clear();
-  if ( line_width > 0 ) {
-    obj->Attr()->FillColor()->Set( &line_color );
-    if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
-      obj->Attr()->FillColor()->SetOpacity( 1.0 );
-    }
+  if (
+    marker_shape == MarkerShape::HorLine ||
+    marker_shape == MarkerShape::VerLine
+  ) {
+    ApplyLineStyle( obj );
+    obj->Attr()->SetLineDash( 0 );
   } else {
-    obj->Attr()->FillColor()->Clear();
+    if ( line_width > 0 ) {
+      obj->Attr()->FillColor()->Set( &line_color );
+      if ( type != SeriesType::Scatter && type != SeriesType::Point ) {
+        obj->Attr()->FillColor()->SetOpacity( 1.0 );
+      }
+    } else {
+      obj->Attr()->FillColor()->Clear();
+    }
   }
 }
 
@@ -443,7 +451,7 @@ void Series::DetermineVisualProperties( void )
   }
 
   // Minimal tag distance from center of data point.
-  tag_dist = has_line ? (line_width / 2) : 0;
+  tag_dist_x = tag_dist_y = has_line ? (line_width / 2) : 0;
 
   if (
     type != SeriesType::XY &&
@@ -486,6 +494,18 @@ void Series::DetermineVisualProperties( void )
         m.y1 = -1.4142 * (0.9 * radius + delta);
         m.y2 = +1.4142 * (0.9 * radius + delta);
         break;
+      case MarkerShape::HorLine :
+        m.x1 = -radius;
+        m.x2 = +radius;
+        m.y1 = 0.0;
+        m.y2 = 0.0;
+        break;
+      case MarkerShape::VerLine :
+        m.x1 = 0.0;
+        m.x2 = 0.0;
+        m.y1 = -radius;
+        m.y2 = +radius;
+        break;
       default :
         m.x1 = -1.0000 * (1.0 * radius + delta);
         m.x2 = +1.0000 * (1.0 * radius + delta);
@@ -501,13 +521,20 @@ void Series::DetermineVisualProperties( void )
   if ( radius > 0 ) {
     marker_show_out = !line_color.IsClear() && line_width > 0;
     marker_show_int = !fill_color.IsClear();
-    if ( 2 * radius < 3 * line_width ) {
-      if ( has_line && 2 * radius < line_width ) {
-        lw = line_width / 2 - radius;
-        radius = line_width / 2;
-        marker_show_out = marker_show_out && lw > 0;
-      } else {
-        marker_show_int = marker_show_int && !marker_show_out;
+    if (
+      marker_shape == MarkerShape::HorLine ||
+      marker_shape == MarkerShape::VerLine
+    ) {
+      marker_show_int = false;
+    } else {
+      if ( 2 * radius < 3 * line_width ) {
+        if ( has_line && 2 * radius < line_width ) {
+          lw = line_width / 2 - radius;
+          radius = line_width / 2;
+          marker_show_out = marker_show_out && lw > 0;
+        } else {
+          marker_show_int = marker_show_int && !marker_show_out;
+        }
       }
     }
   }
@@ -517,7 +544,14 @@ void Series::DetermineVisualProperties( void )
   compute( marker_int, -lw );
   compute( marker_out, 0 );
 
-  tag_dist = std::max( marker_show ? +radius : 0, +tag_dist );
+  tag_dist_x =
+    std::max(
+      marker_show ? ((marker_out.x2 - marker_out.x1) / 2) : 0, +tag_dist_x
+    );
+  tag_dist_y =
+    std::max(
+      marker_show ? ((marker_out.y2 - marker_out.y1) / 2) : 0, +tag_dist_y
+    );
 
   return;
 }
@@ -571,6 +605,15 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
         );
       poly->Close();
       g->Add( poly );
+      break;
+    case MarkerShape::HorLine :
+    case MarkerShape::VerLine :
+      g->Add(
+        new Line(
+          p.x + m.x1, p.y + m.y1,
+          p.x + m.x2, p.y + m.y2
+        )
+      );
       break;
     default :
       break;

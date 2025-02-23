@@ -193,7 +193,8 @@ private:
   SVG::Color tag_text_color;
   SVG::Color tag_fill_color;
   SVG::Color tag_line_color;
-  SVG::U tag_dist;
+  SVG::U tag_dist_x;
+  SVG::U tag_dist_y;
 
   std::vector< SVG::Color > color_list;
   SVG::Color line_color;
