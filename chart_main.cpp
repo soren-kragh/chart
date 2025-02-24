@@ -96,9 +96,10 @@ void Main::SetSubSubTitle( const std::string& txt )
   sub_sub_title = txt;
 }
 
-void Main::SetTitlePos( Pos pos )
+void Main::SetTitlePos( Pos pos_x, Pos pos_y )
 {
-  this->title_pos = pos;
+  this->title_pos_x = pos_x;
+  this->title_pos_y = pos_y;
 }
 
 void Main::SetTitleInside( bool inside )
@@ -1414,11 +1415,11 @@ void Main::AddTitle(
 
   U x = chart_w / 2;
   AnchorX a = AnchorX::Mid;
-  if ( title_pos == Pos::Left ) {
+  if ( title_pos_x == Pos::Left ) {
     x = 0;
     a = AnchorX::Min;
   }
-  if ( title_pos == Pos::Right ) {
+  if ( title_pos_x == Pos::Right ) {
     x = chart_w;
     a = AnchorX::Max;
   }
@@ -1476,22 +1477,80 @@ void Main::AddTitle(
     }
     text_g->FrontToBack();
 
-    if ( title_pos == Pos::Left ) {
-      text_g->MoveTo( AnchorX::Min, AnchorY::Max, mx, chart_h - my );
-      MoveObj( Dir::Right, text_g, avoid_objects, mx, 0 );
-    }
+    Pos pos_x = title_pos_x;
+    Pos pos_y = title_pos_y;
+    if ( pos_x != Pos::Left && pos_x != Pos::Right ) pos_x = Pos::Center;
+    if ( pos_y != Pos::Bottom ) pos_y = Pos::Top;
 
-    if ( title_pos == Pos::Right ) {
-      text_g->MoveTo( AnchorX::Max, AnchorY::Max, chart_w - mx, chart_h - my );
-      MoveObj( Dir::Left, text_g, avoid_objects, mx, 0 );
+    U px = chart_w / 2;
+    U py = chart_h - my;
+    AnchorX ax = AnchorX::Mid;
+    AnchorY ay = AnchorY::Max;
+    if ( pos_x == Pos::Left ) {
+      px = mx;
+      ax = AnchorX::Min;
     }
+    if ( pos_x == Pos::Right ) {
+      px = chart_w - mx;
+      ax = AnchorX::Max;
+    }
+    if ( pos_y == Pos::Bottom ) {
+      py = my;
+      ay = AnchorY::Min;
+    }
+    text_g->MoveTo( ax, ay, px, py );
 
-    bb = text_g->GetBB();
-    if (
-      !(title_pos == Pos::Left && bb.max.x < chart_w - mx) &&
-      !(title_pos == Pos::Right && bb.min.x > mx)
-    ) {
-      text_g->MoveTo( AnchorX::Mid, AnchorY::Max, chart_w / 2, chart_h - my );
+    for ( int pass = 0; pass < 2; pass++ ) {
+      if ( ax != AnchorX::Mid ) {
+        U old_x = coor_hi;
+        while ( true ) {
+          bb = text_g->GetBB();
+          if ( bb.min.x == old_x ) break;
+          old_x = bb.min.x;
+          U dx = 0;
+          for ( auto ao : avoid_objects ) {
+            if ( !SVG::Collides( text_g, ao, mx, 0 ) ) continue;
+            BoundaryBox ao_bb = ao->GetBB();
+            if ( ax == AnchorX::Min && ao_bb.max.x < (chart_w * 1 / 4) ) {
+              dx = ao_bb.max.x - bb.min.x + mx;
+              break;
+            }
+            if ( ax == AnchorX::Max && ao_bb.min.x > (chart_w * 3 / 4) ) {
+              dx = ao_bb.min.x - bb.max.x - mx;
+              break;
+            }
+          }
+          if ( dx == 0 ) break;
+          text_g->Move( dx, 0 );
+        }
+      }
+      bb = text_g->GetBB();
+      if ( bb.min.x < mx || bb.max.x > chart_w - mx ) {
+        text_g->MoveTo( AnchorX::Mid, ay, chart_w / 2, py );
+      }
+      {
+        U old_y = coor_hi;
+        while ( true ) {
+          bb = text_g->GetBB();
+          if ( bb.min.y == old_y ) break;
+          old_y = bb.min.y;
+          U dy = 0;
+          for ( auto ao : avoid_objects ) {
+            if ( !SVG::Collides( text_g, ao, 0, my ) ) continue;
+            BoundaryBox ao_bb = ao->GetBB();
+            if ( ay == AnchorY::Min && ao_bb.max.y < (chart_h * 1 / 4) ) {
+              dy = ao_bb.max.y - bb.min.y + my;
+              break;
+            }
+            if ( ay == AnchorY::Max && ao_bb.min.y > (chart_h * 3 / 4) ) {
+              dy = ao_bb.min.y - bb.max.y - my;
+              break;
+            }
+          }
+          if ( dy == 0 ) break;
+          text_g->Move( 0, dy );
+        }
+      }
     }
 
     avoid_objects.push_back( text_g );

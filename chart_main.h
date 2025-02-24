@@ -50,7 +50,7 @@ public:
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
   void SetSubSubTitle( const std::string& txt );
-  void SetTitlePos( Pos pos );
+  void SetTitlePos( Pos pos_x, Pos pos_y = Pos::Top );
   void SetTitleInside( bool inside = true );
 
   void AddFootnote( std::string& txt );
@@ -166,7 +166,8 @@ private:
   std::string title;
   std::string sub_title;
   std::string sub_sub_title;
-  Pos         title_pos;
+  Pos         title_pos_x;
+  Pos         title_pos_y;
   bool        title_inside;
 
   uint32_t bar_tot = 0;
