@@ -32,6 +32,9 @@ private:
   double weight1 = 0;   // 1st priority weight cost.
   double weight2 = 0;   // 2nd priority weight cost.
 
+  SVG::AnchorX anchor_x;
+  SVG::AnchorY anchor_y;
+
 };
 
 }

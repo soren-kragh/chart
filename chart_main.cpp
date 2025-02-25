@@ -98,6 +98,8 @@ void Main::SetSubSubTitle( const std::string& txt )
 
 void Main::SetTitlePos( Pos pos_x, Pos pos_y )
 {
+  if ( pos_x != Pos::Left && pos_x != Pos::Right ) pos_x = Pos::Center;
+  if ( pos_y != Pos::Bottom ) pos_y = Pos::Top;
   this->title_pos_x = pos_x;
   this->title_pos_y = pos_y;
 }
@@ -417,6 +419,8 @@ void Main::CalcLegendBoxes(
           lb.sp = nx * ny - lc;
           lb.bb.min.x += 1; lb.bb.min.y += 1;
           lb.bb.max.x -= 1; lb.bb.max.y -= 1;
+          lb.anchor_x = anchor_x;
+          lb.anchor_y = anchor_y;
           lb_list.push_back( lb );
         }
       }
@@ -633,6 +637,10 @@ void Main::PlaceLegends(
 {
   if ( LegendCnt() == 0 ) return;
 
+  AnchorX title_anchor_x = AnchorX::Mid;
+  if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
+  if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
+
   if ( legend_pos == Pos::Auto ) {
     LegendBox best_lb;
     bool best_lb_defined = false;
@@ -645,7 +653,15 @@ void Main::PlaceLegends(
         lb.weight1 < best_lb.weight1 ||
         ( lb.weight1 == best_lb.weight1 &&
           ( lb.weight2 < best_lb.weight2 ||
-            (lb.weight2 == best_lb.weight2 && lb.sp < best_lb.sp)
+            ( lb.weight2 == best_lb.weight2 &&
+              ( lb.sp < best_lb.sp ||
+                ( lb.sp == best_lb.sp &&
+                  title_inside && title_anchor_x != AnchorX::Mid &&
+                  lb.anchor_x == title_anchor_x &&
+                  best_lb.anchor_x != title_anchor_x
+                )
+              )
+            )
           )
         )
       ) {
@@ -1477,24 +1493,19 @@ void Main::AddTitle(
     }
     text_g->FrontToBack();
 
-    Pos pos_x = title_pos_x;
-    Pos pos_y = title_pos_y;
-    if ( pos_x != Pos::Left && pos_x != Pos::Right ) pos_x = Pos::Center;
-    if ( pos_y != Pos::Bottom ) pos_y = Pos::Top;
-
     U px = chart_w / 2;
     U py = chart_h - my;
     AnchorX ax = AnchorX::Mid;
     AnchorY ay = AnchorY::Max;
-    if ( pos_x == Pos::Left ) {
+    if ( title_pos_x == Pos::Left ) {
       px = mx;
       ax = AnchorX::Min;
     }
-    if ( pos_x == Pos::Right ) {
+    if ( title_pos_x == Pos::Right ) {
       px = chart_w - mx;
       ax = AnchorX::Max;
     }
-    if ( pos_y == Pos::Bottom ) {
+    if ( title_pos_y == Pos::Bottom ) {
       py = my;
       ay = AnchorY::Min;
     }
