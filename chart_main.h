@@ -66,6 +66,10 @@ public:
   // specify a location outside the chart area.
   void SetLegendPos( Pos pos );
 
+  // Specify if line style legends are shown with an outline around the legend
+  // text, or with a small line segment in front of the legend text.
+  void SetLegendOutline( bool outline );
+
   // Specify alternative background color of legend box.
   SVG::Color* LegendColor( void ) { return &legend_color; }
 
@@ -92,9 +96,10 @@ private:
 
   typedef struct {
     SVG::U ch;  // Character height.
-    SVG::U mw;  // Max outline width.
+    SVG::U ow;  // Max outline width.
     SVG::U cr;  // Outline corner radius.
-    SVG::U mh;  // Marker height,
+    SVG::U mw;  // Marker width.
+    SVG::U mh;  // Marker height.
     SVG::U ss;  // Symbol size "radius" (including markers).
     SVG::U lx;  // Left extra X caused by symbol left overhang.
     SVG::U rx;  // Right extra X caused by symbol left overhang.
@@ -180,8 +185,9 @@ private:
   std::vector< footnote_t > footnotes;
   bool footnote_line = false;
 
-  Pos legend_pos;
+  Pos        legend_pos;
   SVG::Color legend_color;
+  bool       legend_outline;
 
   SVG::U frame_width = 0;
   SVG::U margin      = 5;

@@ -30,6 +30,7 @@ Main::Main( void )
   baseline_adj = 1.0;
   SetLegendPos( Pos::Auto );
   legend_color.Clear();
+  SetLegendOutline( true );
   label_db = new Label();
   tag_db = new Tag();
   axis_x      = new Axis( true , label_db );
@@ -131,6 +132,11 @@ void Main::SetLegendPos( Pos pos )
   legend_pos = pos;
 }
 
+void Main::SetLegendOutline( bool outline )
+{
+  legend_outline = outline;
+}
+
 void Main::SetBarWidth( float one_width, float all_width )
 {
   bar_one_width = one_width;
@@ -162,7 +168,7 @@ uint32_t Main::LegendCnt( void )
 {
   uint32_t n = 0;
   for ( auto series : series_list ) {
-    if ( series->name.length() > 0 ) n++;
+    if ( !series->name.empty() ) n++;
   }
   return n;
 }
@@ -175,8 +181,9 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   U gy = 4;     // Y-gap between series legends.
 
   legend_dims.ch = 0;
-  legend_dims.mw = 0;
+  legend_dims.ow = 0;
   legend_dims.cr = 0;
+  legend_dims.mw = 0;
   legend_dims.mh = 0;
   legend_dims.ss = 0;
   legend_dims.lx = 0;
@@ -199,22 +206,28 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   U oy = char_h / 5;    // Text to outline Y spacing.
 
   for ( auto series : series_list ) {
-    if ( series->name.length() == 0 ) continue;
+    if ( series->name.empty() ) continue;
     bool has_outline =
+      legend_outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea;
     if ( has_outline ) {
-      legend_dims.mw = std::max( legend_dims.mw, series->line_width );
+      legend_dims.ow = std::max( legend_dims.ow, series->line_width );
     }
   }
 
-  U hmw = legend_dims.mw / 2;
+  // No outline if it is too fat.
+  if ( legend_dims.ow > char_h * 0.8 ) {
+    legend_outline = false;
+    legend_dims.ow = 0;
+  }
+  U how = legend_dims.ow / 2;
 
   for ( auto series : series_list ) {
-    if ( series->name.length() == 0 ) continue;
+    if ( series->name.empty() ) continue;
     if (
       series->marker_show &&
       series->type != SeriesType::Area &&
@@ -223,41 +236,63 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
       series->marker_shape != MarkerShape::VerLine
     ) {
       Series::MarkerDims md = series->marker_out;
+      legend_dims.mw = std::max( +legend_dims.mw, md.x2 - md.x1 );
       legend_dims.mh = std::max( +legend_dims.mh, md.y2 - md.y1 );
-      legend_dims.ss = std::max( +legend_dims.ss, -md.x1 );
-      legend_dims.ss = std::max( +legend_dims.ss, +md.x2 );
     }
+  }
+
+  legend_dims.ss = std::max( legend_dims.mw, legend_dims.mh ) / 2;
+
+  U line_symbol_width = legend_outline ? 0 : (2.8 * char_w);
+
+  for ( auto series : series_list ) {
+    if ( series->name.empty() ) continue;
     if (
       series->type == SeriesType::Bar ||
       series->type == SeriesType::StackedBar ||
       series->type == SeriesType::Area ||
       series->type == SeriesType::StackedArea
     ) {
-      legend_dims.ss =
-        std::max( +legend_dims.ss, (char_h + 8) / 2 );
-      if ( !series->line_color.IsClear() ) {
-        legend_dims.ss = std::max( +legend_dims.ss, 2 * series->line_width );
+      if ( series->has_fill || series->has_line ) {
+        legend_dims.ss = std::max( +legend_dims.ss, (char_h + 8) / 2 );
       }
-      if ( series->line_dash > 0 ) {
+      if ( series->has_line ) {
+        legend_dims.ss = std::max( +legend_dims.ss, 2 * series->line_width );
         legend_dims.ss =
           std::max(
             +legend_dims.ss, (series->line_dash + series->line_hole) * 0.75
           );
       }
     }
+    if (
+      series->has_line && !legend_outline &&
+      ( series->type == SeriesType::XY ||
+        series->type == SeriesType::Line ||
+        series->type == SeriesType::Lollipop
+      )
+    ) {
+      legend_dims.ss = std::max( +legend_dims.ss, series->line_width / 2 );
+      line_symbol_width =
+        std::max(
+          +line_symbol_width, 3 * series->line_dash + 2 * series->line_hole
+        );
+      line_symbol_width = std::max( +line_symbol_width, 3 * series->line_width );
+      line_symbol_width = std::max( +line_symbol_width, 3 * legend_dims.mw );
+    }
   }
 
   legend_dims.ch = char_h;
-  legend_dims.lx = std::max( +legend_dims.lx, legend_dims.ss - hmw );
+  legend_dims.lx = std::max( +legend_dims.lx, legend_dims.ss - how );
+  legend_dims.lx = std::max( +legend_dims.lx, line_symbol_width / 2 - how );
   legend_dims.dx += legend_dims.lx;
-  legend_dims.tx = hmw + legend_dims.lx + ox;
+  legend_dims.tx = how + legend_dims.lx + ox;
 
-  if ( hmw > 0 ) {
-    legend_dims.cr = hmw + char_h / 4;
+  if ( how > 0 ) {
+    legend_dims.cr = how + char_h / 4;
   }
 
   for ( auto series : series_list ) {
-    if ( series->name.length() == 0 ) continue;
+    if ( series->name.empty() ) continue;
 
     uint32_t max_lines = 1;
     uint32_t max_chars = 1;
@@ -282,6 +317,7 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
     U text_h = char_h * max_lines;
 
     bool has_outline =
+      legend_outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -293,21 +329,21 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
     legend_dims.sx =
       std::max(
         +legend_dims.sx,
-        2 * hmw + legend_dims.lx + ox + text_w + ox +
-        (has_outline ? (2 * hmw) : 0)
+        2 * how + legend_dims.lx + ox + text_w + ox +
+        (has_outline ? (2 * how) : 0)
       );
 
     legend_dims.sy =
       std::max(
         +legend_dims.sy,
         text_h +
-        (has_outline ? (2 * (oy + series->line_width / 2 + hmw)) : 0)
+        (has_outline ? (2 * (oy + series->line_width / 2 + how)) : 0)
       );
     legend_dims.sy =
       std::max(
         +legend_dims.sy,
         has_outline
-        ? (legend_dims.mh + 2*(legend_dims.cr + hmw))
+        ? (legend_dims.mh + 2*(legend_dims.cr + how))
         : (2 * legend_dims.ss)
       );
   }
@@ -524,15 +560,16 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
 
   int n = 0;
   for ( auto series : series_list ) {
-    if ( series->name.length() == 0 ) continue;
+    if ( series->name.empty() ) continue;
     U px = (n % nx) * +(legend_dims.sx + legend_dims.dx);
     U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
-    Point marker_p{ px + legend_dims.mw/2, py - legend_dims.sy/2 };
+    Point marker_p{ px + legend_dims.ow/2, py - legend_dims.sy/2 };
 
     U line_w = series->line_width;
     if ( !series->has_line ) line_w = 0;
 
     bool has_outline =
+      legend_outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -542,11 +579,27 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     if ( has_outline ) {
       g->Add(
         new Rect(
-          px + legend_dims.mw/2,
-          py - legend_dims.mw/2,
-          px - legend_dims.mw/2 + legend_dims.sx,
-          py + legend_dims.mw/2 - legend_dims.sy,
+          px + legend_dims.ow/2,
+          py - legend_dims.ow/2,
+          px - legend_dims.ow/2 + legend_dims.sx,
+          py + legend_dims.ow/2 - legend_dims.sy,
           legend_dims.cr
+        )
+      );
+      series->ApplyLineStyle( g->Last() );
+    }
+
+    if (
+      series->has_line && !legend_outline &&
+      ( series->type == SeriesType::XY ||
+        series->type == SeriesType::Line ||
+        series->type == SeriesType::Lollipop
+      )
+    ) {
+      g->Add(
+        new Line(
+          marker_p.x - legend_dims.ow/2 - legend_dims.lx, marker_p.y,
+          marker_p.x + legend_dims.ow/2 + legend_dims.lx, marker_p.y
         )
       );
       series->ApplyLineStyle( g->Last() );
@@ -605,7 +658,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
 
     int lines = 1;
     for ( char c : series->name ) if ( c == '\n' ) lines++;
-    px += legend_dims.mw / 2 + legend_dims.tx;
+    px += legend_dims.ow / 2 + legend_dims.tx;
     py -= (legend_dims.sy - lines * legend_dims.ch) / 2;
     std::string s;
     auto cit = series->name.cbegin();

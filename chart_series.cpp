@@ -169,6 +169,8 @@ void Series::SetLineDash( SVG::U dash, SVG::U hole )
 {
   line_dash = dash;
   line_hole = hole;
+  if ( line_hole == 0 ) line_dash = 0;
+  if ( line_dash == 0 ) line_hole = 0;
 }
 
 //------------------------------------------------------------------------------
