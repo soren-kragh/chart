@@ -1762,7 +1762,6 @@ Canvas* Main::Build( void )
   chartbox_below_axes_g->Attr()->FillColor()->Clear();
   chartbox_above_axes_g->Attr()->FillColor()->Clear();
 
-  axes_num_g->Attr()->TextFont()->SetSize( 14 );
   axes_num_g->Attr()->LineColor()->Clear();
 
   // This group only has numbers so optimize baseline to ensure vertical

@@ -1585,14 +1585,6 @@ void Axis::Build(
 {
   if ( !show ) return;
 
-  if ( phase == 0 ) {
-    num_g->Add( new Text( "X" ) );
-    BoundaryBox bb = num_g->Last()->GetBB();
-    num_g->DeleteFront();
-    num_char_w = bb.max.x - bb.min.x;
-    num_char_h = bb.max.y - bb.min.y;
-  }
-
   // Limit for when axes are near min or max.
   double near = 0.3;
 
@@ -1641,6 +1633,17 @@ void Axis::Build(
     return;
   }
 
+  line_g = line_g->AddNewGroup();
+  num_g  = num_g->AddNewGroup();
+  num_g->Attr()->TextFont()->SetSize( 14 );
+  {
+    num_g->Add( new Text( "X" ) );
+    BoundaryBox bb = num_g->Last()->GetBB();
+    num_g->DeleteFront();
+    num_char_w = bb.max.x - bb.min.x;
+    num_char_h = bb.max.y - bb.min.y;
+  }
+
   U as = 0;
   U ae = length;
   if ( reverse ) {
@@ -1654,8 +1657,6 @@ void Axis::Build(
   U ex = (angle == 0) ? ae : orth_coor;
   U ey = (angle == 0) ? orth_coor : ae;
 
-  line_g = line_g->AddNewGroup();
-  num_g  = num_g->AddNewGroup();
   if ( !category_axis ) {
     // Reset letter spacing to default, but offset the baseline such that
     // numbers are vertically centered in their boundary box. Numbers have no
