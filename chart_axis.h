@@ -47,6 +47,9 @@ public:
   void SetNumberUnit( const std::string& txt );
   void ShowMinorNumbers( bool show_minor_mumbers = true );
 
+  // Number (and unit) size scaling factor.
+  void SetNumberSize( float size ) { number_size = size; }
+
   void SetRange( double min, double max, double orth_axis_cross );
   void SetRange( double min, double max );
 
@@ -197,6 +200,7 @@ private:
   std::string  number_unit;
   bool         show_minor_mumbers;
   bool         show_minor_mumbers_auto;
+  float        number_size;
 
   // Use to determine to min/max of the associated series data.
   bool   data_def;

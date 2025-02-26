@@ -43,6 +43,7 @@ Axis::Axis( bool is_x_axis, Label* label_db )
   number_sign = false;
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
+  number_size = 1.0;
   data_def = false;
   data_min = 0;
   data_max = 0;
@@ -1334,7 +1335,7 @@ void Axis::BuildUnit(
     inner_min = outer_min;
   }
 
-  Object* obj = label_db->Create( unit_g, unit, 16, true );
+  Object* obj = label_db->Create( unit_g, unit, 16 * number_size, true );
   obj->Attr()->TextFont()->SetBold();
   bool collision = false;
 
@@ -1634,8 +1635,18 @@ void Axis::Build(
   }
 
   line_g = line_g->AddNewGroup();
-  num_g  = num_g->AddNewGroup();
-  num_g->Attr()->TextFont()->SetSize( 14 );
+  num_g = num_g->AddNewGroup();
+  num_g->Attr()->TextFont()->SetSize( 14 * number_size );
+  if ( !category_axis ) {
+    // Reset letter spacing to default, but offset the baseline such that
+    // numbers are vertically centered in their boundary box. Numbers have no
+    // glyph below the baseline and will therefore appear vertically un-centered
+    // without this adjustment.
+    num_g->Attr()->TextFont()
+      ->SetWidthFactor( 1.0 )
+      ->SetHeightFactor( 1.0 )
+      ->SetBaselineFactor( 0.6 );
+  }
   {
     num_g->Add( new Text( "X" ) );
     BoundaryBox bb = num_g->Last()->GetBB();
@@ -1656,17 +1667,6 @@ void Axis::Build(
   U sy = (angle == 0) ? orth_coor : as;
   U ex = (angle == 0) ? ae : orth_coor;
   U ey = (angle == 0) ? orth_coor : ae;
-
-  if ( !category_axis ) {
-    // Reset letter spacing to default, but offset the baseline such that
-    // numbers are vertically centered in their boundary box. Numbers have no
-    // glyph below the baseline and will therefore appear vertically un-centered
-    // without this adjustment.
-    num_g->Attr()->TextFont()
-      ->SetWidthFactor( 1.0 )
-      ->SetHeightFactor( 1.0 )
-      ->SetBaselineFactor( 0.6 );
-  }
 
   bool axis_at_chart_box = chart_box && (orth_coor_is_min || orth_coor_is_max);
 
