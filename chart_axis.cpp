@@ -44,6 +44,7 @@ Axis::Axis( bool is_x_axis, Label* label_db )
   show_minor_mumbers = false;
   show_minor_mumbers_auto = true;
   number_size = 1.0;
+  label_size = 1.0;
   data_def = false;
   data_min = 0;
   data_max = 0;
@@ -925,9 +926,15 @@ void Axis::BuildTicksHelper(
       }
     } else {
       if ( number_pos == Pos::Right ) {
-        obj->MoveTo( AnchorX::Min, AnchorY::Mid, x + d + num_space_x, y );
+        obj->MoveTo(
+          AnchorX::Min, AnchorY::Mid,
+          x + d + num_space_x * number_size, y
+        );
       } else {
-        obj->MoveTo( AnchorX::Max, AnchorY::Mid, x - d - num_space_x, y );
+        obj->MoveTo(
+          AnchorX::Max, AnchorY::Mid,
+          x - d - num_space_x * number_size, y
+        );
       }
     }
     U mx = num_char_w;
@@ -1185,10 +1192,10 @@ void Axis::BuildCategories(
   } else {
     if ( number_pos == Pos::Right ) {
       ax = AnchorX::Min;
-      dx = 0 + tick_major_len + num_space_x;
+      dx = 0 + tick_major_len + num_space_x * number_size;
     } else {
       ax = AnchorX::Max;
-      dx = 0 - tick_major_len - num_space_x;
+      dx = 0 - tick_major_len - num_space_x * number_size;
     }
   }
 
@@ -1313,8 +1320,8 @@ void Axis::BuildUnit(
   U inner_max = outer_max;
   U inner_min = outer_min;
 
-  outer_max += (angle == 0) ? num_space_x : num_space_y;
-  outer_min -= (angle == 0) ? num_space_x : num_space_y;
+  outer_max += (angle == 0) ? (num_space_x * number_size) : +num_space_y;
+  outer_min -= (angle == 0) ? (num_space_x * number_size) : +num_space_y;
   if ( style == AxisStyle::Arrow ) {
     if ( reverse ) {
       outer_max += tick_major_len;
@@ -1351,7 +1358,7 @@ void Axis::BuildUnit(
         cx = (py == Pos::Center) ? outer_min : inner_min;
         ax = (py == Pos::Center) ? AnchorX::Max : AnchorX::Min;
       } else {
-        cx = coor - tick_major_len - num_space_x;
+        cx = coor - tick_major_len - num_space_x * number_size;
         ax = AnchorX::Max;
       }
     }
@@ -1360,7 +1367,7 @@ void Axis::BuildUnit(
         cx = (py == Pos::Center) ? outer_max : inner_max;
         ax = (py == Pos::Center) ? AnchorX::Min : AnchorX::Max;
       } else {
-        cx = coor + tick_major_len + num_space_x;
+        cx = coor + tick_major_len + num_space_x * number_size;
         ax = AnchorX::Min;
       }
     }
@@ -1819,11 +1826,11 @@ void Axis::BuildLabel(
   Object* lab0 = nullptr;
   Object* lab1 = nullptr;
   if ( !label.empty() ) {
-    lab0 = label_db->Create( label_g, label, 24 );
+    lab0 = label_db->Create( label_g, label, 24 * label_size );
     label_objs.push_back( lab0 );
   }
   if ( !sub_label.empty() ) {
-    lab1 = label_db->Create( label_g, sub_label, 16 );
+    lab1 = label_db->Create( label_g, sub_label, 16 * label_size );
     label_objs.push_back( lab1 );
   }
 

@@ -52,6 +52,7 @@ public:
   void SetSubSubTitle( const std::string& txt );
   void SetTitlePos( Pos pos_x, Pos pos_y = Pos::Top );
   void SetTitleInside( bool inside = true );
+  void SetTitleSize( float size ) { title_size = size; }
 
   void AddFootnote( std::string& txt );
 
@@ -60,6 +61,9 @@ public:
 
   // A line above the footnotes.
   void SetFootnoteLine( bool footnote_line = true );
+
+  // Footnote size scaling factor.
+  void SetFootnoteSize( float size ) { footnote_size = size; }
 
   // Normally it will strive to place the series legends somewhere inside the
   // chart area, but if the legends obscure too much of the charts you may
@@ -72,6 +76,9 @@ public:
 
   // Specify alternative background color of legend box.
   SVG::Color* LegendColor( void ) { return &legend_color; }
+
+  // Legend text size scaling factor.
+  void SetLegendSize( float size ) { legend_size = size; }
 
   // Specify the relative width of bars (0.0 to 1.0) and the relative width (0.0
   // to 1.0) of all bars belonging to the same X-value.
@@ -174,6 +181,7 @@ private:
   Pos         title_pos_x;
   Pos         title_pos_y;
   bool        title_inside;
+  float       title_size;
 
   uint32_t bar_tot = 0;
   uint32_t lol_tot = 0;
@@ -184,10 +192,12 @@ private:
   };
   std::vector< footnote_t > footnotes;
   bool footnote_line = false;
+  float footnote_size = 1.0;
 
   Pos        legend_pos;
   SVG::Color legend_color;
   bool       legend_outline;
+  float      legend_size;
 
   SVG::U frame_width = 0;
   SVG::U margin      = 5;

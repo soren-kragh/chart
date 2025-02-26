@@ -61,10 +61,15 @@ public:
   void SetGridStyle( GridStyle gs );
   void SetGrid( bool major_enable = true, bool minor_enable = false );
   void SetNumberPos( Pos pos );
-  void SetLabel( const std::string& txt );
-  void SetSubLabel( const std::string& txt );
+
   void SetUnit( const std::string& txt );
   void SetUnitPos( Pos pos );
+
+  void SetLabel( const std::string& txt );
+  void SetSubLabel( const std::string& txt );
+
+  // Label size scaling factor.
+  void SetLabelSize( float size ) { label_size = size; }
 
 private:
 
@@ -188,8 +193,8 @@ private:
   SVG::U tick_minor_len = 4;
 
   // Axis number spacing from major tick.
-  SVG::U num_space_x = 3;
-  SVG::U num_space_y = 3;
+  SVG::U num_space_x = 4;
+  SVG::U num_space_y = 4;
 
   SVG::U num_char_w;
   SVG::U num_char_h;
@@ -219,10 +224,12 @@ private:
   bool   minor_grid_enable;
   bool   grid_set;
 
+  std::string unit;
+  Pos         unit_pos;
+
   std::string label;
   std::string sub_label;
-  std::string unit;
-  Pos unit_pos;
+  float       label_size;
 
   SVG::U    orth_length;
   AxisStyle orth_style[ 2 ];

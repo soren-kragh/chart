@@ -28,9 +28,14 @@ Main::Main( void )
   width_adj    = 1.0;
   height_adj   = 1.0;
   baseline_adj = 1.0;
+  title_pos_x  = Pos::Center;
+  title_pos_y  = Pos::Top;
+  title_inside = false;
+  title_size   = 1.0;
   SetLegendPos( Pos::Auto );
   legend_color.Undef();
   SetLegendOutline( true );
+  legend_size = 1.0;
   label_db = new Label();
   tag_db = new Tag();
   axis_x      = new Axis( true , label_db );
@@ -1494,21 +1499,21 @@ void Main::AddTitle(
   }
   U y = chart_h + space_y;
   if ( !sub_sub_title.empty() ) {
-    Object* obj = label_db->Create( text_g, sub_sub_title, 14 );
+    Object* obj = label_db->Create( text_g, sub_sub_title, 14 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + 3;
   }
   if ( !sub_title.empty() ) {
-    Object* obj = label_db->Create( text_g, sub_title, 20 );
+    Object* obj = label_db->Create( text_g, sub_title, 20 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + 3;
   }
   if ( !title.empty() ) {
-    Object* obj = label_db->Create( text_g, title, 36 );
+    Object* obj = label_db->Create( text_g, title, 36 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
@@ -1649,7 +1654,7 @@ void Main::AddFootnotes(
     U x = bb.min.x + dx;
     U y = bb.min.y - dy;
     AnchorX a = AnchorX::Min;
-    label_db->Create( chart_g, footnote.txt, 14 );
+    label_db->Create( chart_g, footnote.txt, 14 * footnote_size );
     if ( footnote.pos == Pos::Center ) {
       x = chart_w / 2;
       a = AnchorX::Mid;
@@ -1771,7 +1776,7 @@ Canvas* Main::Build( void )
     ->SetHeightFactor( 0.80 )
     ->SetBaselineFactor( 0.30 );
 
-  legend_g->Attr()->TextFont()->SetSize( 14 );
+  legend_g->Attr()->TextFont()->SetSize( 14 * legend_size );
 
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
