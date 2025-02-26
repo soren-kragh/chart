@@ -29,7 +29,7 @@ Main::Main( void )
   height_adj   = 1.0;
   baseline_adj = 1.0;
   SetLegendPos( Pos::Auto );
-  legend_color.Clear();
+  legend_color.Undef();
   SetLegendOutline( true );
   label_db = new Label();
   tag_db = new Tag();
@@ -548,7 +548,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     if ( framed ) {
       g->Last()->Attr()->LineColor()->Set( &axis_color );
       g->Last()->Attr()->SetLineWidth( 1 );
-      if ( !LegendColor()->IsClear() ) {
+      if ( LegendColor()->IsDefined() ) {
         g->Last()->Attr()->FillColor()->Set( LegendColor() );
       }
     } else {
@@ -1541,7 +1541,7 @@ void Main::AddTitle(
     );
     text_g->Last()->Attr()->LineColor()->Set( &axis_color );
     text_g->Last()->Attr()->SetLineWidth( 1 );
-    if ( !LegendColor()->IsClear() ) {
+    if ( LegendColor()->IsDefined() ) {
       text_g->Last()->Attr()->FillColor()->Set( LegendColor() );
     }
     text_g->FrontToBack();
