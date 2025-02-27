@@ -65,6 +65,12 @@ public:
   // Footnote size scaling factor.
   void SetFootnoteSize( float size ) { footnote_size = size; }
 
+  void SetLegendHeading( const std::string& txt );
+
+  // Force the legend frame to be drawn or not instead of it being determined
+  // automatically.
+  void SetLegendFrame( bool enable = true );
+
   // Normally it will strive to place the series legends somewhere inside the
   // chart area, but if the legends obscure too much of the charts you may
   // specify a location outside the chart area.
@@ -117,6 +123,8 @@ private:
     SVG::U sy;  // Size in Y direction.
     SVG::U mx;  // Legend box margin in X direction.
     SVG::U my;  // Legend box margin in Y direction.
+    SVG::U hx;  // Heading X width.
+    SVG::U hy;  // Heading Y width.
   } LegendDims;
 
   uint32_t LegendCnt( void );
@@ -194,10 +202,13 @@ private:
   bool footnote_line = false;
   float footnote_size = 1.0;
 
-  Pos        legend_pos;
-  SVG::Color legend_color;
-  bool       legend_outline;
-  float      legend_size;
+  std::string legend_heading;
+  bool        legend_frame;
+  bool        legend_frame_specified;
+  Pos         legend_pos;
+  SVG::Color  legend_color;
+  bool        legend_outline;
+  float       legend_size;
 
   SVG::U frame_width = 0;
   SVG::U margin      = 5;

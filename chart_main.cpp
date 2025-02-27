@@ -32,6 +32,8 @@ Main::Main( void )
   title_pos_y  = Pos::Top;
   title_inside = false;
   title_size   = 1.0;
+  legend_frame           = true;
+  legend_frame_specified = false;
   SetLegendPos( Pos::Auto );
   legend_color.Undef();
   SetLegendOutline( true );
@@ -132,6 +134,17 @@ void Main::SetFootnoteLine( bool footnote_line )
   this->footnote_line = footnote_line;
 }
 
+void Main::SetLegendHeading( const std::string& txt )
+{
+  legend_heading = txt;
+}
+
+void Main::SetLegendFrame( bool enable )
+{
+  legend_frame = enable;
+  legend_frame_specified = true;
+}
+
 void Main::SetLegendPos( Pos pos )
 {
   legend_pos = pos;
@@ -182,8 +195,7 @@ uint32_t Main::LegendCnt( void )
 
 void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
 {
-  U gx = 8;     // X-gap between series legends.
-  U gy = 4;     // Y-gap between series legends.
+  bool framed = legend_frame_specified ? legend_frame : true;
 
   legend_dims.ch = 0;
   legend_dims.ow = 0;
@@ -194,18 +206,28 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   legend_dims.lx = 0;
   legend_dims.rx = 0;
   legend_dims.tx = 0;
-  legend_dims.dx = gx;
-  legend_dims.dy = gy;
+  legend_dims.dx = 8;
+  legend_dims.dy = 4;
   legend_dims.sx = 0;
   legend_dims.sy = 0;
-  legend_dims.mx = 2 * box_spacing;
-  legend_dims.my = 2 * box_spacing;
+  legend_dims.mx = framed ? (2 * box_spacing) : (1 * box_spacing);
+  legend_dims.my = framed ? (2 * box_spacing) : (1 * box_spacing);
+  legend_dims.hx = 0;
+  legend_dims.hy = 0;
 
   g->Add( new Text( "X" ) );
   BoundaryBox bb = g->Last()->GetBB();
   g->DeleteFront();
   U char_w = bb.max.x - bb.min.x;
   U char_h = bb.max.y - bb.min.y;
+
+  if ( !legend_heading.empty() ) {
+    label_db->Create( g, legend_heading, char_h * 1.2 );
+    BoundaryBox bb = g->Last()->GetBB();
+    g->DeleteFront();
+    legend_dims.hx = bb.max.x - bb.min.x;
+    legend_dims.hy = bb.max.y - bb.min.y + char_h / 2;
+  }
 
   U ox = char_h / 3;    // Text to outline X spacing.
   U oy = char_h / 5;    // Text to outline Y spacing.
@@ -375,14 +397,14 @@ void Main::CalcLegendBoxes(
     uint32_t nx = (anchor_x == AnchorX::Mid) ? lc :  1;
     uint32_t ny = (anchor_x == AnchorX::Mid) ?  1 : lc;
     while ( nx > 0 && ny > 0 ) {
-      g->Add(
-        new Rect(
-          0, 0,
-          nx * legend_dims.sx + (nx - 1) * legend_dims.dx + 2 * legend_dims.mx +
-          legend_dims.lx + legend_dims.rx,
-          ny * legend_dims.sy + (ny - 1) * legend_dims.dy + 2 * legend_dims.my
-        )
-      );
+      {
+        U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+        U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+        w = std::max( w + legend_dims.lx + legend_dims.rx, +legend_dims.hx );
+        w += 2 * legend_dims.mx;
+        h += 2 * legend_dims.my + legend_dims.hy;
+        g->Add( new Rect( 0, 0, w, h ) );
+      }
       Object* obj = g->Last();
       U x = 0;
       U y = 0;
@@ -541,13 +563,18 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
   {
     U mx = framed ? legend_dims.mx : U( 0 );
     U my = framed ? legend_dims.my : U( 0 );
+    U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+    U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+    w += legend_dims.lx + legend_dims.rx;
+    U ey = legend_dims.hy;
+    U ex = std::max( 0.0, legend_dims.hx - w );
     Point r1{
-      -mx / 2 - legend_dims.lx, +my / 2
+      -mx / 2 - legend_dims.lx - ex / 2,
+      +my / 2 + ey
     };
     Point r2{
-      legend_dims.rx +
-      +(nx * legend_dims.sx + (nx - 1) * legend_dims.dx + mx / 2),
-      -(ny * legend_dims.sy + (ny - 1) * legend_dims.dy + my / 2)
+      r1.x + w + ex + mx,
+      r1.y - h - ey - my
     };
     g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
     if ( framed ) {
@@ -560,6 +587,10 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
       g->Last()->Attr()->FillColor()->Clear();
       g->Last()->Attr()->LineColor()->Clear();
       g->Last()->Attr()->SetLineWidth( 0 );
+    }
+    if ( !legend_heading.empty() ) {
+      Object* obj = label_db->Create( g, legend_heading, legend_dims.ch * 1.2 );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
     }
   }
 
@@ -727,7 +758,10 @@ void Main::PlaceLegends(
       }
     }
     if ( best_lb_defined ) {
-      BuildLegends( legend_g->AddNewGroup(), best_lb.nx, true );
+      BuildLegends(
+        legend_g->AddNewGroup(), best_lb.nx,
+        legend_frame_specified ? legend_frame : true
+      );
       legend_g->Last()->MoveTo(
         AnchorX::Mid, AnchorY::Mid,
         (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
@@ -758,7 +792,10 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegends( legend_g->AddNewGroup(), nx, false );
+    BuildLegends(
+      legend_g->AddNewGroup(), nx,
+      legend_frame_specified ? legend_frame : !legend_heading.empty()
+    );
     Object* legend = legend_g->Last();
 
     U x = 0 - mx;
@@ -811,7 +848,10 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegends( legend_g->AddNewGroup(), nx, false );
+    BuildLegends(
+      legend_g->AddNewGroup(), nx,
+      legend_frame_specified ? legend_frame : !legend_heading.empty()
+    );
     Object* legend = legend_g->Last();
 
     U y = 0 - my;
