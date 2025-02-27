@@ -215,8 +215,8 @@ void Series::ApplyMarkStyle( SVG::Object* obj )
   obj->Attr()->LineColor()->Clear();
   if (
     marker_shape == MarkerShape::Cross ||
-    marker_shape == MarkerShape::HorLine ||
-    marker_shape == MarkerShape::VerLine
+    marker_shape == MarkerShape::LineX ||
+    marker_shape == MarkerShape::LineY
   ) {
     ApplyLineStyle( obj );
     obj->Attr()->SetLineDash( 0 );
@@ -498,17 +498,17 @@ void Series::DetermineVisualProperties( void )
         m.y1 = -1.4142 * (0.9 * radius + delta);
         m.y2 = +1.4142 * (0.9 * radius + delta);
         break;
-      case MarkerShape::HorLine :
-        m.x1 = -radius;
-        m.x2 = +radius;
-        m.y1 = 0.0;
-        m.y2 = 0.0;
+      case MarkerShape::LineX :
+        m.x1 = (axis_x->angle == 0) ? -radius : 0.0;
+        m.x2 = (axis_x->angle == 0) ? +radius : 0.0;
+        m.y1 = (axis_x->angle == 0) ? 0.0 : -radius;
+        m.y2 = (axis_x->angle == 0) ? 0.0 : +radius;
         break;
-      case MarkerShape::VerLine :
-        m.x1 = 0.0;
-        m.x2 = 0.0;
-        m.y1 = -radius;
-        m.y2 = +radius;
+      case MarkerShape::LineY :
+        m.x1 = (axis_x->angle != 0) ? -radius : 0.0;
+        m.x2 = (axis_x->angle != 0) ? +radius : 0.0;
+        m.y1 = (axis_x->angle != 0) ? 0.0 : -radius;
+        m.y2 = (axis_x->angle != 0) ? 0.0 : +radius;
         break;
       default :
         m.x1 = -1.0000 * (1.0 * radius + delta);
@@ -527,8 +527,8 @@ void Series::DetermineVisualProperties( void )
     marker_show_int = !fill_color.IsClear();
     if (
       marker_shape == MarkerShape::Cross ||
-      marker_shape == MarkerShape::HorLine ||
-      marker_shape == MarkerShape::VerLine
+      marker_shape == MarkerShape::LineX ||
+      marker_shape == MarkerShape::LineY
     ) {
       marker_show_int = false;
     } else {
@@ -626,8 +626,8 @@ void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
         )
       );
       break;
-    case MarkerShape::HorLine :
-    case MarkerShape::VerLine :
+    case MarkerShape::LineX :
+    case MarkerShape::LineY :
       g->Add(
         new Line(
           p.x + m.x1, p.y + m.y1,

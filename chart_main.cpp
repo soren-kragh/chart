@@ -237,8 +237,8 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
       series->marker_show &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea &&
-      series->marker_shape != MarkerShape::HorLine &&
-      series->marker_shape != MarkerShape::VerLine
+      series->marker_shape != MarkerShape::LineX &&
+      series->marker_shape != MarkerShape::LineY
     ) {
       Series::MarkerDims md = series->marker_out;
       legend_dims.mw = std::max( +legend_dims.mw, md.x2 - md.x1 );
@@ -614,8 +614,8 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
       series->marker_show &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea &&
-      series->marker_shape != MarkerShape::HorLine &&
-      series->marker_shape != MarkerShape::VerLine
+      series->marker_shape != MarkerShape::LineX &&
+      series->marker_shape != MarkerShape::LineY
     ) {
       marker_p.y -= (series->marker_out.y1 + series->marker_out.y2) / 2;
       if ( series->marker_show_out ) {
