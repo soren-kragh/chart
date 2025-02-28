@@ -57,6 +57,10 @@ public:
   void SetTitleInside( bool inside = true );
   void SetTitleSize( float size ) { title_size = size; }
 
+  // Force the title frame to be drawn or not instead of it being determined
+  // automatically.
+  void SetTitleFrame( bool enable = true );
+
   void AddFootnote( std::string& txt );
 
   // Applies to the most recently added footnote.
@@ -191,6 +195,8 @@ private:
   Pos         title_pos_y;
   bool        title_inside;
   float       title_size;
+  bool        title_frame;
+  bool        title_frame_specified;
 
   uint32_t bar_tot = 0;
   uint32_t lol_tot = 0;

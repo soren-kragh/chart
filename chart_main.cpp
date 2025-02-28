@@ -33,7 +33,9 @@ Main::Main( void )
   title_pos_y  = Pos::Top;
   title_inside = false;
   title_size   = 1.0;
-  legend_frame           = true;
+  title_frame            = false;
+  title_frame_specified  = false;
+  legend_frame           = false;
   legend_frame_specified = false;
   SetLegendPos( Pos::Auto );
   SetLegendOutline( true );
@@ -115,6 +117,12 @@ void Main::SetTitlePos( Pos pos_x, Pos pos_y )
 void Main::SetTitleInside( bool inside )
 {
   this->title_inside = inside;
+}
+
+void Main::SetTitleFrame( bool enable )
+{
+  title_frame = enable;
+  title_frame_specified = true;
 }
 
 void Main::AddFootnote(std::string& txt)
@@ -1520,6 +1528,8 @@ void Main::AddTitle(
 {
   if ( title.empty() && sub_title.empty() && sub_sub_title.empty() ) return;
 
+  bool framed = title_frame_specified ? title_frame : title_inside;
+
   U space_x = 40;
   U space_y = 10;
   BoundaryBox bb;
@@ -1560,27 +1570,13 @@ void Main::AddTitle(
     y += bb.max.y - bb.min.y;
   }
   MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
-  y = 0;
-  for ( auto obj : avoid_objects ) {
-    if ( !obj->Empty() ) {
-      y = std::max( y, obj->GetBB().max.y );
-    }
-  }
-  y = y - text_g->GetBB().max.y;
-  if ( y > 0 ) {
-    for ( auto obj : title_objs ) {
-      obj->Move( 0, y );
-    }
-  }
 
-  if ( title_inside ) {
+  if ( framed ) {
     bb = text_g->GetBB();
-    U mx = box_spacing;
-    U my = box_spacing;
     text_g->Add(
       new Rect(
-        bb.min.x - mx, bb.min.y - my,
-        bb.max.x + mx, bb.max.y + my,
+        bb.min.x - box_spacing, bb.min.y - box_spacing,
+        bb.max.x + box_spacing, bb.max.y + box_spacing,
         box_spacing
       )
     );
@@ -1590,7 +1586,27 @@ void Main::AddTitle(
       text_g->Last()->Attr()->FillColor()->Set( FrameColor() );
     }
     text_g->FrontToBack();
+    bb = text_g->GetBB();
+    if ( bb.min.y < chart_h + space_y ) {
+      text_g->Move( 0, chart_h + space_y - bb.min.y );
+    }
+    MoveObj( Dir::Up, text_g, avoid_objects, box_spacing, box_spacing );
+  }
 
+  y = 0;
+  for ( auto obj : avoid_objects ) {
+    if ( !obj->Empty() ) {
+      y = std::max( y, obj->GetBB().max.y );
+    }
+  }
+  y = y - text_g->GetBB().max.y;
+  if ( y > 0 ) {
+    text_g->Move( 0, y );
+  }
+
+  if ( title_inside ) {
+    U mx = box_spacing;
+    U my = box_spacing;
     U px = chart_w / 2;
     U py = chart_h - my;
     AnchorX ax = AnchorX::Mid;
