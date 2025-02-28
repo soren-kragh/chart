@@ -20,7 +20,7 @@ using namespace Chart;
 
 Main::Main( void )
 {
-  frame_color.Set( ColorName::maroon );
+  border_color.Set( ColorName::black );
   background_color.Set( ColorName::white );
   chart_area_color.Clear();
   axis_color.Set( ColorName::black );
@@ -59,9 +59,9 @@ Main::~Main( void )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Main::SetFrameWidth( SVG::U width )
+void Main::SetBorderWidth( SVG::U width )
 {
-  this->frame_width = width;
+  border_width = width;
 }
 
 void Main::SetMargin( SVG::U margin )
@@ -1741,25 +1741,25 @@ void Main::AddChartMargin(
   bb.min.y = std::min( +bb.min.y, -delta );
   bb.max.y = std::max( +bb.max.y, chart_h + delta );
 
-  bb.min.x -= margin + frame_width;
-  bb.max.x += margin + frame_width;
-  bb.min.y -= margin + frame_width;
-  bb.max.y += margin + frame_width;
+  bb.min.x -= margin + border_width;
+  bb.max.x += margin + border_width;
+  bb.min.y -= margin + border_width;
+  bb.max.y += margin + border_width;
 
   chart_g->Add( new Rect( bb.min, bb.max ) );
   chart_g->Last()->Attr()->FillColor()->Clear();
   chart_g->Last()->Attr()->LineColor()->Clear();
   chart_g->Last()->Attr()->SetLineWidth( 0 );
 
-  bb.min.x += frame_width / 2;
-  bb.max.x -= frame_width / 2;
-  bb.min.y += frame_width / 2;
-  bb.max.y -= frame_width / 2;
+  bb.min.x += border_width / 2;
+  bb.max.x -= border_width / 2;
+  bb.min.y += border_width / 2;
+  bb.max.y -= border_width / 2;
 
   chart_g->Add( new Rect( bb.min, bb.max ) );
-  chart_g->Last()->Attr()->SetLineWidth( frame_width );
-  if ( frame_width > 0 ) {
-    chart_g->Last()->Attr()->LineColor()->Set( &frame_color );
+  chart_g->Last()->Attr()->SetLineWidth( border_width );
+  if ( border_width > 0 ) {
+    chart_g->Last()->Attr()->LineColor()->Set( &border_color );
   } else {
     chart_g->Last()->Attr()->LineColor()->Clear();
   }
