@@ -25,6 +25,7 @@ Main::Main( void )
   chart_area_color.Clear();
   axis_color.Set( ColorName::black );
   text_color.Set( ColorName::black );
+  frame_color.Undef();
   width_adj    = 1.0;
   height_adj   = 1.0;
   baseline_adj = 1.0;
@@ -35,7 +36,6 @@ Main::Main( void )
   legend_frame           = true;
   legend_frame_specified = false;
   SetLegendPos( Pos::Auto );
-  legend_color.Undef();
   SetLegendOutline( true );
   legend_size = 1.0;
   label_db = new Label();
@@ -580,8 +580,8 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     if ( framed ) {
       g->Last()->Attr()->LineColor()->Set( &axis_color );
       g->Last()->Attr()->SetLineWidth( 1 );
-      if ( LegendColor()->IsDefined() ) {
-        g->Last()->Attr()->FillColor()->Set( LegendColor() );
+      if ( FrameColor()->IsDefined() ) {
+        g->Last()->Attr()->FillColor()->Set( FrameColor() );
       }
     } else {
       g->Last()->Attr()->FillColor()->Clear();
@@ -1586,8 +1586,8 @@ void Main::AddTitle(
     );
     text_g->Last()->Attr()->LineColor()->Set( &axis_color );
     text_g->Last()->Attr()->SetLineWidth( 1 );
-    if ( LegendColor()->IsDefined() ) {
-      text_g->Last()->Attr()->FillColor()->Set( LegendColor() );
+    if ( FrameColor()->IsDefined() ) {
+      text_g->Last()->Attr()->FillColor()->Set( FrameColor() );
     }
     text_g->FrontToBack();
 

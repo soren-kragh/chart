@@ -43,6 +43,9 @@ public:
   SVG::Color* AxisColor( void ) { return &axis_color; }
   SVG::Color* TextColor( void ) { return &text_color; }
 
+  // Specify alternative background color of title and legend frames.
+  SVG::Color* FrameColor( void ) { return &frame_color; }
+
   void SetLetterSpacing(
     float width_adj, float height_adj = 1.0, float baseline_adj = 1.0
   );
@@ -79,9 +82,6 @@ public:
   // Specify if line style legends are shown with an outline around the legend
   // text, or with a small line segment in front of the legend text.
   void SetLegendOutline( bool outline );
-
-  // Specify alternative background color of legend box.
-  SVG::Color* LegendColor( void ) { return &legend_color; }
 
   // Legend text size scaling factor.
   void SetLegendSize( float size ) { legend_size = size; }
@@ -178,6 +178,7 @@ private:
   SVG::Color chart_area_color;
   SVG::Color axis_color;
   SVG::Color text_color;
+  SVG::Color frame_color;
 
   float width_adj;
   float height_adj;
@@ -206,7 +207,6 @@ private:
   bool        legend_frame;
   bool        legend_frame_specified;
   Pos         legend_pos;
-  SVG::Color  legend_color;
   bool        legend_outline;
   float       legend_size;
 
