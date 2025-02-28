@@ -1530,8 +1530,8 @@ void Main::AddTitle(
 
   bool framed = title_frame_specified ? title_frame : title_inside;
 
-  U space_x = 40;
-  U space_y = 10;
+  U space_x = 5 * box_spacing;
+  U space_y = 1 * box_spacing;
   BoundaryBox bb;
   std::vector< SVG::Object* > title_objs;
 
@@ -1586,9 +1586,11 @@ void Main::AddTitle(
       text_g->Last()->Attr()->FillColor()->Set( FrameColor() );
     }
     text_g->FrontToBack();
-    bb = text_g->GetBB();
-    if ( bb.min.y < chart_h + space_y ) {
-      text_g->Move( 0, chart_h + space_y - bb.min.y );
+    y = chart_h + space_y;
+    switch ( title_pos_x ) {
+      case Pos::Left  : text_g->MoveTo( a, AnchorY::Min, 0        , y ); break;
+      case Pos::Right : text_g->MoveTo( a, AnchorY::Min, chart_w  , y ); break;
+      default         : text_g->MoveTo( a, AnchorY::Min, chart_w/2, y );
     }
     MoveObj( Dir::Up, text_g, avoid_objects, box_spacing, box_spacing );
   }
