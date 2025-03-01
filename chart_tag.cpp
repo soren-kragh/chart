@@ -446,7 +446,7 @@ SVG::Group* Tag::AddBarTag(
           bb.max.y < series->chart_area.max.y
         )
       ) &&
-      ( pos == Pos::Base ||
+      ( pos == Pos::Base || pos == Pos::Center ||
         ( !(direction == Pos::Right  && bb.min.x < (p1.x + spc_x + base_dist)) &&
           !(direction == Pos::Left   && bb.max.x > (p1.x - spc_x - base_dist)) &&
           !(direction == Pos::Top    && bb.min.y < (p1.y + spc_y + base_dist)) &&

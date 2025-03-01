@@ -1050,6 +1050,7 @@ void Main::AxisPrepare( SVG::Group* tag_g )
     std::swap( axis_y[ 0 ], axis_y[ 1 ] );
     for ( auto series : series_list ) {
       series->axis_y_n = 0;
+      series->axis_y = axis_y[ 0 ];
     }
     axis_x->pos_base_axis_y_n = 0;
   }

@@ -62,20 +62,23 @@ SVG::Group* Label::Create(
   std::string s;
   bool non_space_seen = false;
   auto it = txt.cbegin();
-  while ( it != txt.cend() ) {
-    auto c = *(it++);
-    if ( c != '\n' ) {
-      if ( c == ' ' ) {
-        if ( non_space_seen ) {
-          e.trailing_space += w;
+  char c = '\n';
+  while ( true ) {
+    if ( it != txt.cend() ) {
+      c = *(it++);
+      if ( c != '\n' ) {
+        if ( c == ' ' ) {
+          if ( non_space_seen ) {
+            e.trailing_space += w;
+          } else {
+            e.leading_space += w;
+          }
         } else {
-          e.leading_space += w;
+          non_space_seen = true;
+          e.trailing_space = 0;
         }
-      } else {
-        non_space_seen = true;
-        e.trailing_space = 0;
+        s += c;
       }
-      s += c;
     }
     if ( c == '\n' || it == txt.cend() ) {
       g->Add( new Text( 0, y, s ) );
@@ -90,6 +93,7 @@ SVG::Group* Label::Create(
       non_space_seen = false;
       s.clear();
     }
+    if ( it == txt.cend() ) break;
   }
 
   if ( add_to_db ) {
