@@ -18,6 +18,7 @@
 #include <chart_common.h>
 #include <chart_label.h>
 #include <chart_tag.h>
+#include <chart_html.h>
 #include <chart_series.h>
 #include <chart_axis.h>
 #include <chart_legend_box.h>
@@ -26,11 +27,14 @@ namespace Chart {
 
 class Main
 {
+  friend class HTML;
 
 public:
 
   Main( void );
   ~Main( void );
+
+  void EnableHTML( bool enable = true ) { enable_html = enable; }
 
   void SetBorderWidth( SVG::U width );
   void SetMargin( SVG::U margin );
@@ -107,7 +111,7 @@ public:
   // Add categories for string based X-values.
   void AddCategory( const std::string& category );
 
-  SVG::Canvas* Build( void );
+  std::string Build( void );
 
 private:
 
@@ -146,7 +150,7 @@ private:
 
   // Compute the category stride, i.e. the minimum distance between non empty
   // string categories.
-  int CategoryStride( void );
+  int CatStrideEmpty( void );
 
   void AxisPrepare( SVG::Group* tag_g );
 
@@ -176,6 +180,11 @@ private:
   void AddChartMargin(
     SVG::Group* chart_g
   );
+
+  // Transfer various information to the HTML object (html_db).
+  void PrepareHTML( void );
+
+  bool enable_html = false;
 
   SVG::Color border_color;
   SVG::Color background_color;
@@ -228,6 +237,7 @@ private:
 
   Label* label_db;
   Tag* tag_db;
+  HTML* html_db;
 
   std::vector< Series* > series_list;
 

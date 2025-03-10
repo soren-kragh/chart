@@ -17,6 +17,7 @@
 #include <chart_datum.h>
 #include <chart_legend_box.h>
 #include <chart_tag.h>
+#include <chart_html.h>
 
 namespace Chart {
 
@@ -27,6 +28,7 @@ class Series
   friend class Main;
   friend class Axis;
   friend class Tag;
+  friend class HTML;
 
 public:
 
@@ -34,6 +36,12 @@ public:
   ~Series( void );
 
   void SetName( const std::string& name );
+
+  // Defines if HTML should snap to the series even if it is nameless.
+  void SetAnonymousSnap( bool anonymous_snap = true )
+  {
+    this-> anonymous_snap = anonymous_snap;
+  }
 
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
@@ -172,6 +180,8 @@ private:
     std::vector< SVG::Point >* pts_neg = nullptr
   );
 
+  uint32_t id;
+
   // The area within which the graphs are plotted.
   SVG::BoundaryBox chart_area;
 
@@ -181,6 +191,7 @@ private:
 
   SeriesType type;
   std::string name;
+  bool anonymous_snap = false;
   double base;
 
   std::vector< LegendBox >* lb_list;
@@ -195,6 +206,13 @@ private:
   SVG::Color tag_line_color;
   SVG::U tag_dist_x;
   SVG::U tag_dist_y;
+
+  HTML* html_db;
+
+  // Used by Chart::HTML
+  bool has_snap = false;
+  uint32_t line_color_same_cnt = 0;
+  uint32_t fill_color_same_cnt = 0;
 
   std::vector< SVG::Color > color_list;
   SVG::Color line_color;
@@ -232,6 +250,9 @@ private:
 
   bool has_line;
   bool has_fill;
+
+  bool fill_color_shown = false;
+  bool line_color_shown = false;
 
   // Compute derived marker_* variables and other visual properties.
   void DetermineVisualProperties( void );

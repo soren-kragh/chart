@@ -78,7 +78,6 @@ Axis::Axis( bool is_x_axis, Label* label_db )
   cat_coor_is_min = false;
   cat_coor_is_max = false;
   cat_coor = 0;
-  category_stride = 1;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -156,6 +155,12 @@ void Axis::SetTick( double major, int sub_divs )
   this->major = major;
   this->sub_divs = sub_divs;
   show = true;
+}
+
+void Axis::SetTickSpacing( int32_t start, int32_t stride )
+{
+  cat_start = std::max( 0, start );
+  cat_stride = std::max( 1, stride );
 }
 
 void Axis::SetGridStyle( GridStyle gs )
@@ -1185,7 +1190,9 @@ void Axis::BuildCategories(
     U x2 = Coor( category_list.size() );
     if (
       std::abs( x2 - x1 ) <
-      category_list.size() * cat_char_h * 1.5 / category_stride
+      ( category_list.size() * cat_char_h * 1.5
+        / std::max( cat_stride, cat_stride_empty )
+      )
     ) {
       text_angle = 90;
     }
@@ -1206,46 +1213,48 @@ void Axis::BuildCategories(
   for ( bool commit : { false, true } ) {
     while ( true ) {
       bool collision = false;
-      uint32_t n = 0;
+      int32_t n = -1;
       for ( const auto& cat : category_list ) {
-        if ( !cat.empty() ) {
-          Object* obj = cat_g->Add( new Text( cat ) );
-          U x = (angle == 0) ? Coor( n ) : cat_coor;
-          U y = (angle != 0) ? Coor( n ) : cat_coor;
-          if ( trial == 0 ) {
-            obj->MoveTo( ax, ay, x + dx, y + dy );
-          }
-          if ( trial == 1 ) {
-            U sy = (n % 2) ? (cat_char_h + num_space_y) : 0;
-            if ( dy < 0 ) sy = -sy;
-            obj->MoveTo( ax, ay, x + dx, y + dy + sy );
-          }
-          if ( trial == 2 ) {
-            ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
-            ay = AnchorY::Mid;
-            obj->MoveTo( ax, ay, x + dx, y + dy );
-            obj->Rotate( text_angle, ax, ay );
-          }
-          if (
-            (trial < 2 || (text_angle % 90 == 0)) &&
-            Chart::Collides(
-              obj, cat_objects, ((trial < 2) ? (1.5 * cat_char_w) : 0), 0
-            )
-          ) {
-            collision = true;
+        n++;
+        if ( cat.empty() ) continue;
+        if ( n < cat_start ) continue;
+        if ( (n - cat_start) % cat_stride ) continue;
+
+        Object* obj = cat_g->Add( new Text( cat ) );
+        U x = (angle == 0) ? Coor( n ) : cat_coor;
+        U y = (angle != 0) ? Coor( n ) : cat_coor;
+        if ( trial == 0 ) {
+          obj->MoveTo( ax, ay, x + dx, y + dy );
+        }
+        if ( trial == 1 ) {
+          U sy = (n % 2) ? (cat_char_h + num_space_y) : 0;
+          if ( dy < 0 ) sy = -sy;
+          obj->MoveTo( ax, ay, x + dx, y + dy + sy );
+        }
+        if ( trial == 2 ) {
+          ax = (number_pos == Pos::Top) ? AnchorX::Min : AnchorX::Max;
+          ay = AnchorY::Mid;
+          obj->MoveTo( ax, ay, x + dx, y + dy );
+          obj->Rotate( text_angle, ax, ay );
+        }
+        if (
+          (trial < 2 || (text_angle % 90 == 0)) &&
+          Chart::Collides(
+            obj, cat_objects, ((trial < 2) ? (1.5 * cat_char_w) : 0), 0
+          )
+        ) {
+          collision = true;
+          cat_g->DeleteFront();
+        } else {
+          U mx = (angle == 0) ? 4 : 0;
+          bool aoc = Chart::Collides( obj, avoid_objects, mx, 0 );
+          if ( commit && aoc ) {
             cat_g->DeleteFront();
           } else {
-            U mx = (angle == 0) ? 4 : 0;
-            bool aoc = Chart::Collides( obj, avoid_objects, mx, 0 );
-            if ( commit && aoc ) {
-              cat_g->DeleteFront();
-            } else {
-              cat_objects.push_back( obj );
-              if ( commit ) mn_list.push_back( n );
-            }
+            cat_objects.push_back( obj );
+            if ( commit ) mn_list.push_back( n );
           }
         }
-        ++n;
       }
       if ( commit ) break;
       while ( !cat_objects.empty() ) {
@@ -1699,7 +1708,6 @@ void Axis::Build(
         );
       line_g->Add( poly );
       poly->Close();
-      poly->Attr()->FillColor()->Set( ColorName::black );
       poly->Rotate( angle, ex, ey );
     } else {
       if ( !axis_at_chart_box ) {

@@ -21,14 +21,19 @@ using namespace Chart;
 
 Series::Series( SeriesType type )
 {
+  id = 0;
+
   axis_x = nullptr;
   axis_y = nullptr;
   axis_y_n = 0;
   base = 0;
+  tag_db = nullptr;
   tag_enable = false;
   tag_pos = Pos::Auto;
   tag_size = 1.0;
   tag_box = false;
+
+  html_db = nullptr;
 
   color_list.emplace_back(); color_list.back().Set( ColorName::royalblue     );
   color_list.emplace_back(); color_list.back().Set( ColorName::tomato        );
@@ -431,6 +436,8 @@ void Series::DetermineVisualProperties( void )
   marker_show_int = false;
   has_line = false;
   has_fill = false;
+  line_color_shown = false;
+  fill_color_shown = false;
 
   if (
     type == SeriesType::XY ||
@@ -442,6 +449,7 @@ void Series::DetermineVisualProperties( void )
     type == SeriesType::StackedArea
   ) {
     has_line = line_width > 0 && !line_color.IsClear();
+    line_color_shown = has_line;
   }
 
   if (
@@ -451,6 +459,7 @@ void Series::DetermineVisualProperties( void )
     type == SeriesType::StackedArea
   ) {
     has_fill = !fill_color.IsClear();
+    fill_color_shown = has_fill;
   }
 
   // Minimal tag distance from center of data point.
@@ -545,6 +554,9 @@ void Series::DetermineVisualProperties( void )
   }
   marker_show = marker_show_out || marker_show_int;
   if ( !marker_show_out || !marker_show_int ) lw = 0;
+
+  if ( marker_show_int ) fill_color_shown = true;
+  if ( marker_show_out ) line_color_shown = true;
 
   compute( marker_int, -lw );
   compute( marker_out, 0 );
@@ -845,9 +857,12 @@ void Series::BuildArea(
       if ( ap_line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
       line_obj->Add( p );
     }
-    if ( is_datum && marker_show ) {
+    if ( is_datum ) {
       if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
       if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      if ( html_db ) {
+        html_db->AddSnapPoint( this, p, datum.x, datum.tag_y );
+      }
     }
     if ( tag_enable ) {
       tag_db->LineTag(
@@ -1072,6 +1087,10 @@ void Series::BuildBar(
       }
     }
 
+    if ( html_db && p2_inside ) {
+      html_db->AddSnapPoint( this, p2, datum.x, datum.tag_y );
+    }
+
     if ( tag_enable ) {
       Pos direction = zero_direction;
       if ( p2.x > p1.x ) direction = Pos::Right;
@@ -1229,9 +1248,16 @@ void Series::BuildLine(
     } else {
       UpdateLegendBoxes( p, p, true, false );
     }
-    if ( !clipped && marker_show ) {
+    if ( !clipped ) {
       if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
       if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      if ( html_db ) {
+        if ( axis_x->category_axis ) {
+          html_db->AddSnapPoint( this, p, datum.x, datum.tag_y );
+        } else {
+          html_db->AddSnapPoint( this, p, datum.tag_x, datum.tag_y );
+        }
+      }
     }
     if ( tag_enable ) {
       tag_db->LineTag(

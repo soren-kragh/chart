@@ -56,6 +56,10 @@ public:
   // For logarithmic scale, major refers to the power, usually 10.
   void SetTick( double major, int sub_divs = 0 );
 
+  // Applies to category axis only. Sets the starting category text to display
+  // and the the stride after that; start=0 and stride=1 is the default.
+  void SetTickSpacing( int32_t start, int32_t stride );
+
   SVG::Color* GridColor( void ) { return &grid_color; }
 
   void SetGridStyle( GridStyle gs );
@@ -251,7 +255,10 @@ private:
   bool   cat_coor_is_max;
 
   // The minimum distance between non empty string categories.
-  int category_stride;
+  int32_t cat_stride_empty = 1;
+
+  int32_t cat_start = 0;
+  int32_t cat_stride = 1;
 };
 
 }

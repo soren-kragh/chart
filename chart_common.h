@@ -29,6 +29,9 @@ namespace Chart {
   // Spacing around various boxes.
   const SVG::U box_spacing = 8;
 
+  // Snap attraction radius in HTML.
+  const SVG::U snap_point_radius = 20;
+
   // Spacing from series to tag.
   const SVG::U tag_spacing = box_spacing / 2;
 
@@ -79,5 +82,9 @@ namespace Chart {
   );
 
   void ShowObjBB( SVG::Object* obj );
+
+  void MakeColorVisible(
+    SVG::Color* color, SVG::Color* bg_color, float min_visibility = 0.3
+  );
 
 }

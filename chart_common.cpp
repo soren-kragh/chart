@@ -96,3 +96,21 @@ void Chart::ShowObjBB( SVG::Object* obj )
 */
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void Chart::MakeColorVisible(
+  Color* color, Color* bg_color, float min_visibility
+)
+{
+  if ( bg_color->IsClear() ) return;
+  if ( color->IsClear() || Color::Diff( color, bg_color ) < min_visibility ) {
+    color->Set( ColorName::black );
+    float b_diff = Color::Diff( color, bg_color );
+    color->Set( ColorName::white );
+    float w_diff = Color::Diff( color, bg_color );
+    if ( b_diff > w_diff ) {
+      color->Set( ColorName::black );
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////

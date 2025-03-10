@@ -42,6 +42,7 @@ Main::Main( void )
   legend_size = 1.0;
   label_db = new Label();
   tag_db = new Tag();
+  html_db = new HTML( this );
   axis_x      = new Axis( true , label_db );
   axis_y[ 0 ] = new Axis( false, label_db );
   axis_y[ 1 ] = new Axis( false, label_db );
@@ -55,8 +56,9 @@ Main::~Main( void )
   delete axis_x;
   delete axis_y[ 0 ];
   delete axis_y[ 1 ];
-  delete tag_db;
   delete label_db;
+  delete tag_db;
+  delete html_db;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -609,6 +611,15 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
     Point marker_p{ px + legend_dims.ow/2, py - legend_dims.sy/2 };
 
+    if ( enable_html ) {
+      BoundaryBox bb;
+      bb.min.x = px - legend_dims.lx;
+      bb.min.y = py - legend_dims.sy;
+      bb.max.x = px + legend_dims.rx + legend_dims.sx;
+      bb.max.y = py;
+      html_db->LegendPos( series, bb );
+    }
+
     U line_w = series->line_width;
     if ( !series->has_line ) line_w = 0;
 
@@ -734,6 +745,9 @@ void Main::PlaceLegends(
 {
   if ( LegendCnt() == 0 ) return;
 
+  BoundaryBox build_bb;
+  BoundaryBox moved_bb;
+
   AnchorX title_anchor_x = AnchorX::Mid;
   if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
   if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
@@ -770,10 +784,16 @@ void Main::PlaceLegends(
         legend_g->AddNewGroup(), best_lb.nx,
         legend_frame_specified ? legend_frame : true
       );
+      build_bb = legend_g->Last()->GetBB();
       legend_g->Last()->MoveTo(
         AnchorX::Mid, AnchorY::Mid,
         (best_lb.bb.min.x + best_lb.bb.max.x) / 2,
         (best_lb.bb.min.y + best_lb.bb.max.y) / 2
+      );
+      moved_bb = legend_g->Last()->GetBB();
+      html_db->MoveLegends(
+        moved_bb.min.x - build_bb.min.x,
+        moved_bb.min.y - build_bb.min.y
       );
       return;
     } else {
@@ -805,6 +825,7 @@ void Main::PlaceLegends(
       legend_frame_specified ? legend_frame : !legend_heading.empty()
     );
     Object* legend = legend_g->Last();
+    build_bb = legend->GetBB();
 
     U x = 0 - mx;
     Dir dir = Dir::Left;
@@ -837,6 +858,11 @@ void Main::PlaceLegends(
     }
     legend->MoveTo( anchor_x, best_anchor_y, x, best_y );
     MoveObj( dir, legend, avoid_objects, mx, my );
+    moved_bb = legend->GetBB();
+    html_db->MoveLegends(
+      moved_bb.min.x - build_bb.min.x,
+      moved_bb.min.y - build_bb.min.y
+    );
     avoid_objects.push_back( legend );
 
   } else {
@@ -861,6 +887,7 @@ void Main::PlaceLegends(
       legend_frame_specified ? legend_frame : !legend_heading.empty()
     );
     Object* legend = legend_g->Last();
+    build_bb = legend->GetBB();
 
     U y = 0 - my;
     Dir dir = Dir::Down;
@@ -893,6 +920,11 @@ void Main::PlaceLegends(
     }
     legend->MoveTo( best_anchor_x, anchor_y, best_x, y );
     MoveObj( dir, legend, avoid_objects, mx, my );
+    moved_bb = legend->GetBB();
+    html_db->MoveLegends(
+      moved_bb.min.x - build_bb.min.x,
+      moved_bb.min.y - build_bb.min.y
+    );
     avoid_objects.push_back( legend );
 
   }
@@ -902,7 +934,7 @@ void Main::PlaceLegends(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int Main::CategoryStride( void )
+int Main::CatStrideEmpty( void )
 {
   int stride = -1;
   {
@@ -928,6 +960,15 @@ int Main::CategoryStride( void )
 
 void Main::AxisPrepare( SVG::Group* tag_g )
 {
+  axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
+  axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
+  axis_x->chart_box   = chart_box;
+  for ( auto a : axis_y ) {
+    a->length      = (a->angle == 0) ? chart_w : chart_h;
+    a->orth_length = (a->angle == 0) ? chart_h : chart_w;
+    a->chart_box   = chart_box;
+  }
+
   if ( axis_x->angle == 0 ) {
     axis_x->angle = 0;
     axis_y[ 0 ]->angle = 90;
@@ -968,7 +1009,7 @@ void Main::AxisPrepare( SVG::Group* tag_g )
     axis_x->max += bar_margin;
     axis_x->orth_axis_cross = axis_x->min;
     axis_x->reverse = axis_x->reverse ^ (axis_x->angle != 0);
-    axis_x->category_stride = CategoryStride();
+    axis_x->cat_stride_empty = CatStrideEmpty();
   }
 
   axis_x->data_def = false;
@@ -1361,7 +1402,10 @@ void Main::SeriesPrepare(
   lol_tot = 0;
 
   uint32_t bar_tmp[ 2 ] = { 0, 0 };
+  uint32_t series_id = 0;
   for ( auto series : series_list ) {
+    series->id = series_id++;
+
     series->chart_area.min.x = 0;
     series->chart_area.max.x = chart_w;
     series->chart_area.min.y = 0;
@@ -1372,6 +1416,9 @@ void Main::SeriesPrepare(
     series->axis_y = axis_y[ series->axis_y_n ];
     series->lb_list = lb_list;
     series->tag_db = tag_db;
+    if ( enable_html && (!series->name.empty() || series->anonymous_snap) ) {
+      series->html_db = html_db;
+    }
 
     if ( series->type == SeriesType::Lollipop ) {
       lol_tot++;
@@ -1418,6 +1465,8 @@ void Main::SeriesPrepare(
     series->DetermineVisualProperties();
   }
   bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
+
+  html_db->SetAllInline( bar_tot <= 1 && lol_tot <= 1 );
 
   return;
 }
@@ -1738,7 +1787,7 @@ void Main::AddChartMargin(
 {
   BoundaryBox bb = chart_g->GetBB();
 
-  U delta = 0;
+  U delta = enable_html ? +snap_point_radius : 0;
   for ( auto series : series_list ) {
     if (
       series->has_line &&
@@ -1782,18 +1831,91 @@ void Main::AddChartMargin(
   } else {
     chart_g->Last()->Attr()->LineColor()->Clear();
   }
+
   chart_g->FrontToBack();
+  chart_g->FrontToBack();
+
+  return;
 }
 
 //------------------------------------------------------------------------------
 
-Canvas* Main::Build( void )
+void Main::PrepareHTML( void )
+{
+  if ( axis_x->angle == 0 ) {
+
+    if ( axis_x->category_axis ) {
+      html_db->DefAxisX(
+        axis_x->cat_coor_is_max ? 0 : 1, axis_x,
+        axis_x->reverse ? axis_x->max : axis_x->min,
+        axis_x->reverse ? axis_x->min : axis_x->max,
+        NumberFormat::Fixed, false, false, true
+      );
+    } else {
+      html_db->DefAxisX(
+        axis_x->orth_coor_is_max ? 0 : 1, axis_x,
+        axis_x->reverse ? axis_x->max : axis_x->min,
+        axis_x->reverse ? axis_x->min : axis_x->max,
+        axis_x->number_format, axis_x->number_sign, axis_x->log_scale
+      );
+    }
+
+    for ( auto a : axis_y ) {
+      if ( a->show ) {
+        html_db->DefAxisY(
+          a->orth_coor_is_max ? 1 : 0, a,
+          a->reverse ? a->min : a->max,
+          a->reverse ? a->max : a->min,
+          a->number_format, a->number_sign, a->log_scale
+        );
+      }
+    }
+
+  } else {
+
+    if ( axis_x->category_axis ) {
+      html_db->DefAxisY(
+        axis_x->cat_coor_is_max ? 1 : 0, axis_x,
+        axis_x->reverse ? axis_x->min : axis_x->max,
+        axis_x->reverse ? axis_x->max : axis_x->min,
+        NumberFormat::Fixed, false, false, true
+      );
+    } else {
+      html_db->DefAxisY(
+        axis_x->orth_coor_is_max ? 1 : 0, axis_x,
+        axis_x->reverse ? axis_x->min : axis_x->max,
+        axis_x->reverse ? axis_x->max : axis_x->min,
+        axis_x->number_format, axis_x->number_sign, axis_x->log_scale
+      );
+    }
+
+    for ( auto a : axis_y ) {
+      if ( a->show ) {
+        html_db->DefAxisX(
+          a->orth_coor_is_max ? 0 : 1, a,
+          a->reverse ? a->max : a->min,
+          a->reverse ? a->min : a->max,
+          a->number_format, a->number_sign, a->log_scale
+        );
+      }
+    }
+
+    html_db->SwapAxis();
+
+  }
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
+std::string Main::Build( void )
 {
   Canvas* canvas = new Canvas();
 
   Group* chart_g = canvas->TopGroup()->AddNewGroup();
   chart_g->Attr()->TextFont()->SetFamily(
-    "DejaVu Sans Mono,Consolas,Menlo,Courier New"
+    "Noto Mono,Lucida Console,Courier New,monospace"
   );
   chart_g->Attr()->TextFont()
     ->SetWidthFactor( width_adj )
@@ -1821,7 +1943,7 @@ Canvas* Main::Build( void )
 
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( &axis_color );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
-  axes_line_g->Attr()->FillColor()->Clear();
+  axes_line_g->Attr()->FillColor()->Set( &axis_color );
 
   chartbox_below_axes_g->Attr()->FillColor()->Clear();
   chartbox_above_axes_g->Attr()->FillColor()->Clear();
@@ -1836,15 +1958,6 @@ Canvas* Main::Build( void )
     ->SetBaselineFactor( 0.30 );
 
   legend_g->Attr()->TextFont()->SetSize( 14 * legend_size );
-
-  axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
-  axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
-  axis_x->chart_box   = chart_box;
-  for ( auto a : axis_y ) {
-    a->length      = (a->angle == 0) ? chart_w : chart_h;
-    a->orth_length = (a->angle == 0) ? chart_h : chart_w;
-    a->chart_box   = chart_box;
-  }
 
   std::vector< LegendBox > lb_list;
 
@@ -1875,6 +1988,7 @@ Canvas* Main::Build( void )
 
   if ( chart_box ) {
     axes_line_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
+    axes_line_g->Last()->Attr()->FillColor()->Clear();
   }
 
   axis_x->BuildLabel( avoid_objects, axes_label_g );
@@ -1933,7 +2047,15 @@ Canvas* Main::Build( void )
 
   AddChartMargin( chart_g );
 
-  return canvas;
+  std::ostringstream oss;
+  if ( enable_html ) {
+    PrepareHTML();
+    oss << html_db->GenHTML( canvas );
+  } else {
+    oss << canvas->GenSVG( 0, "style=\"pointer-events: none;\"" );
+  }
+  delete canvas;
+  return oss.str();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
