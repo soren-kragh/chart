@@ -178,7 +178,7 @@ private:
   // of the chart area. Doing this ensures consistent chart dimensions
   // independent of the data values close to the edge of the chart area.
   void AddChartMargin(
-    SVG::Group* chart_g
+    SVG::Group* chart_g, bool do_area_margin
   );
 
   // Transfer various information to the HTML object (html_db).
