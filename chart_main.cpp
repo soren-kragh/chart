@@ -401,7 +401,7 @@ void Main::CalcLegendBoxes(
   uint32_t lc = LegendCnt();
 
   auto add_lbs = [&](
-    AnchorX anchor_x, AnchorY anchor_y, bool can_move_x, bool can_move_y
+    AnchorX anchor_x, AnchorY anchor_y, bool can_move = true
   )
   {
     uint32_t nx = (anchor_x == AnchorX::Mid) ? lc :  1;
@@ -424,57 +424,35 @@ void Main::CalcLegendBoxes(
       if ( anchor_y == AnchorY::Max ) y = chart_h;
       obj->MoveTo( anchor_x, anchor_y, x, y );
 
-      if ( can_move_y && anchor_y != AnchorY::Mid ) {
-        U old_y = coor_hi;
-        while ( true ) {
+      if ( can_move ) {
+        bool done = false;
+        while ( !done ) {
+          done = true;
           BoundaryBox obj_bb = obj->GetBB();
-          if ( obj_bb.min.y == old_y ) break;
-          old_y = obj_bb.min.y;
-          U dy = 0;
           for ( auto ao : avoid_objects ) {
             if ( !SVG::Collides( obj, ao ) ) continue;
             BoundaryBox ao_bb = ao->GetBB();
-            if ( anchor_y == AnchorY::Min ) {
-              if ( ao_bb.max.y < (chart_h * 1 / 4) ) {
-                dy = ao_bb.max.y - obj_bb.min.y;
-                break;
-              }
+            U dx =
+              (anchor_x == AnchorX::Min)
+              ? (ao_bb.max.x - obj_bb.min.x)
+              : (ao_bb.min.x - obj_bb.max.x);
+            U dy =
+              (anchor_y == AnchorY::Min)
+              ? (ao_bb.max.y - obj_bb.min.y)
+              : (ao_bb.min.y - obj_bb.max.y);
+            if ( anchor_x == AnchorX::Mid ) dx = 0;
+            if ( anchor_y == AnchorY::Mid ) dy = 0;
+            if ( dx != 0 && std::abs( dx ) < std::abs( dy ) ) {
+              dy = 0;
             } else {
-              if ( ao_bb.min.y > (chart_h * 3 / 4) ) {
-                dy = ao_bb.min.y - obj_bb.max.y;
-                break;
-              }
+              dx = 0;
+            }
+            obj->Move( dx, dy );
+            if ( std::abs( dx ) > epsilon && std::abs( dy ) > epsilon ) {
+              done = false;
+              break;
             }
           }
-          if ( dy == 0 ) break;
-          obj->Move( 0, dy );
-        }
-      }
-
-      if ( can_move_x && anchor_x != AnchorX::Mid ) {
-        U old_x = coor_hi;
-        while ( true ) {
-          BoundaryBox obj_bb = obj->GetBB();
-          if ( obj_bb.min.x == old_x ) break;
-          old_x = obj_bb.min.x;
-          U dx = 0;
-          for ( auto ao : avoid_objects ) {
-            if ( !SVG::Collides( obj, ao ) ) continue;
-            BoundaryBox ao_bb = ao->GetBB();
-            if ( anchor_x == AnchorX::Min ) {
-              if ( ao_bb.max.x < (chart_w * 1 / 4) ) {
-                dx = ao_bb.max.x - obj_bb.min.x;
-                break;
-              }
-            } else {
-              if ( ao_bb.min.x > (chart_w * 3 / 4) ) {
-                dx = ao_bb.min.x - obj_bb.max.x;
-                break;
-              }
-            }
-          }
-          if ( dx == 0 ) break;
-          obj->Move( dx, 0 );
         }
       }
 
@@ -530,33 +508,43 @@ void Main::CalcLegendBoxes(
     if ( axis_y[ 0 ]->orth_coor_is_max ) std::swap( ay1, ay2 );
   }
 
-  for ( bool can_move : { false, true } ) {
-    if ( !dual_y ) add_lbs( ax1, ay1, can_move, can_move );
-    if ( dual_y && axis_x->angle != 0 ) {
-      add_lbs( ax1, AnchorY::Mid, can_move, can_move );
-      add_lbs( ax2, AnchorY::Mid, can_move, can_move );
+  if ( dual_y ) {
+    if ( axis_x->angle == 0 ) {
+      add_lbs( AnchorX::Mid, ay1 );
+      add_lbs( AnchorX::Mid, ay2 );
+      add_lbs( ax1, ay1 );
+      add_lbs( ax2, ay1 );
+      add_lbs( ax1, ay2 );
+      add_lbs( ax2, ay2 );
+      add_lbs( ax1, AnchorY::Mid );
+      add_lbs( ax2, AnchorY::Mid );
+    } else {
+      add_lbs( ax1, ay1 );
+      add_lbs( ax1, AnchorY::Mid );
+      add_lbs( ax1, ay2 );
+      add_lbs( AnchorX::Mid, ay1 );
+      add_lbs( AnchorX::Mid, ay2 );
+      add_lbs( ax2, ay1 );
+      add_lbs( ax2, ay2 );
+      add_lbs( ax2, AnchorY::Mid );
     }
-    add_lbs( AnchorX::Mid, ay1, can_move, can_move );
-    add_lbs( AnchorX::Mid, ay2, can_move, can_move );
-    if ( dual_y ) add_lbs( ax1, ay1, can_move, can_move );
-    add_lbs( ax1, ay2, can_move, can_move );
-    add_lbs( ax2, ay1, can_move, can_move );
-    add_lbs( ax2, ay2, can_move, can_move );
-    if ( can_move ) {
-      add_lbs( AnchorX::Mid, AnchorY::Mid, false, false );
-      if ( !dual_y ) {
-        add_lbs( ax1, AnchorY::Mid, true, false );
-        add_lbs( ax2, AnchorY::Mid, true, false );
-      }
-    }
+  } else {
+    add_lbs( ax1, ay1 );
+    add_lbs( AnchorX::Mid, ay1 );
+    add_lbs( ax1, AnchorY::Mid );
+    add_lbs( ax1, ay2 );
+    add_lbs( AnchorX::Mid, ay2 );
+    add_lbs( ax2, ay1 );
+    add_lbs( ax2, ay2 );
+    add_lbs( ax2, AnchorY::Mid );
   }
 
 /*
   for ( auto lb : lb_list ) {
     g->Add( new Rect( lb.bb.min, lb.bb.max ) );
-    g->Last()->Attr()->SetLineWidth( 0.5 );
+    g->Last()->Attr()->SetLineWidth( 2 );
     g->Last()->Attr()->FillColor()->Clear();
-    g->Last()->Attr()->LineColor()->Set( ColorName::black );
+    g->Last()->Attr()->LineColor()->Set( ColorName::orange );
   }
 */
 }

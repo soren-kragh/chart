@@ -22,6 +22,8 @@ Object* Chart::Collides(
   SVG::U margin_x, SVG::U margin_y
 )
 {
+  margin_x -= epsilon;
+  margin_y -= epsilon;
   if ( obj == nullptr || obj->Empty() ) return nullptr;
   for ( auto object : objects ) {
     if ( object->Empty() ) continue;
@@ -46,8 +48,7 @@ void Chart::MoveObjs(
     U dx = 0;
     U dy = 0;
     for ( auto obj : move_objs ) {
-      Object* col =
-        Collides( obj, avoid_objs, margin_x - epsilon, margin_y - epsilon );
+      Object* col = Collides( obj, avoid_objs, margin_x, margin_y );
       if ( col != nullptr ) {
         BoundaryBox col_bb = col->GetBB();
         BoundaryBox obj_bb = obj->GetBB();
