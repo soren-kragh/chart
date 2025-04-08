@@ -1032,8 +1032,6 @@ void Series::BuildBar(
   Point p1;
   Point p2;
 
-  U db = std::min( 0.25, line_width / 2 );
-
   for ( const Datum& datum : datum_list ) {
     size_t i = datum.x;
     double x = datum.x + cx;
@@ -1113,14 +1111,14 @@ void Series::BuildBar(
       datum.y != base &&
       (type == SeriesType::Bar || type == SeriesType::StackedBar)
     ) {
-      U d = std::abs( axis_x->Coor( wx / 2 ) - axis_x->Coor( 0 ) );
+      U w = std::abs( axis_x->Coor( wx / 2 ) - axis_x->Coor( 0 ) );
       bool cut_bot = false;
       bool cut_top = false;
       bool cut_lft = false;
       bool cut_rgt = false;
       if ( axis_x->angle == 0 ) {
-        p1.x -= d;
-        p2.x += d;
+        p1.x -= w;
+        p2.x += w;
         if ( p1.y < p2.y ) {
           if ( !p1_inside ) cut_bot = true;
           if ( !p2_inside ) cut_top = true;
@@ -1132,8 +1130,8 @@ void Series::BuildBar(
           cut_top = true;
         }
       } else {
-        p1.y -= d;
-        p2.y += d;
+        p1.y -= w;
+        p2.y += w;
         if ( p1.x < p2.x ) {
           if ( !p1_inside ) cut_lft = true;
           if ( !p2_inside ) cut_rgt = true;
@@ -1159,68 +1157,58 @@ void Series::BuildBar(
           Point c1{ p1 };
           Point c2{ p2 };
           if ( has_line ) {
-            U d = (line_dash > 0) ? +db : (line_width / 2);
-            if ( !cut_lft ) c1.x += d;
-            if ( !cut_rgt ) c2.x -= d;
-            if ( !cut_bot ) c1.y += d;
-            if ( !cut_top ) c2.y -= d;
+            U d = std::min( 0.25, line_width / 2 );
+            U q = (line_dash > 0) ? +d : (line_width / 2);
+            c1.x += cut_lft ? -d : +q;
+            c2.x -= cut_rgt ? -d : +q;
+            c1.y += cut_bot ? -d : +q;
+            c2.y -= cut_top ? -d : +q;
           }
           fill_g->Add( new Rect( c1, c2 ) );
         }
         if ( has_line ) {
           U d = line_width / 2;
-          U q = db;
+          U q = 0;
           if ( cut_bot && cut_top ) {
             line_g->Add( new Line( p1.x + d, p1.y - q, p1.x + d, p2.y + q ) );
             line_g->Add( new Line( p2.x - d, p1.y - q, p2.x - d, p2.y + q ) );
-            continue;
-          }
+          } else
           if ( cut_lft && cut_rgt ) {
             line_g->Add( new Line( p1.x - q, p1.y + d, p2.x + q, p1.y + d ) );
             line_g->Add( new Line( p1.x - q, p2.y - d, p2.x + q, p2.y - d ) );
-            continue;
-          }
+          } else
           if ( cut_bot ) {
             line_g->Add( new Poly(
               { p1.x + d, p1.y - q, p1.x + d, p2.y - d,
                 p2.x - d, p2.y - d, p2.x - d, p1.y - q
               }
             ) );
-            continue;
-          }
+          } else
           if ( cut_top ) {
             line_g->Add( new Poly(
               { p1.x + d, p2.y + q, p1.x + d, p1.y + d,
                 p2.x - d, p1.y + d, p2.x - d, p2.y + q
               }
             ) );
-            continue;
-          }
+          } else
           if ( cut_lft ) {
             line_g->Add( new Poly(
               { p1.x - q, p1.y + d, p2.x - d, p1.y + d,
                 p2.x - d, p2.y - d, p1.x - q, p2.y - d
               }
             ) );
-            continue;
-          }
+          } else
           if ( cut_rgt ) {
             line_g->Add( new Poly(
               { p2.x + q, p1.y + d, p1.x + d, p1.y + d,
                 p1.x + d, p2.y - d, p2.x + q, p2.y - d
               }
             ) );
-            continue;
+          } else {
+            line_g->Add( new Rect( p1.x + d, p1.y + d, p2.x - d, p2.y - d ) );
           }
-          line_g->Add( new Rect( p1.x + d, p1.y + d, p2.x - d, p2.y - d ) );
         }
       } else {
-        if ( has_line ) {
-          if ( cut_lft ) p1.x -= db;
-          if ( cut_rgt ) p2.x += db;
-          if ( cut_bot ) p1.y -= db;
-          if ( cut_top ) p2.y += db;
-        }
         tbar_g->Add( new Rect( p1, p2 ) );
       }
     }
