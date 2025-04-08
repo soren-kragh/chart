@@ -1032,7 +1032,7 @@ void Series::BuildBar(
   Point p1;
   Point p2;
 
-  U db = std::min( 1.0, line_width / 2 );
+  U db = std::min( 0.25, line_width / 2 );
 
   for ( const Datum& datum : datum_list ) {
     size_t i = datum.x;
@@ -1124,10 +1124,12 @@ void Series::BuildBar(
         if ( p1.y < p2.y ) {
           if ( !p1_inside ) cut_bot = true;
           if ( !p2_inside ) cut_top = true;
+          cut_bot = true;
         }
         if ( p1.y > p2.y ) {
           if ( !p1_inside ) cut_top = true;
           if ( !p2_inside ) cut_bot = true;
+          cut_top = true;
         }
       } else {
         p1.y -= d;
@@ -1135,10 +1137,12 @@ void Series::BuildBar(
         if ( p1.x < p2.x ) {
           if ( !p1_inside ) cut_lft = true;
           if ( !p2_inside ) cut_rgt = true;
+          cut_lft = true;
         }
         if ( p1.x > p2.x ) {
           if ( !p1_inside ) cut_rgt = true;
           if ( !p2_inside ) cut_lft = true;
+          cut_rgt = true;
         }
       }
       if ( p1.x > p2.x ) std::swap( p1.x, p2.x );
@@ -1154,52 +1158,56 @@ void Series::BuildBar(
         if ( has_fill ) {
           Point c1{ p1 };
           Point c2{ p2 };
-          if ( !cut_lft ) c1.x += db;
-          if ( !cut_rgt ) c2.x -= db;
-          if ( !cut_bot ) c1.y += db;
-          if ( !cut_bot ) c2.y -= db;
+          if ( has_line ) {
+            U d = (line_dash > 0) ? +db : (line_width / 2);
+            if ( !cut_lft ) c1.x += d;
+            if ( !cut_rgt ) c2.x -= d;
+            if ( !cut_bot ) c1.y += d;
+            if ( !cut_top ) c2.y -= d;
+          }
           fill_g->Add( new Rect( c1, c2 ) );
         }
         if ( has_line ) {
           U d = line_width / 2;
+          U q = db;
           if ( cut_bot && cut_top ) {
-            line_g->Add( new Line( p1.x + d, p1.y, p1.x + d, p2.y ) );
-            line_g->Add( new Line( p2.x - d, p1.y, p2.x - d, p2.y ) );
+            line_g->Add( new Line( p1.x + d, p1.y - q, p1.x + d, p2.y + q ) );
+            line_g->Add( new Line( p2.x - d, p1.y - q, p2.x - d, p2.y + q ) );
             continue;
           }
           if ( cut_lft && cut_rgt ) {
-            line_g->Add( new Line( p1.x, p1.y + d, p2.x, p1.y + d ) );
-            line_g->Add( new Line( p1.x, p2.y - d, p2.x, p2.y - d ) );
+            line_g->Add( new Line( p1.x - q, p1.y + d, p2.x + q, p1.y + d ) );
+            line_g->Add( new Line( p1.x - q, p2.y - d, p2.x + q, p2.y - d ) );
             continue;
           }
           if ( cut_bot ) {
             line_g->Add( new Poly(
-              { p1.x + d, p1.y, p1.x + d, p2.y - d,
-                p2.x - d, p2.y - d, p2.x - d, p1.y
+              { p1.x + d, p1.y - q, p1.x + d, p2.y - d,
+                p2.x - d, p2.y - d, p2.x - d, p1.y - q
               }
             ) );
             continue;
           }
           if ( cut_top ) {
             line_g->Add( new Poly(
-              { p1.x + d, p2.y, p1.x + d, p1.y + d,
-                p2.x - d, p1.y + d, p2.x - d, p2.y
+              { p1.x + d, p2.y + q, p1.x + d, p1.y + d,
+                p2.x - d, p1.y + d, p2.x - d, p2.y + q
               }
             ) );
             continue;
           }
           if ( cut_lft ) {
             line_g->Add( new Poly(
-              { p1.x, p1.y + d, p2.x - d, p1.y + d,
-                p2.x - d, p2.y - d, p1.x, p2.y - d
+              { p1.x - q, p1.y + d, p2.x - d, p1.y + d,
+                p2.x - d, p2.y - d, p1.x - q, p2.y - d
               }
             ) );
             continue;
           }
           if ( cut_rgt ) {
             line_g->Add( new Poly(
-              { p2.x, p1.y + d, p1.x + d, p1.y + d,
-                p1.x + d, p2.y - d, p2.x, p2.y - d
+              { p2.x + q, p1.y + d, p1.x + d, p1.y + d,
+                p1.x + d, p2.y - d, p2.x + q, p2.y - d
               }
             ) );
             continue;
@@ -1207,6 +1215,12 @@ void Series::BuildBar(
           line_g->Add( new Rect( p1.x + d, p1.y + d, p2.x - d, p2.y - d ) );
         }
       } else {
+        if ( has_line ) {
+          if ( cut_lft ) p1.x -= db;
+          if ( cut_rgt ) p2.x += db;
+          if ( cut_bot ) p1.y -= db;
+          if ( cut_top ) p2.y += db;
+        }
         tbar_g->Add( new Rect( p1, p2 ) );
       }
     }
@@ -1343,6 +1357,7 @@ void Series::BuildLine(
 
 void Series::Build(
   SVG::Group* main_g,
+  SVG::Group* line_g,
   SVG::Group* area_fill_g,
   SVG::Group* marker_g,
   SVG::Group* tag_g,
@@ -1376,7 +1391,6 @@ void Series::Build(
 
   Group* fill_g = nullptr;
   Group* tbar_g = nullptr;
-  Group* line_g = nullptr;
   Group* mark_g = nullptr;
   Group* hole_g = nullptr;
 
@@ -1387,15 +1401,17 @@ void Series::Build(
   }
   ApplyFillStyle( fill_g );
 
-  tbar_g = main_g->AddNewGroup();
-  if ( !line_color.IsClear() && line_width > 0 ) {
+  // Tiny bars.
+  if ( has_line ) {
+    tbar_g = line_g->AddNewGroup();
     tbar_g->Attr()->LineColor()->Clear();
     tbar_g->Attr()->FillColor()->Set( &line_color );
   } else {
+    tbar_g = main_g->AddNewGroup();
     ApplyFillStyle( tbar_g );
   }
 
-  line_g = main_g->AddNewGroup();
+  line_g = line_g->AddNewGroup();
   ApplyLineStyle( line_g );
 
   if ( marker_g != nullptr ) {

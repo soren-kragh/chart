@@ -1484,6 +1484,7 @@ void Main::BuildSeries(
   Group* stacked_area_fill_g = below_axes_g->AddNewGroup();
   Group* stacked_area_line_g = below_axes_g->AddNewGroup();
   Group* bar_area_g          = below_axes_g->AddNewGroup();
+  Group* bar_line_g          = below_axes_g->AddNewGroup();
   Group* lollipop_stem_g     = below_axes_g->AddNewGroup();
 
   for ( auto series : series_list ) {
@@ -1495,7 +1496,8 @@ void Main::BuildSeries(
       }
       sa_first[ y_n ] = false;
       series->Build(
-        stacked_area_line_g, stacked_area_fill_g, above_axes_g, tag_g,
+        stacked_area_line_g, stacked_area_line_g, stacked_area_fill_g,
+        above_axes_g, tag_g,
         0, 1,
         &sa_ofs_pos[ y_n ], &sa_ofs_neg[ y_n ],
         &sa_pts_pos[ y_n ], &sa_pts_neg[ y_n ]
@@ -1507,7 +1509,7 @@ void Main::BuildSeries(
       std::vector< Point > pts_pos;
       std::vector< Point > pts_neg;
       series->Build(
-        bar_area_g, bar_area_g, above_axes_g, tag_g,
+        bar_area_g, bar_area_g, bar_area_g, above_axes_g, tag_g,
         0, 1,
         &ofs_pos, &ofs_neg,
         &pts_pos, &pts_neg
@@ -1528,7 +1530,7 @@ void Main::BuildSeries(
         }
       }
       series->Build(
-        bar_area_g, nullptr, nullptr, tag_g,
+        bar_area_g, bar_line_g, nullptr, nullptr, tag_g,
         bar_num[ y_n ], bar_tot,
         &bar_ofs_pos[ y_n ], &bar_ofs_neg[ y_n ]
       );
@@ -1536,7 +1538,7 @@ void Main::BuildSeries(
     }
     if ( series->type == SeriesType::Lollipop ) {
       series->Build(
-        lollipop_stem_g, nullptr, above_axes_g, tag_g,
+        lollipop_stem_g, lollipop_stem_g, nullptr, above_axes_g, tag_g,
         lol_num, lol_tot
       );
       lol_num++;
@@ -1548,7 +1550,7 @@ void Main::BuildSeries(
       series->type == SeriesType::Point
     ) {
       series->Build(
-        above_axes_g, nullptr, above_axes_g, tag_g,
+        above_axes_g, above_axes_g, nullptr, above_axes_g, tag_g,
         0, 1
       );
     }

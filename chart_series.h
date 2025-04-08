@@ -169,6 +169,7 @@ private:
   );
   void Build(
     SVG::Group* main_g,
+    SVG::Group* line_g,
     SVG::Group* area_fill_g,
     SVG::Group* marker_g,
     SVG::Group* tag_g,
