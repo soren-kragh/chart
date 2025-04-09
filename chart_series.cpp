@@ -1168,7 +1168,7 @@ void Series::BuildBar(
         }
         if ( has_line ) {
           U d = line_width / 2;
-          U q = 0;
+          U q = std::min( 0.25, +d );
           if ( cut_bot && cut_top ) {
             line_g->Add( new Line( p1.x + d, p1.y - q, p1.x + d, p2.y + q ) );
             line_g->Add( new Line( p2.x - d, p1.y - q, p2.x - d, p2.y + q ) );
@@ -1401,6 +1401,9 @@ void Series::Build(
 
   line_g = line_g->AddNewGroup();
   ApplyLineStyle( line_g );
+  if ( type == SeriesType::Bar || type == SeriesType::StackedBar ) {
+    line_g->ParrentGroup()->FrontToBack();
+  }
 
   if ( marker_g != nullptr ) {
     mark_g = marker_g->AddNewGroup();
