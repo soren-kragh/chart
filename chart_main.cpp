@@ -1386,6 +1386,14 @@ void Main::SeriesPrepare(
   std::vector< LegendBox >* lb_list
 )
 {
+  Color tag_bg_color;
+  if ( !ChartAreaColor()->IsClear() ) {
+    tag_bg_color.Set( ChartAreaColor() );
+  } else {
+    tag_bg_color.Set( BackgroundColor() );
+  }
+  if ( tag_bg_color.IsClear() ) tag_bg_color.Set( ColorName::white );
+
   bar_tot = 0;
   lol_tot = 0;
 
@@ -1425,16 +1433,16 @@ void Main::SeriesPrepare(
     }
 
     if ( !series->tag_fill_color.IsDefined() ) {
-      if ( series->line_color.IsClear() ) {
-        if ( series->fill_color.IsClear() ) {
-          series->tag_fill_color.Clear();
-        } else {
-          series->tag_fill_color.Set( &series->fill_color );
-        }
-      } else {
-        series->tag_fill_color.Set( &series->line_color );
+      Color c{ &series->line_color };
+      if ( c.IsClear() ) {
+        c.Set( &series->fill_color );
       }
-      series->tag_fill_color.SetTransparency( 0.5 );
+      if ( c.IsClear() ) {
+        series->tag_fill_color.Set( &tag_bg_color );
+      } else {
+        c.SetTransparency( 0.0 );
+        series->tag_fill_color.Set( &tag_bg_color, &c, 0.2 );
+      }
     }
 
     if ( !series->tag_line_color.IsDefined() ) {
