@@ -2055,7 +2055,7 @@ std::string Main::Build( void )
     PrepareHTML();
     oss << html_db->GenHTML( canvas );
   } else {
-    oss << canvas->GenSVG( 0, "style=\"pointer-events: none;\"" );
+    oss << canvas->GenSVG();
   }
   delete canvas;
   return oss.str();
