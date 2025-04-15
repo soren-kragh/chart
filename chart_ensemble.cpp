@@ -38,29 +38,16 @@ Ensemble::Part::~Part( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::Part::GetBB(
-  BoundaryBox& agr_full_bb,
-  BoundaryBox& agr_area_bb
-)
+Ensemble::PartBB Ensemble::Part::GetPartBB( void )
 {
-  agr_full_bb.Reset();
-  agr_area_bb.Reset();
-
   if ( chart != nullptr ) {
-    agr_full_bb.Update( full_bb );
-    agr_area_bb.Update( area_bb );
-    return;
+    return chart_bb;
   }
 
-  std::vector< BoundaryBox > full_bb_list;
-  std::vector< BoundaryBox > area_bb_list;
+  std::vector< PartBB > outlines;
 
   for ( auto part : parts ) {
-    BoundaryBox fbb;
-    BoundaryBox abb;
-    part->GetBB( fbb, abb );
-    full_bb_list.emplace_back( fbb );
-    area_bb_list.emplace_back( abb );
+    outlines.emplace_back( part->GetPartBB() );
   }
 
 /*
@@ -107,7 +94,7 @@ void Ensemble::Part::GetBB(
   }
 */
 
-  return;
+  return chart_bb;
 }
 
 //------------------------------------------------------------------------------

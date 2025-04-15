@@ -28,13 +28,17 @@ public:
 
 private:
 
+  struct PartBB {
+    SVG::BoundaryBox full_bb;
+    SVG::BoundaryBox area_bb;
+  };
+
   struct Part {
     ~Part( void );
 
     // Associated with chart.
     Main* chart = nullptr;
-    SVG::BoundaryBox full_bb;
-    SVG::BoundaryBox area_bb;
+    PartBB chart_bb;
     SVG::U trans_x{ 0.0 };
     SVG::U trans_y{ 0.0 };
 
@@ -49,10 +53,7 @@ private:
     bool anchor_full = false;
 
     void Arrange( void );
-    void GetBB(
-      SVG::BoundaryBox& agr_full_bb,
-      SVG::BoundaryBox& agr_area_bb
-    );
+    PartBB GetPartBB( void );
   };
 
 };
