@@ -38,70 +38,54 @@ Ensemble::Part::~Part( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Ensemble::PartBB Ensemble::Part::GetPartBB( void )
+void Ensemble::Part::DetermineBB( void )
 {
   if ( chart != nullptr ) {
-    return chart_bb;
+    return;
   }
 
-  std::vector< PartBB > outlines;
+  Part* max_x_part = nullptr;
+  Part* max_y_part = nullptr;
 
   for ( auto part : parts ) {
-    outlines.emplace_back( part->GetPartBB() );
-  }
-
-/*
-  BoundaryBox max_fbb;
-  BoundaryBox max_abb;
-  U max_fwx = 0;
-  U max_fwy = 0;
-  U max_awx = 0;
-  U max_awy = 0;
-
-  for ( auto part : parts ) {
-    BoundaryBox fbb;
-    BoundaryBox abb;
-    GetBB( full, fbb, abb );
-    max_fwx = std::max( +max_fwx, fbb.max.x - fbb.min.x );
-    max_fwy = std::max( +max_fwy, fbb.max.y - fbb.min.y );
-    max_awx = std::max( +max_awx, abb.max.x - abb.min.x );
-    max_awy = std::max( +max_awy, abb.max.y - abb.min.y );
-    max_fbb.Update( fbb );
-    max_abb.Update( abb );
-  }
-
-  for ( auto part : parts ) {
-    BoundaryBox fbb;
-    BoundaryBox abb;
-    GetBB( full, fbb, abb );
-    U dx = 0;
-    U dy = 0;
-    if ( vertical ) {
-    } else {
-      if ( anchor_y == AnchorY::Mid ) {
-        if ( full ) {
-          dy = 
-        } else {
-        }
-      }
+    part->DetermineBB();
+    if ( max_x_part == nullptr ) {
+      max_x_part = part;
+      max_y_part = part;
+      continue;
     }
-    fbb.min.x += dx; fbb.min.y += dy;
-    fbb.max.x += dx; fbb.max.y += dy;
-    abb.min.x += dx; abb.min.y += dy;
-    abb.max.x += dx; abb.max.y += dy;
-    agr_full_bb.Update( fbb );
-    agr_area_bb.Update( abb );
+    U wx =
+      part->anchor_full
+      ? (part->full_bb.max.x - part->full_bb.min.x)
+      : (part->area_bb.max.x - part->area_bb.min.x);
+    U wy =
+      part->anchor_full
+      ? (part->full_bb.max.y - part->full_bb.min.y)
+      : (part->area_bb.max.y - part->area_bb.min.y);
+    U mx =
+      max_x_part->anchor_full
+      ? (max_x_part->full_bb.max.x - max_x_part->full_bb.min.x)
+      : (max_x_part->area_bb.max.x - max_x_part->area_bb.min.x);
+    U my =
+      max_y_part->anchor_full
+      ? (max_y_part->full_bb.max.y - max_y_part->full_bb.min.y)
+      : (max_y_part->area_bb.max.y - max_y_part->area_bb.min.y);
+    if ( wx > mx ) max_x_part = part;
+    if ( wy > my ) max_y_part = part;
   }
-*/
 
-  return chart_bb;
+  full_bb.Reset();
+  area_bb.Reset();
+
+
+
+  return;
 }
 
 //------------------------------------------------------------------------------
 
 void Ensemble::Part::Arrange( void )
 {
-
   return;
 }
 

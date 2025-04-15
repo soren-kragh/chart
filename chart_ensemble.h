@@ -28,33 +28,31 @@ public:
 
 private:
 
-  struct PartBB {
-    SVG::BoundaryBox full_bb;
-    SVG::BoundaryBox area_bb;
-  };
-
   struct Part {
     ~Part( void );
 
-    // Associated with chart.
+    // Associated with leaf parts.
     Main* chart = nullptr;
-    PartBB chart_bb;
     SVG::U trans_x{ 0.0 };
     SVG::U trans_y{ 0.0 };
 
-    // Associated with parts.
+    // Associated with non-leaf parts.
     std::deque< Part* > parts;
     bool vertical = false;
     bool expand = false;
 
-    // Associated with both chart and parts.
+    // Associated with all parts.
+    SVG::BoundaryBox full_bb;
+    SVG::BoundaryBox area_bb;
     SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
     SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
     bool anchor_full = false;
 
+    void DetermineBB( void );
     void Arrange( void );
-    PartBB GetPartBB( void );
   };
+
+  Part* top_part = nullptr;
 
 };
 
