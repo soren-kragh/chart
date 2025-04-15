@@ -52,26 +52,26 @@ void Ensemble::Part::DetermineBB( void )
     if ( mx_part == nullptr ) {
       mx_part = part;
       my_part = part;
-      continue;
+    } else {
+      U wx =
+        part->anchor_full
+        ? (part->full_bb.max.x - part->full_bb.min.x)
+        : (part->area_bb.max.x - part->area_bb.min.x);
+      U wy =
+        part->anchor_full
+        ? (part->full_bb.max.y - part->full_bb.min.y)
+        : (part->area_bb.max.y - part->area_bb.min.y);
+      U mx =
+        mx_part->anchor_full
+        ? (mx_part->full_bb.max.x - mx_part->full_bb.min.x)
+        : (mx_part->area_bb.max.x - mx_part->area_bb.min.x);
+      U my =
+        my_part->anchor_full
+        ? (my_part->full_bb.max.y - my_part->full_bb.min.y)
+        : (my_part->area_bb.max.y - my_part->area_bb.min.y);
+      if ( wx > mx ) mx_part = part;
+      if ( wy > my ) my_part = part;
     }
-    U wx =
-      part->anchor_full
-      ? (part->full_bb.max.x - part->full_bb.min.x)
-      : (part->area_bb.max.x - part->area_bb.min.x);
-    U wy =
-      part->anchor_full
-      ? (part->full_bb.max.y - part->full_bb.min.y)
-      : (part->area_bb.max.y - part->area_bb.min.y);
-    U mx =
-      mx_part->anchor_full
-      ? (mx_part->full_bb.max.x - mx_part->full_bb.min.x)
-      : (mx_part->area_bb.max.x - mx_part->area_bb.min.x);
-    U my =
-      my_part->anchor_full
-      ? (my_part->full_bb.max.y - my_part->full_bb.min.y)
-      : (my_part->area_bb.max.y - my_part->area_bb.min.y);
-    if ( wx > mx ) mx_part = part;
-    if ( wy > my ) my_part = part;
   }
 
   BoundaryBox mx_bb{ mx_part->anchor_full ? mx_part->full_bb : mx_part->area_bb };
@@ -111,14 +111,10 @@ void Ensemble::Part::DetermineBB( void )
         dy = my_bb.max.y - (part->anchor_full ? fbb.max.y : abb.max.y);
       }
     }
-    fbb.min.x += dx;
-    fbb.max.x += dx;
-    abb.min.x += dx;
-    abb.max.x += dx;
-    fbb.min.y += dy;
-    fbb.max.y += dy;
-    abb.min.y += dy;
-    abb.max.y += dy;
+    fbb.min.x += dx; fbb.max.x += dx;
+    fbb.min.y += dy; fbb.max.y += dy;
+    abb.min.x += dx; abb.max.x += dx;
+    abb.min.y += dy; abb.max.y += dy;
     full_bb.Update( fbb );
     area_bb.Update( abb );
     if ( vertical ) {

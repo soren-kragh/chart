@@ -42,11 +42,11 @@ private:
     bool expand = false;
 
     // Associated with all parts.
-    SVG::BoundaryBox full_bb;
-    SVG::BoundaryBox area_bb;
     SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
     SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
     bool anchor_full = false;
+    SVG::BoundaryBox full_bb;
+    SVG::BoundaryBox area_bb;
 
     void DetermineBB( void );
     void Arrange( void );
