@@ -44,14 +44,14 @@ void Ensemble::Part::DetermineBB( void )
     return;
   }
 
-  Part* max_x_part = nullptr;
-  Part* max_y_part = nullptr;
+  Part* mx_part = nullptr;
+  Part* my_part = nullptr;
 
   for ( auto part : parts ) {
     part->DetermineBB();
-    if ( max_x_part == nullptr ) {
-      max_x_part = part;
-      max_y_part = part;
+    if ( mx_part == nullptr ) {
+      mx_part = part;
+      my_part = part;
       continue;
     }
     U wx =
@@ -63,21 +63,70 @@ void Ensemble::Part::DetermineBB( void )
       ? (part->full_bb.max.y - part->full_bb.min.y)
       : (part->area_bb.max.y - part->area_bb.min.y);
     U mx =
-      max_x_part->anchor_full
-      ? (max_x_part->full_bb.max.x - max_x_part->full_bb.min.x)
-      : (max_x_part->area_bb.max.x - max_x_part->area_bb.min.x);
+      mx_part->anchor_full
+      ? (mx_part->full_bb.max.x - mx_part->full_bb.min.x)
+      : (mx_part->area_bb.max.x - mx_part->area_bb.min.x);
     U my =
-      max_y_part->anchor_full
-      ? (max_y_part->full_bb.max.y - max_y_part->full_bb.min.y)
-      : (max_y_part->area_bb.max.y - max_y_part->area_bb.min.y);
-    if ( wx > mx ) max_x_part = part;
-    if ( wy > my ) max_y_part = part;
+      my_part->anchor_full
+      ? (my_part->full_bb.max.y - my_part->full_bb.min.y)
+      : (my_part->area_bb.max.y - my_part->area_bb.min.y);
+    if ( wx > mx ) mx_part = part;
+    if ( wy > my ) my_part = part;
   }
+
+  BoundaryBox mx_bb{ mx_part->anchor_full ? mx_part->full_bb : mx_part->area_bb };
+  BoundaryBox my_bb{ my_part->anchor_full ? my_part->full_bb : my_part->area_bb };
 
   full_bb.Reset();
   area_bb.Reset();
 
+  U x = 0;
+  U y = 0;
 
+  for ( auto part : parts ) {
+    BoundaryBox fbb{ part->full_bb };
+    BoundaryBox abb{ part->area_bb };
+    U dy = y - fbb.min.y;
+    U dx = x - fbb.min.x;
+    if ( vertical ) {
+      dx =
+        (mx_bb.max.x + mx_bb.min.x) -
+        (part->anchor_full ? (fbb.max.x + fbb.min.x) : (abb.max.x + abb.min.x));
+      dx = dx / 2;
+      if ( part->anchor_x == AnchorX::Min ) {
+        dx = mx_bb.min.x - (part->anchor_full ? fbb.min.x : abb.min.x);
+      }
+      if ( part->anchor_x == AnchorX::Max ) {
+        dx = mx_bb.max.x - (part->anchor_full ? fbb.max.x : abb.max.x);
+      }
+    } else {
+      dy =
+        (my_bb.max.y + my_bb.min.y) -
+        (part->anchor_full ? (fbb.max.y + fbb.min.y) : (abb.max.y + abb.min.y));
+      dy = dy / 2;
+      if ( part->anchor_y == AnchorY::Min ) {
+        dy = my_bb.min.y - (part->anchor_full ? fbb.min.y : abb.min.y);
+      }
+      if ( part->anchor_y == AnchorY::Max ) {
+        dy = my_bb.max.y - (part->anchor_full ? fbb.max.y : abb.max.y);
+      }
+    }
+    fbb.min.x += dx;
+    fbb.max.x += dx;
+    abb.min.x += dx;
+    abb.max.x += dx;
+    fbb.min.y += dy;
+    fbb.max.y += dy;
+    abb.min.y += dy;
+    abb.max.y += dy;
+    full_bb.Update( fbb );
+    area_bb.Update( abb );
+    if ( vertical ) {
+      y += fbb.max.y - fbb.min.y;
+    } else {
+      x += fbb.max.x - fbb.min.x;
+    }
+  }
 
   return;
 }

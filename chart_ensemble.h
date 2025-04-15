@@ -31,12 +31,12 @@ private:
   struct Part {
     ~Part( void );
 
-    // Associated with leaf parts.
+    // Associated with leaf parts (identified by chart != nullptr).
     Main* chart = nullptr;
     SVG::U trans_x{ 0.0 };
     SVG::U trans_y{ 0.0 };
 
-    // Associated with non-leaf parts.
+    // Associated with non-leaf parts (identified by chart == nullptr).
     std::deque< Part* > parts;
     bool vertical = false;
     bool expand = false;
