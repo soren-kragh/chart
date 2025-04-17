@@ -53,29 +53,17 @@ void Ensemble::Part::DetermineBB( void )
       mx_part = part;
       my_part = part;
     } else {
-      U wx =
-        part->anchor_full
-        ? (part->full_bb.max.x - part->full_bb.min.x)
-        : (part->area_bb.max.x - part->area_bb.min.x);
-      U wy =
-        part->anchor_full
-        ? (part->full_bb.max.y - part->full_bb.min.y)
-        : (part->area_bb.max.y - part->area_bb.min.y);
-      U mx =
-        mx_part->anchor_full
-        ? (mx_part->full_bb.max.x - mx_part->full_bb.min.x)
-        : (mx_part->area_bb.max.x - mx_part->area_bb.min.x);
-      U my =
-        my_part->anchor_full
-        ? (my_part->full_bb.max.y - my_part->full_bb.min.y)
-        : (my_part->area_bb.max.y - my_part->area_bb.min.y);
+      U wx = part->area_bb.max.x - part->area_bb.min.x;
+      U wy = part->area_bb.max.y - part->area_bb.min.y;
+      U mx = mx_part->area_bb.max.x - mx_part->area_bb.min.x;
+      U my = my_part->area_bb.max.y - my_part->area_bb.min.y;
       if ( wx > mx ) mx_part = part;
       if ( wy > my ) my_part = part;
     }
   }
 
-  BoundaryBox mx_bb{ mx_part->anchor_full ? mx_part->full_bb : mx_part->area_bb };
-  BoundaryBox my_bb{ my_part->anchor_full ? my_part->full_bb : my_part->area_bb };
+  BoundaryBox mx_bb{ mx_part->area_bb };
+  BoundaryBox my_bb{ my_part->area_bb };
 
   full_bb.Reset();
   area_bb.Reset();
@@ -89,26 +77,20 @@ void Ensemble::Part::DetermineBB( void )
     U dy = y - fbb.min.y;
     U dx = x - fbb.min.x;
     if ( vertical ) {
-      dx =
-        (mx_bb.max.x + mx_bb.min.x) -
-        (part->anchor_full ? (fbb.max.x + fbb.min.x) : (abb.max.x + abb.min.x));
-      dx = dx / 2;
+      dx = (mx_bb.max.x + mx_bb.min.x)/2 - (abb.max.x + abb.min.x)/2;
       if ( part->anchor_x == AnchorX::Min ) {
-        dx = mx_bb.min.x - (part->anchor_full ? fbb.min.x : abb.min.x);
+        dx = mx_bb.min.x - abb.min.x;
       }
       if ( part->anchor_x == AnchorX::Max ) {
-        dx = mx_bb.max.x - (part->anchor_full ? fbb.max.x : abb.max.x);
+        dx = mx_bb.max.x - abb.max.x;
       }
     } else {
-      dy =
-        (my_bb.max.y + my_bb.min.y) -
-        (part->anchor_full ? (fbb.max.y + fbb.min.y) : (abb.max.y + abb.min.y));
-      dy = dy / 2;
+      dy = (my_bb.max.y + my_bb.min.y)/2 - (abb.max.y + abb.min.y)/2;
       if ( part->anchor_y == AnchorY::Min ) {
-        dy = my_bb.min.y - (part->anchor_full ? fbb.min.y : abb.min.y);
+        dy = my_bb.min.y - abb.min.y;
       }
       if ( part->anchor_y == AnchorY::Max ) {
-        dy = my_bb.max.y - (part->anchor_full ? fbb.max.y : abb.max.y);
+        dy = my_bb.max.y - abb.max.y;
       }
     }
     fbb.min.x += dx; fbb.max.x += dx;
