@@ -28,30 +28,40 @@ public:
 
 private:
 
-  struct Part {
-    ~Part( void );
-
-    // Associated with leaf parts (identified by chart != nullptr).
+  struct chart_t {
     Main* chart = nullptr;
-    SVG::U trans_x{ 0.0 };
-    SVG::U trans_y{ 0.0 };
-
-    // Associated with non-leaf parts (identified by chart == nullptr).
-    std::deque< Part* > parts;
-    bool vertical = false;
-    bool expand = false;
-
-    // Associated with all parts.
-    SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
-    SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
     SVG::BoundaryBox full_bb;
     SVG::BoundaryBox area_bb;
-
-    void DetermineBB( void );
-    void Arrange( void );
+    SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
+    SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
+    uint32_t x1, y1;
+    uint32_t x2, y2;
   };
 
-  Part* top_part = nullptr;
+  struct edge_t {
+    SVG::U coor = 0;
+    SVG::U pad;
+    SVG::U mov;
+  };
+
+  struct space_t {
+    edge_t e1;
+    edge_t e2;
+    SVG::U min = 0;
+  };
+
+  std::vector< chart_t > chart_list;
+  std::vector< space_t > space_list_x;
+  std::vector< space_t > space_list_y;
+
+  void InitGrid( void );
+
+  void AnnealGridSpace( std::vector< space_t >& space_list );
+  void AnnealGrid( void );
+
+public:
+  void DisplayGridSpace( std::vector< space_t >& space_list );
+  void Test( void );
 
 };
 
