@@ -50,16 +50,13 @@ private:
     SVG::U min = 0;
   };
 
-  uint32_t converge_step = 0;
-
   std::vector< chart_t > chart_list;
   std::vector< space_t > space_list_x;
   std::vector< space_t > space_list_y;
 
   void InitGrid( void );
 
-  void AnnealGridSpace( std::vector< space_t >& space_list );
-  void AnnealGrid( void );
+  uint32_t SolveGridSpace( std::vector< space_t >& space_list );
 
 public:
   void DisplayGridSpace( std::vector< space_t >& space_list );

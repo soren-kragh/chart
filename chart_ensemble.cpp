@@ -59,110 +59,117 @@ void Ensemble::InitGrid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::AnnealGridSpace( std::vector< space_t >& space_list )
+uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 {
   bool is_x = &space_list == &space_list_x;
 
-  for ( auto& s : space_list ) {
-    s.e1.pad = 0;
-    s.e2.pad = 0;
-    U w = (s.e2.coor - s.e1.coor) / 2;
-    s.e1.adj = +w;
-    s.e2.adj = -w;
-  }
+  uint32_t max_iter = 1000000;
+  uint32_t cur_iter = 0;
 
-  // Update pad values.
-  for ( auto& chart : chart_list ) {
-    U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
-    U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
-    U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-    U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-    U g1 = is_x ? chart.x1 : chart.y1;
-    U g2 = is_x ? chart.x2 : chart.y2;
+  while ( cur_iter < max_iter ) {
+    cur_iter++;
 
-    U ar = (a2 - a1) / 2;
-
-    U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
-    if (
-      is_x
-      ? (chart.anchor_x == SVG::AnchorX::Min)
-      : (chart.anchor_y == SVG::AnchorY::Min)
-    ) {
-      c = space_list[ g1 ].e1.coor + ar;
-    }
-    if (
-      is_x
-      ? (chart.anchor_x == SVG::AnchorX::Max)
-      : (chart.anchor_y == SVG::AnchorY::Max)
-    ) {
-      c = space_list[ g2 ].e2.coor - ar;
-    }
-
-    space_list[ g1 ].e1.pad =
-      std::max(
-        +space_list[ g1 ].e1.pad,
-        space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
-      );
-    space_list[ g2 ].e2.pad =
-      std::max(
-        +space_list[ g2 ].e2.pad,
-        (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
-      );
-  }
-
-  for ( auto& chart : chart_list ) {
-    U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-    U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-    U g1 = is_x ? chart.x1 : chart.y1;
-    U g2 = is_x ? chart.x2 : chart.y2;
-
-    U aw = a2 - a1;
-    U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
-
-    space_list[ g1 ].e1.adj =
-      std::min( +space_list[ g1 ].e1.adj, (sw - aw) / 2 );
-    space_list[ g2 ].e2.adj =
-      std::max( +space_list[ g2 ].e2.adj, (aw - sw) / 2 );
-  }
-
-  {
-    edge_t* e1 = nullptr;
-    edge_t* e2 = nullptr;
     for ( auto& s : space_list ) {
-      e1 = &s.e1;
-      if ( e2 ) {
-        U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
-        e2->adj -= overlap / 2;
-        e1->adj += overlap / 2;
-      }
-      e2 = &s.e2;
+      s.e1.pad = 0;
+      s.e2.pad = 0;
+      U w = (s.e2.coor - s.e1.coor) / 2;
+      s.e1.adj = +w;
+      s.e2.adj = -w;
     }
-  }
 
-  if ( converge_step == 0 ) {
-    bool more = false;
+    // Update pad values.
+    for ( auto& chart : chart_list ) {
+      U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
+      U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
+      U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
+      U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
+      U g1 = is_x ? chart.x1 : chart.y1;
+      U g2 = is_x ? chart.x2 : chart.y2;
+
+      U ar = (a2 - a1) / 2;
+
+      U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
+      if (
+        is_x
+        ? (chart.anchor_x == SVG::AnchorX::Min)
+        : (chart.anchor_y == SVG::AnchorY::Min)
+      ) {
+        c = space_list[ g1 ].e1.coor + ar;
+      }
+      if (
+        is_x
+        ? (chart.anchor_x == SVG::AnchorX::Max)
+        : (chart.anchor_y == SVG::AnchorY::Max)
+      ) {
+        c = space_list[ g2 ].e2.coor - ar;
+      }
+
+      space_list[ g1 ].e1.pad =
+        std::max(
+          +space_list[ g1 ].e1.pad,
+          space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
+        );
+      space_list[ g2 ].e2.pad =
+        std::max(
+          +space_list[ g2 ].e2.pad,
+          (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
+        );
+    }
+
+    for ( auto& chart : chart_list ) {
+      U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
+      U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
+      U g1 = is_x ? chart.x1 : chart.y1;
+      U g2 = is_x ? chart.x2 : chart.y2;
+
+      U aw = a2 - a1;
+      U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
+
+      space_list[ g1 ].e1.adj =
+        std::min( +space_list[ g1 ].e1.adj, (sw - aw) / 2 );
+      space_list[ g2 ].e2.adj =
+        std::max( +space_list[ g2 ].e2.adj, (aw - sw) / 2 );
+    }
+
+    {
+      edge_t* e1 = nullptr;
+      edge_t* e2 = nullptr;
+      for ( auto& s : space_list ) {
+        e1 = &s.e1;
+        if ( e2 ) {
+          U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
+          e2->adj -= overlap / 2;
+          e1->adj += overlap / 2;
+        }
+        e2 = &s.e2;
+      }
+    }
+
+    bool converged = true;
     for ( auto& s : space_list ) {
       s.e1.coor += s.e1.adj * 0.5;
       s.e2.coor += s.e2.adj * 0.5;
-      more = more || std::abs( s.e1.adj ) > 1e-4 || std::abs( s.e2.adj ) > 1e-4;
+      if ( std::abs( s.e1.adj ) > 1e-4 || std::abs( s.e2.adj ) > 1e-4 ) {
+        converged = false;
+      }
       if ( s.e2.coor - s.e1.coor < s.min ) {
         U c = (s.e1.coor + s.e2.coor) / 2;
         s.e1.coor = c - s.min / 2;
         s.e2.coor = c + s.min / 2;
       }
     }
-    if ( !more ) converge_step = 1;
-    return;
+
+    if ( converged ) break;
+
   }
 
-  return;
+  return cur_iter;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void Ensemble::DisplayGridSpace( std::vector< space_t >& space_list )
 {
-  printf( "%1d   ", converge_step );
   for ( auto& s : space_list ) {
     printf( "| %7.2f : %7.2f |", +s.e1.coor, +s.e2.coor );
   }
@@ -210,15 +217,10 @@ void Ensemble::Test( void )
 
   InitGrid();
 
-  printf( "%6d: ", 0 );
+  uint32_t iter = SolveGridSpace( space_list_x );
+  RenumberGridSpace( space_list_x );
   DisplayGridSpace( space_list_x );
-  for ( int i = 0; i < 1000; i++ ) {
-    AnnealGridSpace( space_list_x );
-    RenumberGridSpace( space_list_x );
-    printf( "%6d: ", i );
-    DisplayGridSpace( space_list_x );
-    if ( converge_step == 1 ) break;
-  }
+  printf( "%8d iterations\n", iter );
 
   return;
 }
