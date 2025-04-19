@@ -41,7 +41,8 @@ private:
   struct edge_t {
     SVG::U coor = 0;
     SVG::U pad;
-    SVG::U mov;
+    SVG::U mov; // Used for collisions
+    SVG::U adj; // Used for adjusting to get even spacing
   };
 
   struct space_t {
@@ -49,6 +50,8 @@ private:
     edge_t e2;
     SVG::U min = 0;
   };
+
+  uint32_t converge_step = 1;
 
   std::vector< chart_t > chart_list;
   std::vector< space_t > space_list_x;
@@ -61,6 +64,7 @@ private:
 
 public:
   void DisplayGridSpace( std::vector< space_t >& space_list );
+  void RenumberGridSpace( std::vector< space_t >& space_list );
   void Test( void );
 
 };
