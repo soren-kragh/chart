@@ -39,9 +39,10 @@ private:
   };
 
   struct edge_t {
-    SVG::U coor = 0;
-    SVG::U pad;
-    SVG::U adj;         // Iterative adjustment
+    SVG::U coor = 0;    // Coordinate of this core chart area edge
+    SVG::U adj;         // Iterative adjustment to coor
+    SVG::U pad;         // Padding caused by decorations outside core chart area
+    bool pad_use = false;
   };
 
   struct space_t {
