@@ -140,7 +140,7 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
     // Make the convergence limit dependent on how long we have iterated.
     double min_limit = 1e-5;
-    double max_limit = 1e+0;
+    double max_limit = 1e-2;
     U converge_limit =
       min_limit +
       (1.0 * cur_iter * cur_iter * (max_limit - min_limit)) /
@@ -211,34 +211,14 @@ void Ensemble::RenumberGridSpace( std::vector< space_t >& space_list )
 
 void Ensemble::Test( void )
 {
+  for ( int i = 0; i < 3; i++ )
   {
     chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 0; chart.grid_y2 = 0;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = i; chart.grid_y1 = 0;
+    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = i; chart.grid_y2 = 0;
     chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.max.x += 0;
-    chart_list.push_back( chart );
-  }
-  {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 1; chart.grid_y1 = 0;
-    chart.full_bb.Update( 200, 0 ); chart.grid_x2 = 1; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 400;
-    chart_list.push_back( chart );
-  }
-  {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 2; chart.grid_y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 2; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
-    chart_list.push_back( chart );
-  }
-  {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
-    chart.full_bb.Update( 1000, 0 ); chart.grid_x2 = 2; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
+    chart.full_bb.min.x -= 50;
+    chart.full_bb.max.x += 50;
     chart_list.push_back( chart );
   }
 
