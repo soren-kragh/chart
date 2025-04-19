@@ -41,8 +41,7 @@ private:
   struct edge_t {
     SVG::U coor = 0;
     SVG::U pad;
-    SVG::U mov; // Used for collisions
-    SVG::U adj; // Used for adjusting to get even spacing
+    SVG::U adj;         // Iterative adjustment
   };
 
   struct space_t {
@@ -51,7 +50,7 @@ private:
     SVG::U min = 0;
   };
 
-  uint32_t converge_step = 1;
+  uint32_t converge_step = 0;
 
   std::vector< chart_t > chart_list;
   std::vector< space_t > space_list_x;
