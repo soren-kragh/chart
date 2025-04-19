@@ -145,13 +145,12 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       }
     }
 
-    bool converged = true;
+    U max_adj = 0;
     for ( auto& s : space_list ) {
       s.e1.coor += s.e1.adj * 0.5;
       s.e2.coor += s.e2.adj * 0.5;
-      if ( std::abs( s.e1.adj ) > 1e-4 || std::abs( s.e2.adj ) > 1e-4 ) {
-        converged = false;
-      }
+      max_adj = std::max( +max_adj, std::abs( s.e1.adj ) );
+      max_adj = std::max( +max_adj, std::abs( s.e2.adj ) );
       if ( s.e2.coor - s.e1.coor < s.min ) {
         U c = (s.e1.coor + s.e2.coor) / 2;
         s.e1.coor = c - s.min / 2;
@@ -159,7 +158,9 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       }
     }
 
-    if ( converged ) break;
+    printf( "%12.6f\n", +max_adj );
+
+    if ( max_adj < 1e-3 ) break;
 
   }
 
