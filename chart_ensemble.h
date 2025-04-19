@@ -34,8 +34,8 @@ private:
     SVG::BoundaryBox area_bb;
     SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
     SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
-    uint32_t x1, y1;
-    uint32_t x2, y2;
+    uint32_t grid_x1, grid_y1;
+    uint32_t grid_x2, grid_y2;
   };
 
   struct edge_t {

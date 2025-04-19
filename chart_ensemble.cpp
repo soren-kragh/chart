@@ -33,8 +33,8 @@ void Ensemble::InitGrid( void )
   uint32_t max_x = 0;
   uint32_t max_y = 0;
   for ( auto& chart : chart_list ) {
-    max_x = std::max( max_x, chart.x2 );
-    max_y = std::max( max_y, chart.y2 );
+    max_x = std::max( max_x, chart.grid_x2 );
+    max_y = std::max( max_y, chart.grid_y2 );
   }
   space_t space;
   space_list_x.resize( max_x + 1, space );
@@ -66,8 +66,8 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
       U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
       U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-      U g1 = is_x ? chart.x1 : chart.y1;
-      U g2 = is_x ? chart.x2 : chart.y2;
+      U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+      U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
 
       U ar = (a2 - a1) / 2;
 
@@ -102,8 +102,8 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
     for ( auto& chart : chart_list ) {
       U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
       U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-      U g1 = is_x ? chart.x1 : chart.y1;
-      U g2 = is_x ? chart.x2 : chart.y2;
+      U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+      U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
 
       U aw = a2 - a1;
       U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
@@ -130,22 +130,29 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       }
     }
 
-    U max_adj = 0;
+    U acu_adj = 0;
     for ( auto& s : space_list ) {
-      s.e1.coor += s.e1.adj * 0.5;
-      s.e2.coor += s.e2.adj * 0.5;
-      max_adj = std::max( +max_adj, std::abs( s.e1.adj ) );
-      max_adj = std::max( +max_adj, std::abs( s.e2.adj ) );
+      s.e1.coor += s.e1.adj * 0.75;
+      s.e2.coor += s.e2.adj * 0.75;
+      acu_adj += std::abs( s.e1.adj );
+      acu_adj += std::abs( s.e2.adj );
     }
 
-    printf( "%12.6f\n", +max_adj );
+    // Make the convergence limit dependent on how long we have iterated.
+    double min_limit = 1e-5;
+    double max_limit = 1e+0;
+    U converge_limit =
+      min_limit +
+      (1.0 * cur_iter * cur_iter * (max_limit - min_limit)) /
+      (1.0 * max_iter * max_iter);
+
+    printf( "-    %12.6f    %12.10f\n", +acu_adj, +converge_limit );
 
     // To get alignment of the core chart areas, we initially do not take
     // padding into account. Therefore, when we have converged, check if the
     // padding collides and if so we have to take padding into consideration and
     // iterate more.
-    U converge_limit = 1e-3;
-    if ( max_adj < converge_limit ) {
+    if ( acu_adj < converge_limit ) {
       bool collisions = false;
       edge_t* e1 = nullptr;
       edge_t* e2 = nullptr;
@@ -183,7 +190,7 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 void Ensemble::DisplayGridSpace( std::vector< space_t >& space_list )
 {
   for ( auto& s : space_list ) {
-    printf( "| %7.2f : %7.2f |", +s.e1.coor, +s.e2.coor );
+    printf( "| %8.3f : %8.3f |", +s.e1.coor, +s.e2.coor );
   }
   printf( "\n" );
 }
@@ -206,31 +213,31 @@ void Ensemble::Test( void )
 {
   {
     chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.x1 = 0; chart.y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.x2 = 0; chart.y2 = 0;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
+    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 0; chart.grid_y2 = 0;
     chart.area_bb.Update( chart.full_bb );
     chart.full_bb.max.x += 0;
     chart_list.push_back( chart );
   }
   {
     chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.x1 = 1; chart.y1 = 0;
-    chart.full_bb.Update( 200, 0 ); chart.x2 = 1; chart.y2 = 0;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 1; chart.grid_y1 = 0;
+    chart.full_bb.Update( 200, 0 ); chart.grid_x2 = 1; chart.grid_y2 = 0;
     chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 500;
+    chart.full_bb.min.x -= 400;
     chart_list.push_back( chart );
   }
   {
     chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.x1 = 2; chart.y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.x2 = 2; chart.y2 = 0;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 2; chart.grid_y1 = 0;
+    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 2; chart.grid_y2 = 0;
     chart.area_bb.Update( chart.full_bb );
     chart_list.push_back( chart );
   }
   {
     chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.x1 = 0; chart.y1 = 0;
-    chart.full_bb.Update( 900, 0 ); chart.x2 = 2; chart.y2 = 0;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
+    chart.full_bb.Update( 1000, 0 ); chart.grid_x2 = 2; chart.grid_y2 = 0;
     chart.area_bb.Update( chart.full_bb );
     chart_list.push_back( chart );
   }
