@@ -48,7 +48,6 @@ private:
   struct space_t {
     edge_t e1;
     edge_t e2;
-    SVG::U min = 0;
   };
 
   std::vector< chart_t > chart_list;

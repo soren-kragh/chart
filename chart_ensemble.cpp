@@ -39,22 +39,6 @@ void Ensemble::InitGrid( void )
   space_t space;
   space_list_x.resize( max_x + 1, space );
   space_list_y.resize( max_y + 1, space );
-  for ( auto& chart : chart_list ) {
-    if ( chart.x1 == chart.x2 ) {
-      space_list_x[ chart.x1 ].min =
-        std::max(
-          +space_list_x[ chart.x1 ].min,
-          chart.area_bb.max.x - chart.area_bb.min.x
-        );
-    }
-    if ( chart.y1 == chart.y2 ) {
-      space_list_y[ chart.y1 ].min =
-        std::max(
-          +space_list_y[ chart.y1 ].min,
-          chart.area_bb.max.y - chart.area_bb.min.y
-        );
-    }
-  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,9 +56,8 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
     for ( auto& s : space_list ) {
       s.e1.pad = 0;
       s.e2.pad = 0;
-      U w = (s.e2.coor - s.e1.coor) / 2;
-      s.e1.adj = +w;
-      s.e2.adj = -w;
+      s.e1.adj = (s.e2.coor - s.e1.coor) / 2;
+      s.e2.adj = (s.e1.coor - s.e2.coor) / 2;
     }
 
     // Update pad values.
@@ -153,19 +136,14 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       s.e2.coor += s.e2.adj * 0.5;
       max_adj = std::max( +max_adj, std::abs( s.e1.adj ) );
       max_adj = std::max( +max_adj, std::abs( s.e2.adj ) );
-      if ( s.e2.coor - s.e1.coor < s.min ) {
-        U c = (s.e1.coor + s.e2.coor) / 2;
-        s.e1.coor = c - s.min / 2;
-        s.e2.coor = c + s.min / 2;
-      }
     }
 
     printf( "%12.6f\n", +max_adj );
 
     // To get alignment of the core chart areas, we initially do not take
-    // padding into account. So when we have converged, check if the padding
-    // collides and if so we have to take padding into consideration and iterate
-    // more.
+    // padding into account. Therefore, when we have converged, check if the
+    // padding collides and if so we have to take padding into consideration and
+    // iterate more.
     U converge_limit = 1e-3;
     if ( max_adj < converge_limit ) {
       bool collisions = false;
@@ -174,17 +152,25 @@ uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       for ( auto& s : space_list ) {
         e1 = &s.e1;
         if ( e2 ) {
-          U overlap =
-            (e2->coor + e2->pad) -
-            (e1->coor - e1->pad);
-          bool collides = overlap > 4 * converge_limit;
-          e2->pad_use = e2->pad_use || collides || cur_iter > max_iter / 2;
-          e1->pad_use = e1->pad_use || collides || cur_iter > max_iter / 2;
-          collisions = collisions || collides;
+          U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
+          if ( overlap > 4 * converge_limit ) {
+            e2->pad_use = true;
+            e1->pad_use = true;
+            collisions  = true;
+          }
         }
         e2 = &s.e2;
       }
       if ( !collisions ) break; // Solution found!
+    }
+
+    // If we have iterated a really long time, include all padding in the solver
+    // such that they can have a chance to take some effect before we bail out.
+    if ( cur_iter == max_iter / 2 ) {
+      for ( auto& s : space_list ) {
+        s.e1.pad_use = true;
+        s.e2.pad_use = true;
+      }
     }
 
   }
