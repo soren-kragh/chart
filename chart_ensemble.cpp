@@ -43,146 +43,164 @@ void Ensemble::InitGrid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-uint32_t Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
+void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 {
   bool is_x = &space_list == &space_list_x;
 
-  uint32_t max_iter = 1000000;
-  uint32_t cur_iter = 0;
+  bool solved = false;
 
-  while ( cur_iter < max_iter ) {
-    cur_iter++;
+  uint32_t max_trial = 5;
+  uint32_t cur_trial = 0;
 
-    for ( auto& s : space_list ) {
-      s.e1.pad = 0;
-      s.e2.pad = 0;
-      s.e1.adj = (s.e2.coor - s.e1.coor) / 2;
-      s.e2.adj = (s.e1.coor - s.e2.coor) / 2;
-    }
+  while ( !solved && cur_trial < max_trial ) {
+    cur_trial++;
 
-    // Update pad values.
-    for ( auto& chart : chart_list ) {
-      U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
-      U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
-      U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-      U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-      U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-      U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
-
-      U ar = (a2 - a1) / 2;
-
-      U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
-      if (
-        is_x
-        ? (chart.anchor_x == SVG::AnchorX::Min)
-        : (chart.anchor_y == SVG::AnchorY::Min)
-      ) {
-        c = space_list[ g1 ].e1.coor + ar;
-      }
-      if (
-        is_x
-        ? (chart.anchor_x == SVG::AnchorX::Max)
-        : (chart.anchor_y == SVG::AnchorY::Max)
-      ) {
-        c = space_list[ g2 ].e2.coor - ar;
-      }
-
-      space_list[ g1 ].e1.pad =
-        std::max(
-          +space_list[ g1 ].e1.pad,
-          space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
-        );
-      space_list[ g2 ].e2.pad =
-        std::max(
-          +space_list[ g2 ].e2.pad,
-          (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
-        );
-    }
-
-    for ( auto& chart : chart_list ) {
-      U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-      U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-      U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-      U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
-
-      U aw = a2 - a1;
-      U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
-
-      space_list[ g1 ].e1.adj =
-        std::min( +space_list[ g1 ].e1.adj, (sw - aw) / 2 );
-      space_list[ g2 ].e2.adj =
-        std::max( +space_list[ g2 ].e2.adj, (aw - sw) / 2 );
-    }
-
-    {
-      edge_t* e1 = nullptr;
-      edge_t* e2 = nullptr;
-      for ( auto& s : space_list ) {
-        e1 = &s.e1;
-        if ( e2 ) {
-          U overlap =
-            (e2->coor + (e2->pad_use ? +e2->pad : 0)) -
-            (e1->coor - (e1->pad_use ? +e1->pad : 0));
-          e2->adj -= overlap / 2;
-          e1->adj += overlap / 2;
-        }
-        e2 = &s.e2;
-      }
-    }
-
-    U acu_adj = 0;
-    for ( auto& s : space_list ) {
-      s.e1.coor += s.e1.adj * 0.75;
-      s.e2.coor += s.e2.adj * 0.75;
-      acu_adj += std::abs( s.e1.adj );
-      acu_adj += std::abs( s.e2.adj );
-    }
-
-    // Make the convergence limit dependent on how long we have iterated.
-    double min_limit = 1e-5;
-    double max_limit = 1e-2;
-    U converge_limit =
-      min_limit +
-      (1.0 * cur_iter * cur_iter * (max_limit - min_limit)) /
-      (1.0 * max_iter * max_iter);
-
-    printf( "-    %12.6f    %12.10f\n", +acu_adj, +converge_limit );
-
-    // To get alignment of the core chart areas, we initially do not take
-    // padding into account. Therefore, when we have converged, check if the
-    // padding collides and if so we have to take padding into consideration and
-    // iterate more.
-    if ( acu_adj < converge_limit ) {
-      bool collisions = false;
-      edge_t* e1 = nullptr;
-      edge_t* e2 = nullptr;
-      for ( auto& s : space_list ) {
-        e1 = &s.e1;
-        if ( e2 ) {
-          U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
-          if ( overlap > 4 * converge_limit ) {
-            e2->pad_use = true;
-            e1->pad_use = true;
-            collisions  = true;
-          }
-        }
-        e2 = &s.e2;
-      }
-      if ( !collisions ) break; // Solution found!
-    }
-
-    // If we have iterated a really long time, include all padding in the solver
-    // such that they can have a chance to take some effect before we bail out.
-    if ( cur_iter == max_iter / 2 ) {
+    if ( cur_trial == max_trial ) {
+      // At last trial, just include all padding in the solver such that they
+      // can have a chance to take some effect before we bail out.
       for ( auto& s : space_list ) {
         s.e1.pad_use = true;
         s.e2.pad_use = true;
       }
     }
 
+    uint32_t max_iter = 1000000;
+    uint32_t cur_iter = 0;
+
+    while ( !solved && cur_iter < max_iter ) {
+      cur_iter++;
+
+      for ( auto& s : space_list ) {
+        s.e1.pad = 0;
+        s.e2.pad = 0;
+        s.e1.adj = (s.e2.coor - s.e1.coor) / 2;
+        s.e2.adj = (s.e1.coor - s.e2.coor) / 2;
+      }
+
+      // Update pad values.
+      for ( auto& chart : chart_list ) {
+        U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
+        U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
+        U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
+        U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
+        U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+        U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+
+        U ar = (a2 - a1) / 2;
+
+        U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
+        if (
+          is_x
+          ? (chart.anchor_x == SVG::AnchorX::Min)
+          : (chart.anchor_y == SVG::AnchorY::Min)
+        ) {
+          c = space_list[ g1 ].e1.coor + ar;
+        }
+        if (
+          is_x
+          ? (chart.anchor_x == SVG::AnchorX::Max)
+          : (chart.anchor_y == SVG::AnchorY::Max)
+        ) {
+          c = space_list[ g2 ].e2.coor - ar;
+        }
+
+        space_list[ g1 ].e1.pad =
+          std::max(
+            +space_list[ g1 ].e1.pad,
+            space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
+          );
+        space_list[ g2 ].e2.pad =
+          std::max(
+            +space_list[ g2 ].e2.pad,
+            (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
+          );
+      }
+
+      for ( auto& chart : chart_list ) {
+        U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
+        U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
+        U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+        U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+
+        U aw = a2 - a1;
+        U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
+
+        space_list[ g1 ].e1.adj =
+          std::min( +space_list[ g1 ].e1.adj, (sw - aw) / 2 );
+        space_list[ g2 ].e2.adj =
+          std::max( +space_list[ g2 ].e2.adj, (aw - sw) / 2 );
+      }
+
+      {
+        edge_t* e1 = nullptr;
+        edge_t* e2 = nullptr;
+        for ( auto& s : space_list ) {
+          e1 = &s.e1;
+          if ( e2 ) {
+            U overlap =
+              (e2->coor + (e2->pad_use ? +e2->pad : 0)) -
+              (e1->coor - (e1->pad_use ? +e1->pad : 0));
+            e2->adj -= overlap / 2;
+            e1->adj += overlap / 2;
+          }
+          e2 = &s.e2;
+        }
+      }
+
+      U acu_adj = 0;
+      for ( auto& s : space_list ) {
+        s.e1.coor += s.e1.adj * 0.75;
+        s.e2.coor += s.e2.adj * 0.75;
+        acu_adj += std::abs( s.e1.adj );
+        acu_adj += std::abs( s.e2.adj );
+      }
+
+      // Make the convergence limit dependent on how long we have iterated.
+      double min_limit = 1e-5;
+      double max_limit = 1e-2;
+      U converge_limit =
+        min_limit +
+        (1.0 * cur_iter * cur_iter * (max_limit - min_limit)) /
+        (1.0 * max_iter * max_iter);
+
+      printf(
+        "-    %4d    %10d    %12.6f    %12.10f\n",
+        cur_trial, cur_iter, +acu_adj, +converge_limit
+      );
+
+      // To get alignment of the core chart areas, we initially do not take
+      // padding into account. Therefore, when we have converged, check if the
+      // padding collides and if so we have to take padding into consideration
+      // and iterate more.
+      if ( acu_adj < converge_limit || cur_iter == max_iter ) {
+        bool collisions = false;
+        bool pad_change = false;
+        edge_t* e1 = nullptr;
+        edge_t* e2 = nullptr;
+        for ( auto& s : space_list ) {
+          e1 = &s.e1;
+          if ( e2 ) {
+            U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
+            if ( overlap > 4 * converge_limit ) {
+              collisions  = true;
+              pad_change  = pad_change || !e2->pad_use || !e1->pad_use;
+              e2->pad_use = true;
+              e1->pad_use = true;
+            }
+          }
+          e2 = &s.e2;
+        }
+        // If no pad usage was changed, we cannot do more and therefore we just
+        // declare the optimization as solved.
+        solved = !collisions || !pad_change;
+        break;
+      }
+
+    }
+
   }
 
-  return cur_iter;
+  return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -211,7 +229,7 @@ void Ensemble::RenumberGridSpace( std::vector< space_t >& space_list )
 
 void Ensemble::Test( void )
 {
-  for ( int i = 0; i < 3; i++ )
+  for ( int i = 0; i < 10; i++ )
   {
     chart_t chart;
     chart.full_bb.Update(   0, 0 ); chart.grid_x1 = i; chart.grid_y1 = 0;
@@ -224,10 +242,9 @@ void Ensemble::Test( void )
 
   InitGrid();
 
-  uint32_t iter = SolveGridSpace( space_list_x );
+  SolveGridSpace( space_list_x );
   RenumberGridSpace( space_list_x );
   DisplayGridSpace( space_list_x );
-  printf( "%8d iterations\n", iter );
 
   return;
 }

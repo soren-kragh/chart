@@ -56,7 +56,7 @@ private:
 
   void InitGrid( void );
 
-  uint32_t SolveGridSpace( std::vector< space_t >& space_list );
+  void SolveGridSpace( std::vector< space_t >& space_list );
 
 public:
   void DisplayGridSpace( std::vector< space_t >& space_list );
