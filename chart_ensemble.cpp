@@ -13,6 +13,9 @@
 
 #include <chart_ensemble.h>
 
+#include <algorithm>
+#include <numeric>
+
 using namespace SVG;
 using namespace Chart;
 
@@ -47,7 +50,49 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 {
   bool is_x = &space_list == &space_list_x;
 
+  auto update_pad = [&]( void ) {
+    for ( auto& chart : chart_list ) {
+      U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
+      U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
+      U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
+      U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
+      uint32_t g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+      uint32_t g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+
+      U ar = (a2 - a1) / 2;
+
+      U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
+      if (
+        is_x
+        ? (chart.anchor_x == SVG::AnchorX::Min)
+        : (chart.anchor_y == SVG::AnchorY::Min)
+      ) {
+        c = space_list[ g1 ].e1.coor + ar;
+      }
+      if (
+        is_x
+        ? (chart.anchor_x == SVG::AnchorX::Max)
+        : (chart.anchor_y == SVG::AnchorY::Max)
+      ) {
+        c = space_list[ g2 ].e2.coor - ar;
+      }
+
+      space_list[ g1 ].e1.pad =
+        std::max(
+          +space_list[ g1 ].e1.pad,
+          space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
+        );
+      space_list[ g2 ].e2.pad =
+        std::max(
+          +space_list[ g2 ].e2.pad,
+          (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
+        );
+    }
+  };
+
   bool solved = false;
+
+  uint32_t tot_iter = 0;
 
   uint32_t max_trial = 5;
   uint32_t cur_trial = 0;
@@ -64,11 +109,74 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       }
     }
 
+    // Initial placement.
+    if ( 1 ) {
+      std::vector< size_t > sorted_indices( chart_list.size() );
+      std::iota( sorted_indices.begin(), sorted_indices.end(), 0 );
+
+      std::sort(
+        sorted_indices.begin(), sorted_indices.end(),
+        [&]( size_t a_index, size_t b_index ) {
+          const auto& a = chart_list[ a_index ];
+          const auto& b = chart_list[ b_index ];
+          return
+            (a.grid_x1 != b.grid_x1)
+            ? (a.grid_x1 < b.grid_x1)
+            : (a.grid_x2 < b.grid_x2);
+        }
+      );
+
+      for ( auto& s : space_list ) {
+        s.e1.pad = 0;
+        s.e2.pad = 0;
+        s.e1.coor = 0;
+        s.e2.coor = 0;
+      }
+
+      for ( auto i : sorted_indices ) {
+        auto& chart = chart_list[ i ];
+
+        U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
+        U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
+        uint32_t g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+        uint32_t g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+
+        space_list[ g2 ].e2.coor =
+          std::max(
+            +space_list[ g2 ].e2.coor,
+            space_list[ g1 ].e1.coor + (a2 - a1)
+          );
+
+        U coor = space_list[ g2 ].e2.coor;
+        for ( uint32_t g = g2 + 1; g < space_list.size(); g++ ) {
+          space_list[ g ].e1.coor = std::max( space_list[ g ].e1.coor, coor );
+          coor = space_list[ g ].e1.coor;
+          space_list[ g ].e2.coor = std::max( space_list[ g ].e2.coor, coor );
+          coor = space_list[ g ].e2.coor;
+        }
+      }
+
+      update_pad();
+
+      U coor = 0;
+      for ( auto& s : space_list ) {
+        U aw = s.e2.coor - s.e1.coor;
+        s.e1.coor = coor + (s.e1.pad_use ? +s.e1.pad : 0);
+        s.e2.coor = s.e1.coor + aw;
+        coor = s.e2.coor + (s.e2.pad_use ? +s.e2.pad : 0);
+      }
+
+      printf( "Trial %1d initial placement:\n", cur_trial );
+      RenumberGridSpace( space_list );
+      DisplayGridSpace( space_list );
+    }
+
     uint32_t max_iter = 1000000;
     uint32_t cur_iter = 0;
 
     while ( !solved && cur_iter < max_iter ) {
       cur_iter++;
+      tot_iter++;
 
       for ( auto& s : space_list ) {
         s.e1.pad = 0;
@@ -77,50 +185,13 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
         s.e2.adj = (s.e1.coor - s.e2.coor) / 2;
       }
 
-      // Update pad values.
-      for ( auto& chart : chart_list ) {
-        U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
-        U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
-        U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-        U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-        U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-        U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
-
-        U ar = (a2 - a1) / 2;
-
-        U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
-        if (
-          is_x
-          ? (chart.anchor_x == SVG::AnchorX::Min)
-          : (chart.anchor_y == SVG::AnchorY::Min)
-        ) {
-          c = space_list[ g1 ].e1.coor + ar;
-        }
-        if (
-          is_x
-          ? (chart.anchor_x == SVG::AnchorX::Max)
-          : (chart.anchor_y == SVG::AnchorY::Max)
-        ) {
-          c = space_list[ g2 ].e2.coor - ar;
-        }
-
-        space_list[ g1 ].e1.pad =
-          std::max(
-            +space_list[ g1 ].e1.pad,
-            space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
-          );
-        space_list[ g2 ].e2.pad =
-          std::max(
-            +space_list[ g2 ].e2.pad,
-            (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
-          );
-      }
+      update_pad();
 
       for ( auto& chart : chart_list ) {
         U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
         U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-        U g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-        U g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+        uint32_t g1 = is_x ? chart.grid_x1 : chart.grid_y1;
+        uint32_t g2 = is_x ? chart.grid_x2 : chart.grid_y2;
 
         U aw = a2 - a1;
         U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
@@ -165,7 +236,7 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
       printf(
         "-    %4d    %10d    %12.6f    %12.10f\n",
-        cur_trial, cur_iter, +acu_adj, +converge_limit
+        cur_trial, tot_iter, +acu_adj, +converge_limit
       );
 
       // To get alignment of the core chart areas, we initially do not take
@@ -198,6 +269,9 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
     }
 
+    printf( "Trial %1d final placement:\n", cur_trial );
+    RenumberGridSpace( space_list );
+    DisplayGridSpace( space_list );
   }
 
   return;
@@ -207,7 +281,13 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
 void Ensemble::DisplayGridSpace( std::vector< space_t >& space_list )
 {
+  uint32_t n = 0;
   for ( auto& s : space_list ) {
+    n++;
+    if ( n > 8 ) {
+      printf( "..." );
+      break;
+    }
     printf( "| %8.3f : %8.3f |", +s.e1.coor, +s.e2.coor );
   }
   printf( "\n" );
@@ -229,7 +309,7 @@ void Ensemble::RenumberGridSpace( std::vector< space_t >& space_list )
 
 void Ensemble::Test( void )
 {
-  for ( int i = 0; i < 10; i++ )
+  for ( int i = 0; i < 8; i++ )
   {
     chart_t chart;
     chart.full_bb.Update(   0, 0 ); chart.grid_x1 = i; chart.grid_y1 = 0;
@@ -240,11 +320,19 @@ void Ensemble::Test( void )
     chart_list.push_back( chart );
   }
 
+  {
+    chart_t chart;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
+    chart.full_bb.Update( 1200, 0 ); chart.grid_x2 = 3; chart.grid_y2 = 0;
+    chart.area_bb.Update( chart.full_bb );
+    chart.full_bb.min.x -= 0;
+    chart.full_bb.max.x += 0;
+    chart_list.push_back( chart );
+  }
+
   InitGrid();
 
   SolveGridSpace( space_list_x );
-  RenumberGridSpace( space_list_x );
-  DisplayGridSpace( space_list_x );
 
   return;
 }
