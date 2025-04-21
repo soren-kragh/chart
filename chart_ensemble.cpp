@@ -224,13 +224,7 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
         acu_adj += std::abs( s.e2.adj );
       }
 
-      // Make the convergence limit dependent on how long we have iterated.
-      double min_limit = 1e-9;
-      double max_limit = 1e-1;
-      U converge_limit =
-        min_limit +
-        (1.0 * cur_iter * cur_iter * (max_limit - min_limit)) /
-        (1.0 * max_iter * max_iter);
+      U converge_limit = 1e-3;
 
       printf(
         "-    %4d    %10d    %12.6f    %12.10f\n",
@@ -241,9 +235,8 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       // padding into account. Therefore, when we have converged, check if the
       // padding collides and if so we have to take padding into consideration
       // and iterate more.
-      if ( acu_adj < converge_limit || cur_iter == max_iter ) {
-        bool collisions = false;
-        bool pad_change = false;
+      solved = acu_adj < converge_limit;
+      if ( solved || cur_iter == max_iter ) {
         edge_t* e1 = nullptr;
         edge_t* e2 = nullptr;
         for ( auto& s : space_list ) {
@@ -251,17 +244,13 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
           if ( e2 ) {
             U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
             if ( overlap > 4 * converge_limit ) {
-              collisions  = true;
-              pad_change  = pad_change || !e2->pad_use || !e1->pad_use;
               e2->pad_use = true;
               e1->pad_use = true;
+              solved = false;
             }
           }
           e2 = &s.e2;
         }
-        // If no pad usage was changed, we cannot do more and therefore we just
-        // declare the optimization as solved.
-        solved = !collisions || !pad_change;
         break;
       }
 
