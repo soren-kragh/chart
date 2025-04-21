@@ -28,6 +28,12 @@ public:
 
 private:
 
+  // Indicates that Y grid indices goes downwards instead of upwards.
+  bool grid_inverse_y = false;
+
+  uint32_t grid_max_x = 0;
+  uint32_t grid_max_y = 0;
+
   struct chart_t {
     Main* chart = nullptr;
     SVG::BoundaryBox full_bb;

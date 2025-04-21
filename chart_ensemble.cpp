@@ -33,15 +33,13 @@ Ensemble::~Ensemble( void )
 
 void Ensemble::InitGrid( void )
 {
-  uint32_t max_x = 0;
-  uint32_t max_y = 0;
   for ( auto& chart : chart_list ) {
-    max_x = std::max( max_x, chart.grid_x2 );
-    max_y = std::max( max_y, chart.grid_y2 );
+    grid_max_x = std::max( grid_max_x, chart.grid_x2 );
+    grid_max_y = std::max( grid_max_y, chart.grid_y2 );
   }
   space_t space;
-  space_list_x.resize( max_x + 1, space );
-  space_list_y.resize( max_y + 1, space );
+  space_list_x.resize( grid_max_x + 1, space );
+  space_list_y.resize( grid_max_y + 1, space );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
