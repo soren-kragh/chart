@@ -50,6 +50,22 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 {
   bool is_x = &space_list == &space_list_x;
 
+  // Create chart sorting based on grid position.
+  std::vector< size_t > sorted_indices( chart_list.size() );
+  std::iota( sorted_indices.begin(), sorted_indices.end(), 0 );
+  std::sort(
+    sorted_indices.begin(), sorted_indices.end(),
+    [&]( size_t a_index, size_t b_index ) {
+      const auto& a = chart_list[ a_index ];
+      const auto& b = chart_list[ b_index ];
+      uint32_t a1 = is_x ? a.grid_x1 : a.grid_y1;
+      uint32_t a2 = is_x ? a.grid_x2 : a.grid_y2;
+      uint32_t b1 = is_x ? b.grid_x1 : b.grid_y1;
+      uint32_t b2 = is_x ? b.grid_x2 : b.grid_y2;
+      return (a1 != b1) ? (a1 < b1) : (a2 < b2);
+    }
+  );
+
   auto update_pad = [&]( void ) {
     for ( auto& chart : chart_list ) {
       U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
@@ -110,22 +126,7 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
     }
 
     // Initial placement.
-    if ( 1 ) {
-      std::vector< size_t > sorted_indices( chart_list.size() );
-      std::iota( sorted_indices.begin(), sorted_indices.end(), 0 );
-
-      std::sort(
-        sorted_indices.begin(), sorted_indices.end(),
-        [&]( size_t a_index, size_t b_index ) {
-          const auto& a = chart_list[ a_index ];
-          const auto& b = chart_list[ b_index ];
-          return
-            (a.grid_x1 != b.grid_x1)
-            ? (a.grid_x1 < b.grid_x1)
-            : (a.grid_x2 < b.grid_x2);
-        }
-      );
-
+    {
       for ( auto i : sorted_indices ) {
         auto& chart = chart_list[ i ];
 
