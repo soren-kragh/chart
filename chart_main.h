@@ -28,11 +28,14 @@ namespace Chart {
 class Main
 {
   friend class HTML;
+  friend class Ensemble;
 
 public:
 
-  Main( void );
+  Main( SVG::Group* svg_g = nullptr );
   ~Main( void );
+
+  SVG::Group* GetGroup( void ) { return svg_g; }
 
   void EnableHTML( bool enable = true ) { enable_html = enable; }
 
@@ -114,6 +117,8 @@ public:
   std::string Build( void );
 
 private:
+
+  SVG::Group* svg_g = nullptr;
 
   typedef struct {
     SVG::U ch;  // Character height.

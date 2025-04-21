@@ -18,8 +18,9 @@ using namespace Chart;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Main::Main( void )
+Main::Main( SVG::Group* svg_g )
 {
+  this->svg_g = svg_g;
   border_color.Set( ColorName::black );
   background_color.Set( ColorName::white );
   chart_area_color.Clear();

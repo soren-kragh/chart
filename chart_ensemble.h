@@ -26,7 +26,23 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
+  void SetInverseY( bool inverse = true ) { grid_inverse_y = inverse; }
+
+  Main* NewChart(
+    uint32_t grid_x1, uint32_t grid_y1,
+    uint32_t grid_x2, uint32_t grid_y2
+  );
+  Main* NewChart(
+    uint32_t grid_x1, uint32_t grid_y1,
+    uint32_t grid_x2, uint32_t grid_y2,
+    SVG::AnchorX anchor_x,
+    SVG::AnchorY anchor_y
+  );
+
 private:
+
+  SVG::Canvas* canvas;
+  SVG::Group* top_g;
 
   // Indicates that Y grid indices goes downwards instead of upwards.
   bool grid_inverse_y = false;
@@ -38,10 +54,13 @@ private:
     Main* chart = nullptr;
     SVG::BoundaryBox full_bb;
     SVG::BoundaryBox area_bb;
+    uint32_t grid_x1 = 0;
+    uint32_t grid_y1 = 0;
+    uint32_t grid_x2 = 0;
+    uint32_t grid_y2 = 0;
+    bool anchor_defined = false;
     SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
     SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
-    uint32_t grid_x1, grid_y1;
-    uint32_t grid_x2, grid_y2;
   };
 
   struct edge_t {
