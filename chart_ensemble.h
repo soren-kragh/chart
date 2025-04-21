@@ -39,10 +39,10 @@ private:
   };
 
   struct edge_t {
-    SVG::U coor = 0;    // Coordinate of this core chart area edge
+    SVG::U coor;        // Coordinate of this core chart area edge
     SVG::U adj;         // Iterative adjustment to coor
     SVG::U pad;         // Padding caused by decorations outside core chart area
-    bool pad_use = false;
+    bool pad_use;
   };
 
   struct space_t {
@@ -57,6 +57,8 @@ private:
   void InitGrid( void );
 
   void SolveGridSpace( std::vector< space_t >& space_list );
+
+  void ComputeGrid( void );
 
 public:
   void DisplayGridSpace( std::vector< space_t >& space_list );

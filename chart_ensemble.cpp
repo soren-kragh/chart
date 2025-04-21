@@ -106,6 +106,15 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
     }
   };
 
+  for ( auto& s : space_list ) {
+    s.e1.coor    = 0;
+    s.e1.pad     = 0;
+    s.e1.pad_use = 0;
+    s.e2.coor    = 0;
+    s.e2.pad     = 0;
+    s.e2.pad_use = 0;
+  }
+
   bool solved = false;
 
   uint32_t tot_iter = 0;
@@ -125,7 +134,8 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       }
     }
 
-    // Initial placement.
+    // Initial placement (not really needed, but gives much faster convergence
+    // in some cases).
     {
       for ( auto i : sorted_indices ) {
         auto& chart = chart_list[ i ];
@@ -267,6 +277,15 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::ComputeGrid( void )
+{
+  InitGrid();
+  SolveGridSpace( space_list_x );
+  SolveGridSpace( space_list_y );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::DisplayGridSpace( std::vector< space_t >& space_list )
 {
   uint32_t n = 0;
@@ -297,36 +316,43 @@ void Ensemble::RenumberGridSpace( std::vector< space_t >& space_list )
 
 void Ensemble::Test( void )
 {
-  for ( int i = 0; i < 20; i++ ) {
-    {
-      chart_t chart;
-      chart.full_bb.Update(   0, 0 ); chart.grid_x1 = i; chart.grid_y1 = 0;
-      chart.full_bb.Update( 100, 0 ); chart.grid_x2 = i; chart.grid_y2 = 0;
-      chart.area_bb.Update( chart.full_bb );
-      chart.full_bb.min.x -= 50;
-      chart.full_bb.max.x += 50;
-      chart_list.push_back( chart );
-    }
-    if ( i > 0 ) {
-      chart_t chart;
-      chart.full_bb.Update(   0, 0 ); chart.grid_x1 = i - 1; chart.grid_y1 = 0;
-      chart.full_bb.Update( 800, 0 ); chart.grid_x2 = i + 1; chart.grid_y2 = 0;
-      chart.area_bb.Update( chart.full_bb );
-      chart.full_bb.min.x -= 30;
-      chart.full_bb.max.x += 30;
-      chart_list.push_back( chart );
-    }
-  }
-
   {
     chart_t chart;
     chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
-    chart.full_bb.Update( 1000, 0 ); chart.grid_x2 = 3; chart.grid_y2 = 0;
+    chart.full_bb.Update( 600, 0 ); chart.grid_x2 = 1; chart.grid_y2 = 0;
     chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 0;
-    chart.full_bb.max.x += 1000;
+    chart.full_bb.min.x -= 100;
+    chart.full_bb.max.x += 100;
     chart_list.push_back( chart );
   }
+  {
+    chart_t chart;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
+    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 0; chart.grid_y2 = 0;
+    chart.area_bb.Update( chart.full_bb );
+    chart.full_bb.min.x -= 50;
+    chart.full_bb.max.x += 50;
+    chart_list.push_back( chart );
+  }
+  {
+    chart_t chart;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 1; chart.grid_y1 = 0;
+    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 1; chart.grid_y2 = 0;
+    chart.area_bb.Update( chart.full_bb );
+    chart.full_bb.min.x -= 50;
+    chart.full_bb.max.x += 50;
+    chart_list.push_back( chart );
+  }
+  for ( int i = 0; i < 3; i++ ) {
+    chart_t chart;
+    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 2; chart.grid_y1 = 0;
+    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 2; chart.grid_y2 = 0;
+    chart.area_bb.Update( chart.full_bb );
+    chart.full_bb.min.x -= 50;
+    chart.full_bb.max.x += 50;
+    chart_list.push_back( chart );
+  }
+
 
   InitGrid();
 
