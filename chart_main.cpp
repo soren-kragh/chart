@@ -1913,11 +1913,9 @@ void Main::PrepareHTML( void )
 
 //------------------------------------------------------------------------------
 
-std::string Main::Build( void )
+void Main::Build( void )
 {
-  Canvas* canvas = new Canvas();
-
-  Group* chart_g = canvas->TopGroup()->AddNewGroup();
+  Group* chart_g = svg_g->AddNewGroup();
   chart_g->Attr()->TextFont()->SetFamily(
     "Noto Mono,Lucida Console,Courier New,monospace"
   );
@@ -2051,6 +2049,7 @@ std::string Main::Build( void )
   AddFootnotes( chart_g );
   AddChartMargin( chart_g, false );
 
+/*
   std::ostringstream oss;
   if ( enable_html ) {
     PrepareHTML();
@@ -2060,6 +2059,7 @@ std::string Main::Build( void )
   }
   delete canvas;
   return oss.str();
+*/
 }
 
 ///////////////////////////////////////////////////////////////////////////////

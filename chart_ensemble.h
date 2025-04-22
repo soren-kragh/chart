@@ -26,8 +26,6 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
-  void SetInverseY( bool inverse = true ) { grid_inverse_y = inverse; }
-
   Main* NewChart(
     uint32_t grid_x1, uint32_t grid_y1,
     uint32_t grid_x2, uint32_t grid_y2
@@ -39,13 +37,12 @@ public:
     SVG::AnchorY anchor_y
   );
 
+  std::string Build( void );
+
 private:
 
   SVG::Canvas* canvas;
   SVG::Group* top_g;
-
-  // Indicates that Y grid indices goes downwards instead of upwards.
-  bool grid_inverse_y = false;
 
   uint32_t grid_max_x = 0;
   uint32_t grid_max_y = 0;

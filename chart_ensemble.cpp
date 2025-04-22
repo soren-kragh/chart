@@ -84,11 +84,11 @@ void Ensemble::InitGrid( void )
     chart.full_bb = chart.chart->GetGroup()->GetBB();
     chart.area_bb.Update( 0, 0 );
     chart.area_bb.Update( chart.chart->chart_w, chart.chart->chart_h );
-    if ( grid_inverse_y ) {
-      std::swap( chart.grid_y1, chart.grid_y2 );
-      chart.grid_y1 = grid_max_y - chart.grid_y1;
-      chart.grid_y2 = grid_max_y - chart.grid_y2;
-    }
+
+    std::swap( chart.grid_y1, chart.grid_y2 );
+    chart.grid_y1 = grid_max_y - chart.grid_y1;
+    chart.grid_y2 = grid_max_y - chart.grid_y2;
+
     if ( !chart.anchor_defined ) {
       if ( chart.grid_x1 == 0 && chart.grid_x2 < grid_max_x ) {
         chart.anchor_x = SVG::AnchorX::Min;
@@ -239,9 +239,11 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
       }
     }
 
+/*
     printf( "Trial %1d initial placement:\n", cur_trial );
     RenumberGridSpace( space_list );
     DisplayGridSpace( space_list );
+*/
 
     uint32_t max_iter = 100000;
     uint32_t cur_iter = 0;
@@ -300,10 +302,12 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
       U converge_limit = 1e-3;
 
+/*
       printf(
         "-    %4d    %10d    %12.6f    %12.10f\n",
         cur_trial, tot_iter, +acu_adj, +converge_limit
       );
+*/
 
       // To get alignment of the core chart areas, we initially do not take
       // padding into account. Therefore, when we have converged, check if the
@@ -330,9 +334,11 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
     }
 
+/*
     printf( "Trial %1d final placement:\n", cur_trial );
     RenumberGridSpace( space_list );
     DisplayGridSpace( space_list );
+*/
   }
 
   return;
@@ -345,6 +351,19 @@ void Ensemble::ComputeGrid( void )
   InitGrid();
   SolveGridSpace( space_list_x );
   SolveGridSpace( space_list_y );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+std::string Ensemble::Build( void )
+{
+  for ( auto& chart : chart_list ) {
+    chart.chart->Build();
+  }
+  ComputeGrid();
+  std::ostringstream oss;
+  oss << canvas->GenSVG();
+  return oss.str();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

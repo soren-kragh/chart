@@ -114,7 +114,7 @@ public:
   // Add categories for string based X-values.
   void AddCategory( const std::string& category );
 
-  std::string Build( void );
+  void Build( void );
 
 private:
 
