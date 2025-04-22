@@ -39,7 +39,9 @@ Ensemble::~Ensemble( void )
 
 Main* Ensemble::NewChart(
   uint32_t grid_row1, uint32_t grid_col1,
-  uint32_t grid_row2, uint32_t grid_col2
+  uint32_t grid_row2, uint32_t grid_col2,
+  Pos align_hor,
+  Pos align_ver
 )
 {
   chart_t chart;
@@ -53,30 +55,21 @@ Main* Ensemble::NewChart(
   chart.grid_x2 = grid_col2;
   chart.grid_y2 = grid_row2;
 
-  chart_list.push_back( chart );
-  return chart.chart;
-}
-
-//------------------------------------------------------------------------------
-
-Main* Ensemble::NewChart(
-  uint32_t grid_row1, uint32_t grid_col1,
-  uint32_t grid_row2, uint32_t grid_col2,
-  Pos align_hor,
-  Pos align_ver
-)
-{
-  NewChart( grid_col1, grid_row1, grid_col2, grid_row2 );
-  auto& chart = chart_list.back();
-
   chart.anchor_x = SVG::AnchorX::Mid;
-  chart.anchor_y = SVG::AnchorY::Mid;
-  if ( align_hor == Chart::Pos::Left   ) chart.anchor_x = SVG::AnchorX::Min;
-  if ( align_hor == Chart::Pos::Right  ) chart.anchor_x = SVG::AnchorX::Max;
-  if ( align_ver == Chart::Pos::Bottom ) chart.anchor_y = SVG::AnchorY::Min;
-  if ( align_ver == Chart::Pos::Top    ) chart.anchor_y = SVG::AnchorY::Max;
-  chart.anchor_defined = true;
+  if ( align_hor != Chart::Pos::Auto ) {
+    if ( align_hor == Chart::Pos::Left   ) chart.anchor_x = SVG::AnchorX::Min;
+    if ( align_hor == Chart::Pos::Right  ) chart.anchor_x = SVG::AnchorX::Max;
+    chart.anchor_x_defined = true;
+  }
 
+  chart.anchor_y = SVG::AnchorY::Mid;
+  if ( align_ver != Chart::Pos::Auto ) {
+    if ( align_ver == Chart::Pos::Bottom ) chart.anchor_y = SVG::AnchorY::Min;
+    if ( align_ver == Chart::Pos::Top    ) chart.anchor_y = SVG::AnchorY::Max;
+    chart.anchor_y_defined = true;
+  }
+
+  chart_list.push_back( chart );
   return chart.chart;
 }
 
@@ -101,20 +94,23 @@ void Ensemble::InitGrid( void )
     chart.grid_y1 = grid_max_y - chart.grid_y1;
     chart.grid_y2 = grid_max_y - chart.grid_y2;
 
-    if ( !chart.anchor_defined ) {
+    if ( !chart.anchor_x_defined ) {
       if ( chart.grid_x1 == 0 && chart.grid_x2 < grid_max_x ) {
         chart.anchor_x = SVG::AnchorX::Min;
       }
       if ( chart.grid_x1 > 0 && chart.grid_x2 == grid_max_x ) {
         chart.anchor_x = SVG::AnchorX::Max;
       }
+    }
+
+    if ( !chart.anchor_y_defined ) {
       if ( chart.grid_y1 == 0 && chart.grid_y2 < grid_max_y ) {
         chart.anchor_y = SVG::AnchorY::Min;
       }
       if ( chart.grid_y1 > 0 && chart.grid_y2 == grid_max_y ) {
         chart.anchor_y = SVG::AnchorY::Max;
       }
-      chart.anchor_defined = true;
+      chart.anchor_y_defined = true;
     }
   }
 }

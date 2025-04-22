@@ -28,13 +28,9 @@ public:
 
   Main* NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
-    uint32_t grid_row2, uint32_t grid_col2
-  );
-  Main* NewChart(
-    uint32_t grid_row1, uint32_t grid_col1,
     uint32_t grid_row2, uint32_t grid_col2,
-    Pos align_hor,
-    Pos align_ver
+    Pos align_hor = Pos::Auto,
+    Pos align_ver = Pos::Auto
   );
 
   std::string Build( void );
@@ -55,7 +51,8 @@ private:
     uint32_t grid_y1 = 0;
     uint32_t grid_x2 = 0;
     uint32_t grid_y2 = 0;
-    bool anchor_defined = false;
+    bool anchor_x_defined = false;
+    bool anchor_y_defined = false;
     SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
     SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
   };
