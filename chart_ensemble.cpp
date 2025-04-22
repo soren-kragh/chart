@@ -38,16 +38,21 @@ Ensemble::~Ensemble( void )
 ////////////////////////////////////////////////////////////////////////////////
 
 Main* Ensemble::NewChart(
-  uint32_t grid_x1, uint32_t grid_y1,
-  uint32_t grid_x2, uint32_t grid_y2
+  uint32_t grid_row1, uint32_t grid_col1,
+  uint32_t grid_row2, uint32_t grid_col2
 )
 {
   chart_t chart;
   chart.chart = new Main( top_g->AddNewGroup() );
-  chart.grid_x1 = grid_x1;
-  chart.grid_y1 = grid_y1;
-  chart.grid_x2 = grid_x2;
-  chart.grid_y2 = grid_y2;
+
+  // Note that the Y grid coordinates are in normal bottom to top "mathematical"
+  // direction, whereas rows goes top to bottom. The InitGrid() will reorient
+  // the Y grid coordinates to match these notations.
+  chart.grid_x1 = grid_col1;
+  chart.grid_y1 = grid_row1;
+  chart.grid_x2 = grid_col2;
+  chart.grid_y2 = grid_row2;
+
   chart_list.push_back( chart );
   return chart.chart;
 }
@@ -55,13 +60,13 @@ Main* Ensemble::NewChart(
 //------------------------------------------------------------------------------
 
 Main* Ensemble::NewChart(
-  uint32_t grid_x1, uint32_t grid_y1,
-  uint32_t grid_x2, uint32_t grid_y2,
+  uint32_t grid_row1, uint32_t grid_col1,
+  uint32_t grid_row2, uint32_t grid_col2,
   SVG::AnchorX anchor_x,
   SVG::AnchorY anchor_y
 )
 {
-  NewChart( grid_x1, grid_y1, grid_x2, grid_y2 );
+  NewChart( grid_col1, grid_row1, grid_col2, grid_row2 );
   auto& chart = chart_list.back();
   chart.anchor_x = anchor_x;
   chart.anchor_y = anchor_y;
@@ -85,6 +90,7 @@ void Ensemble::InitGrid( void )
     chart.area_bb.Update( 0, 0 );
     chart.area_bb.Update( chart.chart->chart_w, chart.chart->chart_h );
 
+    // Convert row notation to Y grid coordinates.
     std::swap( chart.grid_y1, chart.grid_y2 );
     chart.grid_y1 = grid_max_y - chart.grid_y1;
     chart.grid_y2 = grid_max_y - chart.grid_y2;

@@ -27,12 +27,12 @@ public:
   ~Ensemble( void );
 
   Main* NewChart(
-    uint32_t grid_x1, uint32_t grid_y1,
-    uint32_t grid_x2, uint32_t grid_y2
+    uint32_t grid_row1, uint32_t grid_col1,
+    uint32_t grid_row2, uint32_t grid_col2
   );
   Main* NewChart(
-    uint32_t grid_x1, uint32_t grid_y1,
-    uint32_t grid_x2, uint32_t grid_y2,
+    uint32_t grid_row1, uint32_t grid_col1,
+    uint32_t grid_row2, uint32_t grid_col2,
     SVG::AnchorX anchor_x,
     SVG::AnchorY anchor_y
   );
