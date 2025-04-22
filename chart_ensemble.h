@@ -33,8 +33,8 @@ public:
   Main* NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
     uint32_t grid_row2, uint32_t grid_col2,
-    SVG::AnchorX anchor_x,
-    SVG::AnchorY anchor_y
+    Pos align_hor,
+    Pos align_ver
   );
 
   std::string Build( void );

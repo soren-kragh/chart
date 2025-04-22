@@ -62,15 +62,21 @@ Main* Ensemble::NewChart(
 Main* Ensemble::NewChart(
   uint32_t grid_row1, uint32_t grid_col1,
   uint32_t grid_row2, uint32_t grid_col2,
-  SVG::AnchorX anchor_x,
-  SVG::AnchorY anchor_y
+  Pos align_hor,
+  Pos align_ver
 )
 {
   NewChart( grid_col1, grid_row1, grid_col2, grid_row2 );
   auto& chart = chart_list.back();
-  chart.anchor_x = anchor_x;
-  chart.anchor_y = anchor_y;
+
+  chart.anchor_x = SVG::AnchorX::Mid;
+  chart.anchor_y = SVG::AnchorY::Mid;
+  if ( align_hor == Chart::Pos::Left   ) chart.anchor_x = SVG::AnchorX::Min;
+  if ( align_hor == Chart::Pos::Right  ) chart.anchor_x = SVG::AnchorX::Max;
+  if ( align_ver == Chart::Pos::Bottom ) chart.anchor_y = SVG::AnchorY::Min;
+  if ( align_ver == Chart::Pos::Top    ) chart.anchor_y = SVG::AnchorY::Max;
   chart.anchor_defined = true;
+
   return chart.chart;
 }
 
@@ -90,7 +96,7 @@ void Ensemble::InitGrid( void )
     chart.area_bb.Update( 0, 0 );
     chart.area_bb.Update( chart.chart->chart_w, chart.chart->chart_h );
 
-    // Convert row notation to Y grid coordinates.
+    // Convert row location to Y grid coordinates.
     std::swap( chart.grid_y1, chart.grid_y2 );
     chart.grid_y1 = grid_max_y - chart.grid_y1;
     chart.grid_y2 = grid_max_y - chart.grid_y2;
