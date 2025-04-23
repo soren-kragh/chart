@@ -26,7 +26,11 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
-  Main* NewChart(
+  bool Empty( void ) { return chart_list.empty(); }
+
+  Main* LastChart( void ) { return chart_list.back().chart; }
+
+  void NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
     uint32_t grid_row2, uint32_t grid_col2,
     Pos align_hor = Pos::Auto,

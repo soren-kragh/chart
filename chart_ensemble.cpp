@@ -37,7 +37,7 @@ Ensemble::~Ensemble( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Main* Ensemble::NewChart(
+void Ensemble::NewChart(
   uint32_t grid_row1, uint32_t grid_col1,
   uint32_t grid_row2, uint32_t grid_col2,
   Pos align_hor,
@@ -70,7 +70,8 @@ Main* Ensemble::NewChart(
   }
 
   chart_list.push_back( chart );
-  return chart.chart;
+
+  return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -365,6 +366,9 @@ void Ensemble::ComputeGrid( void )
 
 std::string Ensemble::Build( void )
 {
+  if ( Empty() ) {
+    NewChart( 0, 0, 0, 0 );
+  }
   for ( auto& chart : chart_list ) {
     chart.chart->Build();
   }
