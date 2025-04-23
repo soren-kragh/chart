@@ -372,7 +372,27 @@ std::string Ensemble::Build( void )
   for ( auto& chart : chart_list ) {
     chart.chart->Build();
   }
+
   ComputeGrid();
+
+  for ( auto& chart : chart_list ) {
+    U gx1 = space_list_x[ chart.grid_x1 ].e1.coor;
+    U gx2 = space_list_x[ chart.grid_x2 ].e2.coor;
+    U gy1 = space_list_y[ chart.grid_y1 ].e1.coor;
+    U gy2 = space_list_y[ chart.grid_y2 ].e2.coor;
+
+    U mx = (gx1 + gx2) / 2 - (chart.area_bb.min.x + chart.area_bb.max.x) / 2;
+    U my = (gy1 + gy2) / 2 - (chart.area_bb.min.y + chart.area_bb.max.y) / 2;
+
+    if ( chart.anchor_x == SVG::AnchorX::Min ) mx = gx1 - chart.area_bb.min.x;
+    if ( chart.anchor_x == SVG::AnchorX::Max ) mx = gx2 - chart.area_bb.max.x;
+
+    if ( chart.anchor_y == SVG::AnchorY::Min ) my = gy1 - chart.area_bb.min.y;
+    if ( chart.anchor_y == SVG::AnchorY::Max ) my = gy2 - chart.area_bb.max.y;
+
+    chart.chart->GetGroup()->Move( mx, my );
+  }
+
   std::ostringstream oss;
   oss << canvas->GenSVG();
   return oss.str();
