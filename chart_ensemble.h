@@ -37,12 +37,19 @@ public:
     Pos align_ver = Pos::Auto
   );
 
+  SVG::Color* BackgroundColor( void ) { return &background_color; }
+
   std::string Build( void );
 
 private:
 
   SVG::Canvas* canvas;
   SVG::Group* top_g;
+
+  SVG::Color background_color;
+  SVG::Color border_color;
+  SVG::U border_width = 0;
+  SVG::U margin       = 5;
 
   uint32_t grid_max_x = 0;
   uint32_t grid_max_y = 0;
@@ -83,6 +90,8 @@ private:
   void SolveGridSpace( std::vector< space_t >& space_list );
 
   void ComputeGrid( void );
+
+  void BuildBackground( void );
 
 public:
   void DisplayGridSpace( std::vector< space_t >& space_list );

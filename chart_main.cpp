@@ -18,8 +18,9 @@ using namespace Chart;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Main::Main( SVG::Group* svg_g )
+Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
 {
+  this->ensemble = ensemble;
   this->svg_g = svg_g;
   border_color.Set( ColorName::black );
   background_color.Set( ColorName::white );

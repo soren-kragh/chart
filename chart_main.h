@@ -25,6 +25,8 @@
 
 namespace Chart {
 
+class Ensemble;
+
 class Main
 {
   friend class HTML;
@@ -32,7 +34,7 @@ class Main
 
 public:
 
-  Main( SVG::Group* svg_g = nullptr );
+  Main( Ensemble* ensemble, SVG::Group* svg_g );
   ~Main( void );
 
   SVG::Group* GetGroup( void ) { return svg_g; }
@@ -118,6 +120,7 @@ public:
 
 private:
 
+  Ensemble* ensemble = nullptr;
   SVG::Group* svg_g = nullptr;
 
   typedef struct {
@@ -191,8 +194,8 @@ private:
 
   bool enable_html = false;
 
-  SVG::Color border_color;
-  SVG::Color background_color;
+  SVG::Color border_color;      // TBD
+  SVG::Color background_color;  // TBD
   SVG::Color chart_area_color;
   SVG::Color axis_color;
   SVG::Color text_color;
@@ -230,8 +233,8 @@ private:
   bool        legend_outline;
   float       legend_size;
 
-  SVG::U border_width = 0;
-  SVG::U margin       = 5;
+  SVG::U border_width = 0;      // TBD
+  SVG::U margin       = 5;      // TBD
   SVG::U chart_w      = 1000;
   SVG::U chart_h      = 600;
   bool   chart_box    = false;

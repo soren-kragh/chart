@@ -25,6 +25,9 @@ Ensemble::Ensemble( void )
 {
   canvas = new Canvas();
   top_g = canvas->TopGroup()->AddNewGroup();
+
+  background_color.Set( ColorName::white );
+  border_color.Set( ColorName::black );
 }
 
 Ensemble::~Ensemble( void )
@@ -45,7 +48,7 @@ void Ensemble::NewChart(
 )
 {
   element_t elem;
-  elem.chart = new Main( top_g->AddNewGroup() );
+  elem.chart = new Main( this, top_g->AddNewGroup() );
 
   // Note that the Y grid coordinates are in normal bottom to top "mathematical"
   // direction, whereas rows goes top to bottom. The InitGrid() will reorient
@@ -364,11 +367,49 @@ void Ensemble::ComputeGrid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::BuildBackground( void )
+{
+  BoundaryBox bb = top_g->GetBB();
+
+  bb.min.x -= margin + border_width;
+  bb.max.x += margin + border_width;
+  bb.min.y -= margin + border_width;
+  bb.max.y += margin + border_width;
+
+  top_g->Add( new Rect( bb.min, bb.max ) );
+  top_g->Last()->Attr()->FillColor()->Clear();
+  top_g->Last()->Attr()->LineColor()->Clear();
+  top_g->Last()->Attr()->SetLineWidth( 0 );
+  top_g->FrontToBack();
+
+  bb.min.x += border_width / 2;
+  bb.max.x -= border_width / 2;
+  bb.min.y += border_width / 2;
+  bb.max.y -= border_width / 2;
+
+  top_g->Add( new Rect( bb.min, bb.max ) );
+  top_g->Last()->Attr()->SetLineWidth( border_width );
+  if ( border_width > 0 ) {
+    top_g->Last()->Attr()->LineColor()->Set( &border_color );
+  } else {
+    top_g->Last()->Attr()->LineColor()->Clear();
+  }
+
+  top_g->FrontToBack();
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 std::string Ensemble::Build( void )
 {
   if ( Empty() ) {
     NewChart( 0, 0, 0, 0 );
   }
+
+  top_g->Attr()->FillColor()->Set( &background_color );
+
   for ( auto& elem : element_list ) {
     elem.chart->Build();
   }
@@ -392,6 +433,8 @@ std::string Ensemble::Build( void )
 
     elem.chart->GetGroup()->Move( mx, my );
   }
+
+  BuildBackground();
 
 /*
   {
