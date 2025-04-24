@@ -11,8 +11,8 @@
 //  permit persons to whom the Software is furnished to do so.
 //
 
+#include <chart_ensemble.h>
 #include <chart_html.h>
-#include <chart_main.h>
 
 using namespace SVG;
 using namespace Chart;
@@ -131,7 +131,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   if ( !main->ChartAreaColor()->IsClear() ) {
     bg_color.Set( main->ChartAreaColor() );
   } else {
-    bg_color.Set( main->BackgroundColor() );
+    bg_color.Set( main->ensemble->BackgroundColor() );
   }
   if ( bg_color.IsClear() ) bg_color.Set( ColorName::white );
 

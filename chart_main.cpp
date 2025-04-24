@@ -11,6 +11,7 @@
 //  permit persons to whom the Software is furnished to do so.
 //
 
+#include <chart_ensemble.h>
 #include <chart_main.h>
 
 using namespace SVG;
@@ -23,7 +24,6 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   this->ensemble = ensemble;
   this->svg_g = svg_g;
   border_color.Set( ColorName::black );
-  background_color.Set( ColorName::white );
   chart_area_color.Clear();
   axis_color.Set( ColorName::black );
   text_color.Set( ColorName::black );
@@ -1392,7 +1392,7 @@ void Main::SeriesPrepare(
   if ( !ChartAreaColor()->IsClear() ) {
     tag_bg_color.Set( ChartAreaColor() );
   } else {
-    tag_bg_color.Set( BackgroundColor() );
+    tag_bg_color.Set( ensemble->BackgroundColor() );
   }
   if ( tag_bg_color.IsClear() ) tag_bg_color.Set( ColorName::white );
 
@@ -1924,12 +1924,11 @@ void Main::Build( void )
     ->SetWidthFactor( width_adj )
     ->SetHeightFactor( height_adj )
     ->SetBaselineFactor( baseline_adj );
-  chart_g->Attr()->FillColor()->Set( &background_color );
   chart_g->Attr()->TextColor()->Set( &text_color );
   chart_g->Attr()->LineColor()->Clear();
   chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
-  if ( !chart_area_color.IsClear() ) {
-    chart_g->Last()->Attr()->FillColor()->Set( &chart_area_color );
+  if ( !ChartAreaColor()->IsClear() ) {
+    chart_g->Last()->Attr()->FillColor()->Set( ChartAreaColor() );
   }
 
   Group* grid_minor_g          = chart_g->AddNewGroup();
@@ -2034,10 +2033,10 @@ void Main::Build( void )
   // Add background for text objects in the Label data base.
   {
     bool partial_ok = true;
-    if ( chart_area_color.IsClear() ) {
-      label_bg_g->Attr()->FillColor()->Set( &background_color );
+    if ( ChartAreaColor()->IsClear() ) {
+      label_bg_g->Attr()->FillColor()->Set( ensemble->BackgroundColor() );
     } else {
-      label_bg_g->Attr()->FillColor()->Set( &chart_area_color );
+      label_bg_g->Attr()->FillColor()->Set( ChartAreaColor() );
       partial_ok = false;
     }
     BoundaryBox area;

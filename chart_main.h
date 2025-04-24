@@ -47,7 +47,6 @@ public:
   void SetChartBox( bool chart_box = true );
 
   SVG::Color* BorderColor( void ) { return &border_color; }
-  SVG::Color* BackgroundColor( void ) { return &background_color; }
   SVG::Color* ChartAreaColor( void ) { return &chart_area_color; }
   SVG::Color* AxisColor( void ) { return &axis_color; }
   SVG::Color* TextColor( void ) { return &text_color; }
@@ -195,7 +194,6 @@ private:
   bool enable_html = false;
 
   SVG::Color border_color;      // TBD
-  SVG::Color background_color;  // TBD
   SVG::Color chart_area_color;
   SVG::Color axis_color;
   SVG::Color text_color;
