@@ -393,6 +393,26 @@ std::string Ensemble::Build( void )
     elem.chart->GetGroup()->Move( mx, my );
   }
 
+/*
+  {
+    BoundaryBox bb = canvas->TopGroup()->GetBB();
+
+    Group* g = canvas->TopGroup()->AddNewGroup();
+    g->Attr()->LineColor()->Set( ColorName::black );
+    g->Attr()->SetLineWidth( 0.5 );
+    g->Attr()->FillColor()->Set( ColorName::yellow );
+    g->Attr()->FillColor()->SetOpacity( 0.2 );
+
+    for ( auto& s : space_list_x ) {
+      g->Add( new Rect( s.e1.coor, bb.min.y, s.e2.coor, bb.max.y ) );
+    }
+
+    for ( auto& s : space_list_y ) {
+      g->Add( new Rect( bb.min.x, s.e1.coor, bb.max.x, s.e2.coor ) );
+    }
+  }
+*/
+
   std::ostringstream oss;
   oss << canvas->GenSVG();
   return oss.str();
