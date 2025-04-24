@@ -23,7 +23,6 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
 {
   this->ensemble = ensemble;
   this->svg_g = svg_g;
-  border_color.Set( ColorName::black );
   chart_area_color.Clear();
   axis_color.Set( ColorName::black );
   text_color.Set( ColorName::black );
@@ -64,16 +63,6 @@ Main::~Main( void )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-void Main::SetBorderWidth( SVG::U width )
-{
-  border_width = width;
-}
-
-void Main::SetMargin( SVG::U margin )
-{
-  this->margin = margin;
-}
 
 void Main::SetChartArea( SVG::U width, SVG::U height )
 {
@@ -1781,62 +1770,34 @@ void Main::AddFootnotes(
 
 //------------------------------------------------------------------------------
 
-void Main::AddChartMargin(
-  SVG::Group* chart_g, bool do_area_margin
-)
+void Main::AddChartPadding( SVG::Group* chart_g )
 {
   BoundaryBox bb = chart_g->GetBB();
 
-  if ( do_area_margin ) {
-    U delta = enable_html ? +snap_point_radius : 0;
-    for ( auto series : series_list ) {
-      if (
-        series->has_line &&
-        series->type != SeriesType::Bar &&
-        series->type != SeriesType::StackedBar
-      ) {
-        delta = std::max( +delta, series->line_width / 2 );
-      }
-      if ( series->marker_show ) {
-        delta = std::max( +delta, -series->marker_out.x1 );
-        delta = std::max( +delta, -series->marker_out.y1 );
-        delta = std::max( +delta, +series->marker_out.x2 );
-        delta = std::max( +delta, +series->marker_out.y2 );
-      }
+  U delta = enable_html ? +snap_point_radius : 0;
+  for ( auto series : series_list ) {
+    if (
+      series->has_line &&
+      series->type != SeriesType::Bar &&
+      series->type != SeriesType::StackedBar
+    ) {
+      delta = std::max( +delta, series->line_width / 2 );
     }
-
-    bb.Update( -delta, -delta );
-    bb.Update( chart_w + delta, chart_h + delta );
-
-    chart_g->Add( new Rect( bb.min, bb.max ) );
-    chart_g->Last()->Attr()->FillColor()->Clear();
-    chart_g->Last()->Attr()->LineColor()->Clear();
-    chart_g->Last()->Attr()->SetLineWidth( 0 );
-  } else {
-    bb.min.x -= margin + border_width;
-    bb.max.x += margin + border_width;
-    bb.min.y -= margin + border_width;
-    bb.max.y += margin + border_width;
-
-    chart_g->Add( new Rect( bb.min, bb.max ) );
-    chart_g->Last()->Attr()->FillColor()->Clear();
-    chart_g->Last()->Attr()->LineColor()->Clear();
-    chart_g->Last()->Attr()->SetLineWidth( 0 );
-    chart_g->FrontToBack();
-
-    bb.min.x += border_width / 2;
-    bb.max.x -= border_width / 2;
-    bb.min.y += border_width / 2;
-    bb.max.y -= border_width / 2;
-
-    chart_g->Add( new Rect( bb.min, bb.max ) );
-    chart_g->Last()->Attr()->SetLineWidth( border_width );
-    if ( border_width > 0 ) {
-      chart_g->Last()->Attr()->LineColor()->Set( &border_color );
-    } else {
-      chart_g->Last()->Attr()->LineColor()->Clear();
+    if ( series->marker_show ) {
+      delta = std::max( +delta, -series->marker_out.x1 );
+      delta = std::max( +delta, -series->marker_out.y1 );
+      delta = std::max( +delta, +series->marker_out.x2 );
+      delta = std::max( +delta, +series->marker_out.y2 );
     }
   }
+
+  bb.Update( -delta, -delta );
+  bb.Update( chart_w + delta, chart_h + delta );
+
+  chart_g->Add( new Rect( bb.min, bb.max ) );
+  chart_g->Last()->Attr()->FillColor()->Clear();
+  chart_g->Last()->Attr()->LineColor()->Clear();
+  chart_g->Last()->Attr()->SetLineWidth( 0 );
 
   chart_g->FrontToBack();
 
@@ -2045,9 +2006,9 @@ void Main::Build( void )
     label_db->AddBackground( label_bg_g, area, partial_ok );
   }
 
-  AddChartMargin( chart_g, true );
+  AddChartPadding( chart_g );
+
   AddFootnotes( chart_g );
-  AddChartMargin( chart_g, false );
 
 // TBD
 /*

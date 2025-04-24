@@ -390,7 +390,7 @@ void Ensemble::BuildBackground( void )
   top_g->Add( new Rect( bb.min, bb.max ) );
   top_g->Last()->Attr()->SetLineWidth( border_width );
   if ( border_width > 0 ) {
-    top_g->Last()->Attr()->LineColor()->Set( &border_color );
+    top_g->Last()->Attr()->LineColor()->Set( BorderColor() );
   } else {
     top_g->Last()->Attr()->LineColor()->Clear();
   }
@@ -408,7 +408,7 @@ std::string Ensemble::Build( void )
     NewChart( 0, 0, 0, 0 );
   }
 
-  top_g->Attr()->FillColor()->Set( &background_color );
+  top_g->Attr()->FillColor()->Set( BackgroundColor() );
 
   for ( auto& elem : element_list ) {
     elem.chart->Build();

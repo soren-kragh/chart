@@ -41,12 +41,9 @@ public:
 
   void EnableHTML( bool enable = true ) { enable_html = enable; }
 
-  void SetBorderWidth( SVG::U width );
-  void SetMargin( SVG::U margin );
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
-  SVG::Color* BorderColor( void ) { return &border_color; }
   SVG::Color* ChartAreaColor( void ) { return &chart_area_color; }
   SVG::Color* AxisColor( void ) { return &axis_color; }
   SVG::Color* TextColor( void ) { return &text_color; }
@@ -122,6 +119,10 @@ private:
   Ensemble* ensemble = nullptr;
   SVG::Group* svg_g = nullptr;
 
+  SVG::U chart_w   = 1000;
+  SVG::U chart_h   = 600;
+  bool   chart_box = false;
+
   typedef struct {
     SVG::U ch;  // Character height.
     SVG::U ow;  // Max outline width.
@@ -180,20 +181,17 @@ private:
     SVG::Group* chart_g
   );
 
-  // Create an invisible rectangle around the chart area with extra margin to
+  // Create an invisible rectangle around the chart area with extra padding to
   // account for markers and/or lines which due to their width may spill out of
   // of the chart area. Doing this ensures consistent chart dimensions
   // independent of the data values close to the edge of the chart area.
-  void AddChartMargin(
-    SVG::Group* chart_g, bool do_area_margin
-  );
+  void AddChartPadding( SVG::Group* chart_g );
 
   // Transfer various information to the HTML object (html_db).
   void PrepareHTML( void );
 
   bool enable_html = false;
 
-  SVG::Color border_color;      // TBD
   SVG::Color chart_area_color;
   SVG::Color axis_color;
   SVG::Color text_color;
@@ -230,12 +228,6 @@ private:
   Pos         legend_pos;
   bool        legend_outline;
   float       legend_size;
-
-  SVG::U border_width = 0;      // TBD
-  SVG::U margin       = 5;      // TBD
-  SVG::U chart_w      = 1000;
-  SVG::U chart_h      = 600;
-  bool   chart_box    = false;
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;

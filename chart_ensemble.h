@@ -37,6 +37,9 @@ public:
     Pos align_ver = Pos::Auto
   );
 
+  void SetMargin( SVG::U margin ) { this->margin = margin; }
+  void SetBorderWidth( SVG::U width ) { border_width = width; }
+  SVG::Color* BorderColor( void ) { return &border_color; }
   SVG::Color* BackgroundColor( void ) { return &background_color; }
 
   std::string Build( void );
