@@ -26,9 +26,9 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
-  bool Empty( void ) { return chart_list.empty(); }
+  bool Empty( void ) { return element_list.empty(); }
 
-  Main* LastChart( void ) { return chart_list.back().chart; }
+  Main* LastChart( void ) { return element_list.back().chart; }
 
   void NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
@@ -47,7 +47,7 @@ private:
   uint32_t grid_max_x = 0;
   uint32_t grid_max_y = 0;
 
-  struct chart_t {
+  struct element_t {
     Main* chart = nullptr;
     SVG::BoundaryBox full_bb;
     SVG::BoundaryBox area_bb;
@@ -73,7 +73,8 @@ private:
     edge_t e2;
   };
 
-  std::vector< chart_t > chart_list;
+  std::vector< element_t > element_list;
+
   std::vector< space_t > space_list_x;
   std::vector< space_t > space_list_y;
 

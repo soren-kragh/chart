@@ -29,8 +29,8 @@ Ensemble::Ensemble( void )
 
 Ensemble::~Ensemble( void )
 {
-  for ( auto& chart : chart_list ) {
-    delete chart.chart;
+  for ( auto& elem : element_list ) {
+    delete elem.chart;
   }
   delete canvas;
 }
@@ -44,32 +44,32 @@ void Ensemble::NewChart(
   Pos align_ver
 )
 {
-  chart_t chart;
-  chart.chart = new Main( top_g->AddNewGroup() );
+  element_t elem;
+  elem.chart = new Main( top_g->AddNewGroup() );
 
   // Note that the Y grid coordinates are in normal bottom to top "mathematical"
   // direction, whereas rows goes top to bottom. The InitGrid() will reorient
   // the Y grid coordinates to match these notations.
-  chart.grid_x1 = grid_col1;
-  chart.grid_y1 = grid_row1;
-  chart.grid_x2 = grid_col2;
-  chart.grid_y2 = grid_row2;
+  elem.grid_x1 = grid_col1;
+  elem.grid_y1 = grid_row1;
+  elem.grid_x2 = grid_col2;
+  elem.grid_y2 = grid_row2;
 
-  chart.anchor_x = SVG::AnchorX::Mid;
+  elem.anchor_x = SVG::AnchorX::Mid;
   if ( align_hor != Chart::Pos::Auto ) {
-    if ( align_hor == Chart::Pos::Left   ) chart.anchor_x = SVG::AnchorX::Min;
-    if ( align_hor == Chart::Pos::Right  ) chart.anchor_x = SVG::AnchorX::Max;
-    chart.anchor_x_defined = true;
+    if ( align_hor == Chart::Pos::Left   ) elem.anchor_x = SVG::AnchorX::Min;
+    if ( align_hor == Chart::Pos::Right  ) elem.anchor_x = SVG::AnchorX::Max;
+    elem.anchor_x_defined = true;
   }
 
-  chart.anchor_y = SVG::AnchorY::Mid;
+  elem.anchor_y = SVG::AnchorY::Mid;
   if ( align_ver != Chart::Pos::Auto ) {
-    if ( align_ver == Chart::Pos::Bottom ) chart.anchor_y = SVG::AnchorY::Min;
-    if ( align_ver == Chart::Pos::Top    ) chart.anchor_y = SVG::AnchorY::Max;
-    chart.anchor_y_defined = true;
+    if ( align_ver == Chart::Pos::Bottom ) elem.anchor_y = SVG::AnchorY::Min;
+    if ( align_ver == Chart::Pos::Top    ) elem.anchor_y = SVG::AnchorY::Max;
+    elem.anchor_y_defined = true;
   }
 
-  chart_list.push_back( chart );
+  element_list.push_back( elem );
 
   return;
 }
@@ -78,40 +78,40 @@ void Ensemble::NewChart(
 
 void Ensemble::InitGrid( void )
 {
-  for ( auto& chart : chart_list ) {
-    grid_max_x = std::max( grid_max_x, chart.grid_x2 );
-    grid_max_y = std::max( grid_max_y, chart.grid_y2 );
+  for ( auto& elem : element_list ) {
+    grid_max_x = std::max( grid_max_x, elem.grid_x2 );
+    grid_max_y = std::max( grid_max_y, elem.grid_y2 );
   }
   space_t space;
   space_list_x.resize( grid_max_x + 1, space );
   space_list_y.resize( grid_max_y + 1, space );
-  for ( auto& chart : chart_list ) {
-    chart.full_bb = chart.chart->GetGroup()->GetBB();
-    chart.area_bb.Update( 0, 0 );
-    chart.area_bb.Update( chart.chart->chart_w, chart.chart->chart_h );
+  for ( auto& elem : element_list ) {
+    elem.full_bb = elem.chart->GetGroup()->GetBB();
+    elem.area_bb.Update( 0, 0 );
+    elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
 
     // Convert row location to Y grid coordinates.
-    std::swap( chart.grid_y1, chart.grid_y2 );
-    chart.grid_y1 = grid_max_y - chart.grid_y1;
-    chart.grid_y2 = grid_max_y - chart.grid_y2;
+    std::swap( elem.grid_y1, elem.grid_y2 );
+    elem.grid_y1 = grid_max_y - elem.grid_y1;
+    elem.grid_y2 = grid_max_y - elem.grid_y2;
 
-    if ( !chart.anchor_x_defined ) {
-      if ( chart.grid_x1 == 0 && chart.grid_x2 < grid_max_x ) {
-        chart.anchor_x = SVG::AnchorX::Min;
+    if ( !elem.anchor_x_defined ) {
+      if ( elem.grid_x1 == 0 && elem.grid_x2 < grid_max_x ) {
+        elem.anchor_x = SVG::AnchorX::Min;
       }
-      if ( chart.grid_x1 > 0 && chart.grid_x2 == grid_max_x ) {
-        chart.anchor_x = SVG::AnchorX::Max;
+      if ( elem.grid_x1 > 0 && elem.grid_x2 == grid_max_x ) {
+        elem.anchor_x = SVG::AnchorX::Max;
       }
     }
 
-    if ( !chart.anchor_y_defined ) {
-      if ( chart.grid_y1 == 0 && chart.grid_y2 < grid_max_y ) {
-        chart.anchor_y = SVG::AnchorY::Min;
+    if ( !elem.anchor_y_defined ) {
+      if ( elem.grid_y1 == 0 && elem.grid_y2 < grid_max_y ) {
+        elem.anchor_y = SVG::AnchorY::Min;
       }
-      if ( chart.grid_y1 > 0 && chart.grid_y2 == grid_max_y ) {
-        chart.anchor_y = SVG::AnchorY::Max;
+      if ( elem.grid_y1 > 0 && elem.grid_y2 == grid_max_y ) {
+        elem.anchor_y = SVG::AnchorY::Max;
       }
-      chart.anchor_y_defined = true;
+      elem.anchor_y_defined = true;
     }
   }
 }
@@ -122,14 +122,14 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 {
   bool is_x = &space_list == &space_list_x;
 
-  // Create chart sorting based on grid position.
-  std::vector< size_t > sorted_indices( chart_list.size() );
+  // Create element sorting based on grid position.
+  std::vector< size_t > sorted_indices( element_list.size() );
   std::iota( sorted_indices.begin(), sorted_indices.end(), 0 );
   std::sort(
     sorted_indices.begin(), sorted_indices.end(),
     [&]( size_t a_index, size_t b_index ) {
-      const auto& a = chart_list[ a_index ];
-      const auto& b = chart_list[ b_index ];
+      const auto& a = element_list[ a_index ];
+      const auto& b = element_list[ b_index ];
       uint32_t a1 = is_x ? a.grid_x1 : a.grid_y1;
       uint32_t a2 = is_x ? a.grid_x2 : a.grid_y2;
       uint32_t b1 = is_x ? b.grid_x1 : b.grid_y1;
@@ -139,28 +139,28 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
   );
 
   auto update_pad = [&]( void ) {
-    for ( auto& chart : chart_list ) {
-      U f1 = is_x ? chart.full_bb.min.x : chart.full_bb.min.y;
-      U f2 = is_x ? chart.full_bb.max.x : chart.full_bb.max.y;
-      U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-      U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-      uint32_t g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-      uint32_t g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+    for ( auto& elem : element_list ) {
+      U f1 = is_x ? elem.full_bb.min.x : elem.full_bb.min.y;
+      U f2 = is_x ? elem.full_bb.max.x : elem.full_bb.max.y;
+      U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
+      U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
+      uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
+      uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
 
       U ar = (a2 - a1) / 2;
 
       U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
       if (
         is_x
-        ? (chart.anchor_x == SVG::AnchorX::Min)
-        : (chart.anchor_y == SVG::AnchorY::Min)
+        ? (elem.anchor_x == SVG::AnchorX::Min)
+        : (elem.anchor_y == SVG::AnchorY::Min)
       ) {
         c = space_list[ g1 ].e1.coor + ar;
       }
       if (
         is_x
-        ? (chart.anchor_x == SVG::AnchorX::Max)
-        : (chart.anchor_y == SVG::AnchorY::Max)
+        ? (elem.anchor_x == SVG::AnchorX::Max)
+        : (elem.anchor_y == SVG::AnchorY::Max)
       ) {
         c = space_list[ g2 ].e2.coor - ar;
       }
@@ -210,12 +210,12 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
     // in some cases).
     {
       for ( auto i : sorted_indices ) {
-        auto& chart = chart_list[ i ];
+        auto& elem = element_list[ i ];
 
-        U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-        U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-        uint32_t g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-        uint32_t g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+        U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
+        U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
+        uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
+        uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
 
         space_list[ g2 ].e2.coor =
           std::max(
@@ -270,11 +270,11 @@ void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
 
       update_pad();
 
-      for ( auto& chart : chart_list ) {
-        U a1 = is_x ? chart.area_bb.min.x : chart.area_bb.min.y;
-        U a2 = is_x ? chart.area_bb.max.x : chart.area_bb.max.y;
-        uint32_t g1 = is_x ? chart.grid_x1 : chart.grid_y1;
-        uint32_t g2 = is_x ? chart.grid_x2 : chart.grid_y2;
+      for ( auto& elem : element_list ) {
+        U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
+        U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
+        uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
+        uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
 
         U aw = a2 - a1;
         U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
@@ -369,28 +369,28 @@ std::string Ensemble::Build( void )
   if ( Empty() ) {
     NewChart( 0, 0, 0, 0 );
   }
-  for ( auto& chart : chart_list ) {
-    chart.chart->Build();
+  for ( auto& elem : element_list ) {
+    elem.chart->Build();
   }
 
   ComputeGrid();
 
-  for ( auto& chart : chart_list ) {
-    U gx1 = space_list_x[ chart.grid_x1 ].e1.coor;
-    U gx2 = space_list_x[ chart.grid_x2 ].e2.coor;
-    U gy1 = space_list_y[ chart.grid_y1 ].e1.coor;
-    U gy2 = space_list_y[ chart.grid_y2 ].e2.coor;
+  for ( auto& elem : element_list ) {
+    U gx1 = space_list_x[ elem.grid_x1 ].e1.coor;
+    U gx2 = space_list_x[ elem.grid_x2 ].e2.coor;
+    U gy1 = space_list_y[ elem.grid_y1 ].e1.coor;
+    U gy2 = space_list_y[ elem.grid_y2 ].e2.coor;
 
-    U mx = (gx1 + gx2) / 2 - (chart.area_bb.min.x + chart.area_bb.max.x) / 2;
-    U my = (gy1 + gy2) / 2 - (chart.area_bb.min.y + chart.area_bb.max.y) / 2;
+    U mx = (gx1 + gx2) / 2 - (elem.area_bb.min.x + elem.area_bb.max.x) / 2;
+    U my = (gy1 + gy2) / 2 - (elem.area_bb.min.y + elem.area_bb.max.y) / 2;
 
-    if ( chart.anchor_x == SVG::AnchorX::Min ) mx = gx1 - chart.area_bb.min.x;
-    if ( chart.anchor_x == SVG::AnchorX::Max ) mx = gx2 - chart.area_bb.max.x;
+    if ( elem.anchor_x == SVG::AnchorX::Min ) mx = gx1 - elem.area_bb.min.x;
+    if ( elem.anchor_x == SVG::AnchorX::Max ) mx = gx2 - elem.area_bb.max.x;
 
-    if ( chart.anchor_y == SVG::AnchorY::Min ) my = gy1 - chart.area_bb.min.y;
-    if ( chart.anchor_y == SVG::AnchorY::Max ) my = gy2 - chart.area_bb.max.y;
+    if ( elem.anchor_y == SVG::AnchorY::Min ) my = gy1 - elem.area_bb.min.y;
+    if ( elem.anchor_y == SVG::AnchorY::Max ) my = gy2 - elem.area_bb.max.y;
 
-    chart.chart->GetGroup()->Move( mx, my );
+    elem.chart->GetGroup()->Move( mx, my );
   }
 
   std::ostringstream oss;
@@ -431,40 +431,40 @@ void Ensemble::RenumberGridSpace( std::vector< space_t >& space_list )
 void Ensemble::Test( void )
 {
   {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
-    chart.full_bb.Update( 600, 0 ); chart.grid_x2 = 1; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 100;
-    chart.full_bb.max.x += 100;
-    chart_list.push_back( chart );
+    element_t elem;
+    elem.full_bb.Update(   0, 0 ); elem.grid_x1 = 0; elem.grid_y1 = 0;
+    elem.full_bb.Update( 600, 0 ); elem.grid_x2 = 1; elem.grid_y2 = 0;
+    elem.area_bb.Update( elem.full_bb );
+    elem.full_bb.min.x -= 100;
+    elem.full_bb.max.x += 100;
+    element_list.push_back( elem );
   }
   {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 0; chart.grid_y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 0; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 50;
-    chart.full_bb.max.x += 50;
-    chart_list.push_back( chart );
+    element_t elem;
+    elem.full_bb.Update(   0, 0 ); elem.grid_x1 = 0; elem.grid_y1 = 0;
+    elem.full_bb.Update( 100, 0 ); elem.grid_x2 = 0; elem.grid_y2 = 0;
+    elem.area_bb.Update( elem.full_bb );
+    elem.full_bb.min.x -= 50;
+    elem.full_bb.max.x += 50;
+    element_list.push_back( elem );
   }
   {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 1; chart.grid_y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 1; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 50;
-    chart.full_bb.max.x += 50;
-    chart_list.push_back( chart );
+    element_t elem;
+    elem.full_bb.Update(   0, 0 ); elem.grid_x1 = 1; elem.grid_y1 = 0;
+    elem.full_bb.Update( 100, 0 ); elem.grid_x2 = 1; elem.grid_y2 = 0;
+    elem.area_bb.Update( elem.full_bb );
+    elem.full_bb.min.x -= 50;
+    elem.full_bb.max.x += 50;
+    element_list.push_back( elem );
   }
   for ( int i = 0; i < 3; i++ ) {
-    chart_t chart;
-    chart.full_bb.Update(   0, 0 ); chart.grid_x1 = 2; chart.grid_y1 = 0;
-    chart.full_bb.Update( 100, 0 ); chart.grid_x2 = 2; chart.grid_y2 = 0;
-    chart.area_bb.Update( chart.full_bb );
-    chart.full_bb.min.x -= 50;
-    chart.full_bb.max.x += 50;
-    chart_list.push_back( chart );
+    element_t elem;
+    elem.full_bb.Update(   0, 0 ); elem.grid_x1 = 2; elem.grid_y1 = 0;
+    elem.full_bb.Update( 100, 0 ); elem.grid_x2 = 2; elem.grid_y2 = 0;
+    elem.area_bb.Update( elem.full_bb );
+    elem.full_bb.min.x -= 50;
+    elem.full_bb.max.x += 50;
+    element_list.push_back( elem );
   }
 
 
