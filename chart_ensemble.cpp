@@ -40,13 +40,23 @@ Ensemble::~Ensemble( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::NewChart(
+bool Ensemble::NewChart(
   uint32_t grid_row1, uint32_t grid_col1,
   uint32_t grid_row2, uint32_t grid_col2,
   Pos align_hor,
   Pos align_ver
 )
 {
+  for ( auto& elem : element_list ) {
+    if (
+      !(grid_col1 < elem.grid_x1 && grid_col2 < elem.grid_x1) &&
+      !(grid_col1 > elem.grid_x2 && grid_col2 > elem.grid_x2) &&
+      !(grid_row1 < elem.grid_y1 && grid_row2 < elem.grid_y1) &&
+      !(grid_row1 > elem.grid_y2 && grid_row2 > elem.grid_y2)
+    )
+      return false;
+  }
+
   element_t elem;
   elem.chart = new Main( this, top_g->AddNewGroup() );
 
@@ -74,7 +84,7 @@ void Ensemble::NewChart(
 
   element_list.push_back( elem );
 
-  return;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

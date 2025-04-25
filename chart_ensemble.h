@@ -30,7 +30,7 @@ public:
 
   Main* LastChart( void ) { return element_list.back().chart; }
 
-  void NewChart(
+  bool NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
     uint32_t grid_row2, uint32_t grid_col2,
     Pos align_hor = Pos::Auto,
