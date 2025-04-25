@@ -90,6 +90,11 @@ void Ensemble::InitGrid( void )
   space_list_y.resize( grid_max_y + 1, space );
   for ( auto& elem : element_list ) {
     elem.full_bb = elem.chart->GetGroup()->GetBB();
+    elem.full_bb.min.x -= grid_padding;
+    elem.full_bb.max.x += grid_padding;
+    elem.full_bb.min.y -= grid_padding;
+    elem.full_bb.max.y += grid_padding;
+
     elem.area_bb.Update( 0, 0 );
     elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
 
@@ -371,10 +376,10 @@ void Ensemble::BuildBackground( void )
 {
   BoundaryBox bb = top_g->GetBB();
 
-  bb.min.x -= margin + border_width;
-  bb.max.x += margin + border_width;
-  bb.min.y -= margin + border_width;
-  bb.max.y += margin + border_width;
+  bb.min.x -= margin + padding + border_width;
+  bb.max.x += margin + padding + border_width;
+  bb.min.y -= margin + padding + border_width;
+  bb.max.y += margin + padding + border_width;
 
   top_g->Add( new Rect( bb.min, bb.max ) );
   top_g->Last()->Attr()->FillColor()->Clear();
@@ -382,10 +387,10 @@ void Ensemble::BuildBackground( void )
   top_g->Last()->Attr()->SetLineWidth( 0 );
   top_g->FrontToBack();
 
-  bb.min.x += border_width / 2;
-  bb.max.x -= border_width / 2;
-  bb.min.y += border_width / 2;
-  bb.max.y -= border_width / 2;
+  bb.min.x += margin + border_width / 2;
+  bb.max.x -= margin + border_width / 2;
+  bb.min.y += margin + border_width / 2;
+  bb.max.y -= margin + border_width / 2;
 
   top_g->Add( new Rect( bb.min, bb.max ) );
   top_g->Last()->Attr()->SetLineWidth( border_width );

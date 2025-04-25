@@ -42,6 +42,12 @@ public:
   SVG::Color* BorderColor( void ) { return &border_color; }
   SVG::Color* BackgroundColor( void ) { return &background_color; }
 
+  // Padding around all elements.
+  void SetPadding( SVG::U padding ) { this->padding = padding; }
+
+  // Padding around elements in the grid,
+  void SetGridPadding( SVG::U padding ) { grid_padding = padding; }
+
   std::string Build( void );
 
 private:
@@ -52,7 +58,9 @@ private:
   SVG::Color background_color;
   SVG::Color border_color;
   SVG::U border_width = 0;
-  SVG::U margin       = 5;
+  SVG::U margin       = 0;
+  SVG::U padding      = 8;
+  SVG::U grid_padding = 4;
 
   uint32_t grid_max_x = 0;
   uint32_t grid_max_y = 0;
