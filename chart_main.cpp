@@ -66,8 +66,8 @@ Main::~Main( void )
 
 void Main::SetChartArea( SVG::U width, SVG::U height )
 {
-  chart_w = std::max( U( 100 ), width );
-  chart_h = std::max( U( 100 ), height );
+  chart_w = std::max( U( 10 ), width );
+  chart_h = std::max( U( 10 ), height );
 }
 
 void Main::SetChartBox( bool chart_box )
