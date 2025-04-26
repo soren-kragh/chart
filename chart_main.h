@@ -39,8 +39,6 @@ public:
 
   SVG::Group* GetGroup( void ) { return svg_g; }
 
-  void EnableHTML( bool enable = true ) { enable_html = enable; }
-
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
@@ -187,10 +185,8 @@ private:
   // independent of the data values close to the edge of the chart area.
   void AddChartPadding( SVG::Group* chart_g );
 
-  // Transfer various information to the HTML object (html_db).
+  // Transfer various information to the HTML object (ensemble->html_db).
   void PrepareHTML( void );
-
-  bool enable_html = false;
 
   SVG::Color chart_area_color;
   SVG::Color axis_color;
@@ -235,7 +231,6 @@ private:
 
   Label* label_db;
   Tag* tag_db;
-  HTML* html_db;
 
   std::vector< Series* > series_list;
 

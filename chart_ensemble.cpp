@@ -25,6 +25,7 @@ Ensemble::Ensemble( void )
 {
   canvas = new Canvas();
   top_g = canvas->TopGroup()->AddNewGroup();
+  html_db = new HTML( this );
 
   background_color.Set( ColorName::white );
   border_color.Set( ColorName::black );
@@ -32,6 +33,7 @@ Ensemble::Ensemble( void )
 
 Ensemble::~Ensemble( void )
 {
+  delete html_db;
   for ( auto& elem : element_list ) {
     delete elem.chart;
   }
@@ -59,6 +61,7 @@ bool Ensemble::NewChart(
 
   element_t elem;
   elem.chart = new Main( this, top_g->AddNewGroup() );
+  html_db->NewChart( elem.chart );
 
   // Note that the Y grid coordinates are in normal bottom to top "mathematical"
   // direction, whereas rows goes top to bottom. The InitGrid() will reorient

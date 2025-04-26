@@ -43,7 +43,6 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   legend_size = 1.0;
   label_db = new Label();
   tag_db = new Tag();
-  html_db = new HTML( this );
   axis_x      = new Axis( true , label_db );
   axis_y[ 0 ] = new Axis( false, label_db );
   axis_y[ 1 ] = new Axis( false, label_db );
@@ -59,7 +58,6 @@ Main::~Main( void )
   delete axis_y[ 1 ];
   delete label_db;
   delete tag_db;
-  delete html_db;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -590,13 +588,13 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
     Point marker_p{ px + legend_dims.ow/2, py - legend_dims.sy/2 };
 
-    if ( enable_html ) {
+    if ( ensemble->enable_html ) {
       BoundaryBox bb;
       bb.min.x = px - legend_dims.lx;
       bb.min.y = py - legend_dims.sy;
       bb.max.x = px + legend_dims.rx + legend_dims.sx;
       bb.max.y = py;
-      html_db->LegendPos( series, bb );
+      ensemble->html_db->LegendPos( series, bb );
     }
 
     U line_w = series->line_width;
@@ -770,7 +768,7 @@ void Main::PlaceLegends(
         (best_lb.bb.min.y + best_lb.bb.max.y) / 2
       );
       moved_bb = legend_g->Last()->GetBB();
-      html_db->MoveLegends(
+      ensemble->html_db->MoveLegends(
         moved_bb.min.x - build_bb.min.x,
         moved_bb.min.y - build_bb.min.y
       );
@@ -838,7 +836,7 @@ void Main::PlaceLegends(
     legend->MoveTo( anchor_x, best_anchor_y, x, best_y );
     MoveObj( dir, legend, avoid_objects, mx, my );
     moved_bb = legend->GetBB();
-    html_db->MoveLegends(
+    ensemble->html_db->MoveLegends(
       moved_bb.min.x - build_bb.min.x,
       moved_bb.min.y - build_bb.min.y
     );
@@ -900,7 +898,7 @@ void Main::PlaceLegends(
     legend->MoveTo( best_anchor_x, anchor_y, best_x, y );
     MoveObj( dir, legend, avoid_objects, mx, my );
     moved_bb = legend->GetBB();
-    html_db->MoveLegends(
+    ensemble->html_db->MoveLegends(
       moved_bb.min.x - build_bb.min.x,
       moved_bb.min.y - build_bb.min.y
     );
@@ -1403,8 +1401,10 @@ void Main::SeriesPrepare(
     series->axis_y = axis_y[ series->axis_y_n ];
     series->lb_list = lb_list;
     series->tag_db = tag_db;
-    if ( enable_html && (!series->name.empty() || series->anonymous_snap) ) {
-      series->html_db = html_db;
+    if ( ensemble->enable_html ) {
+      if ( !series->name.empty() || series->anonymous_snap ) {
+        series->html_db = ensemble->html_db;
+      }
     }
 
     if ( series->type == SeriesType::Lollipop ) {
@@ -1453,7 +1453,7 @@ void Main::SeriesPrepare(
   }
   bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
 
-  html_db->SetAllInline( bar_tot <= 1 && lol_tot <= 1 );
+  ensemble->html_db->SetAllInline( bar_tot <= 1 && lol_tot <= 1 );
 
   return;
 }
@@ -1774,7 +1774,7 @@ void Main::AddChartPadding( SVG::Group* chart_g )
 {
   BoundaryBox bb = chart_g->GetBB();
 
-  U delta = enable_html ? +snap_point_radius : 0;
+  U delta = ensemble->enable_html ? +snap_point_radius : 0;
   for ( auto series : series_list ) {
     if (
       series->has_line &&
@@ -1811,14 +1811,14 @@ void Main::PrepareHTML( void )
   if ( axis_x->angle == 0 ) {
 
     if ( axis_x->category_axis ) {
-      html_db->DefAxisX(
+      ensemble->html_db->DefAxisX(
         axis_x->cat_coor_is_max ? 0 : 1, axis_x,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->reverse ? axis_x->min : axis_x->max,
         NumberFormat::Fixed, false, false, true
       );
     } else {
-      html_db->DefAxisX(
+      ensemble->html_db->DefAxisX(
         axis_x->orth_coor_is_max ? 0 : 1, axis_x,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->reverse ? axis_x->min : axis_x->max,
@@ -1828,7 +1828,7 @@ void Main::PrepareHTML( void )
 
     for ( auto a : axis_y ) {
       if ( a->show ) {
-        html_db->DefAxisY(
+        ensemble->html_db->DefAxisY(
           a->orth_coor_is_max ? 1 : 0, a,
           a->reverse ? a->min : a->max,
           a->reverse ? a->max : a->min,
@@ -1840,14 +1840,14 @@ void Main::PrepareHTML( void )
   } else {
 
     if ( axis_x->category_axis ) {
-      html_db->DefAxisY(
+      ensemble->html_db->DefAxisY(
         axis_x->cat_coor_is_max ? 1 : 0, axis_x,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->reverse ? axis_x->max : axis_x->min,
         NumberFormat::Fixed, false, false, true
       );
     } else {
-      html_db->DefAxisY(
+      ensemble->html_db->DefAxisY(
         axis_x->orth_coor_is_max ? 1 : 0, axis_x,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->reverse ? axis_x->max : axis_x->min,
@@ -1857,7 +1857,7 @@ void Main::PrepareHTML( void )
 
     for ( auto a : axis_y ) {
       if ( a->show ) {
-        html_db->DefAxisX(
+        ensemble->html_db->DefAxisX(
           a->orth_coor_is_max ? 0 : 1, a,
           a->reverse ? a->max : a->min,
           a->reverse ? a->min : a->max,
@@ -1866,7 +1866,7 @@ void Main::PrepareHTML( void )
       }
     }
 
-    html_db->SwapAxis();
+    ensemble->html_db->SwapAxis();
 
   }
 

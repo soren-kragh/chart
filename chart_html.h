@@ -18,6 +18,7 @@
 
 namespace Chart {
 
+class Ensemble;
 class Main;
 class Axis;
 class Series;
@@ -29,7 +30,9 @@ class HTML
 
 public:
 
-  HTML( Main* main ) : main( main ) {}
+  HTML( Ensemble* ensemble ) : ensemble( ensemble ) {}
+
+  void NewChart( Main* main ) { this->main = main; }
 
   void DefAxisX(
     int n, Axis* axis, double val1, double val2,
@@ -65,7 +68,8 @@ public:
 
 private:
 
-  Main* main;
+  Ensemble* ensemble = nullptr;
+  Main* main = nullptr;
 
   bool all_inline = true;
 

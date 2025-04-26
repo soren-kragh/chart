@@ -20,6 +20,8 @@ namespace Chart {
 
 class Ensemble
 {
+  friend class Main;
+  friend class HTML;
 
 public:
 
@@ -36,6 +38,8 @@ public:
     Pos align_hor = Pos::Auto,
     Pos align_ver = Pos::Auto
   );
+
+  void EnableHTML( bool enable = true ) { enable_html = enable; }
 
   void SetMargin( SVG::U margin ) { this->margin = margin; }
   void SetBorderWidth( SVG::U width ) { border_width = width; }
@@ -54,6 +58,9 @@ private:
 
   SVG::Canvas* canvas;
   SVG::Group* top_g;
+
+  bool enable_html = false;
+  HTML* html_db = nullptr;
 
   SVG::Color background_color;
   SVG::Color border_color;
