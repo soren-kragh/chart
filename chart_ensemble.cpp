@@ -475,7 +475,11 @@ std::string Ensemble::Build( void )
 */
 
   std::ostringstream oss;
-  oss << canvas->GenSVG();
+  if ( enable_html ) {
+    oss << html_db->GenHTML( canvas );
+  } else {
+    oss << canvas->GenSVG();
+  }
   return oss.str();
 }
 

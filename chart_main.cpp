@@ -2010,18 +2010,11 @@ void Main::Build( void )
 
   AddFootnotes( chart_g );
 
-// TBD
-/*
-  std::ostringstream oss;
-  if ( enable_html ) {
+  if ( ensemble->enable_html ) {
     PrepareHTML();
-    oss << html_db->GenHTML( canvas );
-  } else {
-    oss << canvas->GenSVG();
   }
-  delete canvas;
-  return oss.str();
-*/
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
