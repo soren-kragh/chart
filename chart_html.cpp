@@ -19,6 +19,14 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void HTML::NewChart( Main* main )
+{
+  this->main = main;
+  main_list.push_back( main );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void HTML::DefAxisX(
   int n, Axis* axis, double val1, double val2,
   NumberFormat number_format,
@@ -114,18 +122,16 @@ std::string quoteJS( std::string_view s ) {
 
 //------------------------------------------------------------------------------
 
-std::string HTML::GenHTML( SVG::Canvas* canvas )
+void HTML::GenChartData( Main* main, std::ostringstream& oss )
 {
+  BoundaryBox chart_bb = main->GetGroup()->GetBB();
+
   BoundaryBox area_bb;
   // Standard SVG coordinates (Y direction down) given here.
   area_bb.min.x = 0;
   area_bb.min.y = -main->chart_h;
   area_bb.max.x = main->chart_w;
   area_bb.max.y = 0;
-
-  BoundaryBox chart_bb = canvas->TopGroup()->GetBB();
-  U width  = chart_bb.max.x - chart_bb.min.x;
-  U height = chart_bb.max.y - chart_bb.min.y;
 
   Color bg_color;
   if ( !main->ChartAreaColor()->IsClear() ) {
@@ -135,53 +141,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   }
   if ( bg_color.IsClear() ) bg_color.Set( ColorName::white );
 
-  std::ostringstream oss;
-  oss << std::boolalpha;
-
-  #include <chart_html_part1.h>
-
-  oss << "<div style=\"";
-  oss << "width:" << width.SVG( false ) << "px;";
-  oss << "height:" << height.SVG( false ) << "px;";
-  oss << "position:relative;margin:0 auto;\">\n";
-
-  oss << canvas->GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgChart\"" );
-
-  {
-    Canvas cursor_canvas;
-    Group* g = cursor_canvas.TopGroup();
-    g->Add( new Rect( chart_bb.min, chart_bb.max ) );
-    g->Attr()->SetLineWidth( 0 );
-    g->Attr()->LineColor()->Clear();
-    g->Attr()->FillColor()->Clear();
-    oss << cursor_canvas.GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgCursor\"" );
-  }
-
-  {
-    Canvas snap_canvas;
-    Group* g = snap_canvas.TopGroup();
-    g->Add( new Rect( chart_bb.min, chart_bb.max ) );
-    g->Attr()->SetLineWidth( 0 );
-    g->Attr()->LineColor()->Clear();
-    g->Attr()->FillColor()->Clear();
-    g = g->AddNewGroup();
-    uint32_t id = 0;
-    for ( const auto& sp : snap_points ) {
-      std::ostringstream oss;
-      oss << "id=\"" << id << '"';
-      g->Add( new Circle( sp.p, snap_point_radius ) );
-      g->Last()->Attr()->AddCustom( oss.str() );
-      ++id;
-    }
-    g->Attr()->AddCustom( "fill=\"transparent\" style=\"pointer-events: all;\" id=\"snapPoints\"" );
-    oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
-  }
-
-  oss << "</div>\n";
-
-  oss << "\n<script>\n\n";
-
-  oss << "const chart = {" << '\n';
+  oss << "{\n";
 
   bool hide_mouse_cursor = true;
   {
@@ -392,7 +352,72 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   }
   oss << "],\n";
 
-  oss << "};" << '\n';
+  oss << "},\n";
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
+std::string HTML::GenHTML( SVG::Canvas* canvas )
+{
+  std::ostringstream oss;
+  oss << std::boolalpha;
+
+  #include <chart_html_part1.h>
+
+  BoundaryBox ensemble_bb = canvas->TopGroup()->GetBB();
+
+  {
+    U ensemble_w = ensemble_bb.max.x - ensemble_bb.min.x;
+    U ensemble_h = ensemble_bb.max.y - ensemble_bb.min.y;
+    oss << "<div style=\"";
+    oss << "width:" << ensemble_w.SVG( false ) << "px;";
+    oss << "height:" << ensemble_h.SVG( false ) << "px;";
+    oss << "position:relative;margin:0 auto;\">\n";
+  }
+
+  oss << canvas->GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgChart\"" );
+
+  {
+    Canvas cursor_canvas;
+    Group* g = cursor_canvas.TopGroup();
+    g->Add( new Rect( ensemble_bb.min, ensemble_bb.max ) );
+    g->Attr()->SetLineWidth( 0 );
+    g->Attr()->LineColor()->Clear();
+    g->Attr()->FillColor()->Clear();
+    oss << cursor_canvas.GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgCursor\"" );
+  }
+
+  {
+    Canvas snap_canvas;
+    Group* g = snap_canvas.TopGroup();
+    g->Add( new Rect( ensemble_bb.min, ensemble_bb.max ) );
+    g->Attr()->SetLineWidth( 0 );
+    g->Attr()->LineColor()->Clear();
+    g->Attr()->FillColor()->Clear();
+    g = g->AddNewGroup();
+    uint32_t id = 0;
+    for ( const auto& sp : snap_points ) {
+      std::ostringstream oss;
+      oss << "id=\"" << id << '"';
+      g->Add( new Circle( sp.p, snap_point_radius ) );
+      g->Last()->Attr()->AddCustom( oss.str() );
+      ++id;
+    }
+    g->Attr()->AddCustom( "fill=\"transparent\" style=\"pointer-events: all;\" id=\"snapPoints\"" );
+    oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
+  }
+
+  oss << "</div>\n";
+
+  oss << "\n<script>\n\n";
+
+  oss << "let chart;\n\n";
+
+  oss << "const chart_list = [" << '\n';
+  GenChartData( main, oss );
+  oss << "];" << '\n';
 
   #include <chart_html_part2.h>
 

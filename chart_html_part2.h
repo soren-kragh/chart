@@ -846,31 +846,35 @@ svg_snap.addEventListener("mouseleave", () => {
 // Main.
 
 {
-  chart.axisX[0].id = "axisX_0";
-  chart.axisX[1].id = "axisX_1";
-  chart.axisY[0].id = "axisY_0";
-  chart.axisY[1].id = "axisY_1";
-  chart.axisX.forEach(axis => {
-    axis.coor1 = chart.area.x1;
-    axis.coor2 = chart.area.x2;
-    determineDecimals( axis );
-  });
-  chart.axisY.forEach(axis => {
-    axis.coor1 = chart.area.y1;
-    axis.coor2 = chart.area.y2;
-    determineDecimals( axis );
-  });
+  chart_list.forEach(c => {
+    chart = c;
 
-  if (chart.categories) {
-    chart.catList = Array(chart.categories.length).fill().map(() => []);
-    let id = 0;
-    chart.snapPoints.forEach(sp => {
-      if (typeof sp.x === "number") {
-        chart.catList[sp.x].push({serId: sp.s, id});
-      }
-      id++;
+    chart.axisX[0].id = "axisX_0";
+    chart.axisX[1].id = "axisX_1";
+    chart.axisY[0].id = "axisY_0";
+    chart.axisY[1].id = "axisY_1";
+    chart.axisX.forEach(axis => {
+      axis.coor1 = chart.area.x1;
+      axis.coor2 = chart.area.x2;
+      determineDecimals( axis );
     });
-  }
+    chart.axisY.forEach(axis => {
+      axis.coor1 = chart.area.y1;
+      axis.coor2 = chart.area.y2;
+      determineDecimals( axis );
+    });
+
+    if (chart.categories) {
+      chart.catList = Array(chart.categories.length).fill().map(() => []);
+      let id = 0;
+      chart.snapPoints.forEach(sp => {
+        if (typeof sp.x === "number") {
+          chart.catList[sp.x].push({serId: sp.s, id});
+        }
+        id++;
+      });
+    }
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////

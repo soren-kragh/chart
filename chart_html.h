@@ -32,7 +32,7 @@ public:
 
   HTML( Ensemble* ensemble ) : ensemble( ensemble ) {}
 
-  void NewChart( Main* main ) { this->main = main; }
+  void NewChart( Main* main );
 
   void DefAxisX(
     int n, Axis* axis, double val1, double val2,
@@ -71,6 +71,8 @@ private:
   Ensemble* ensemble = nullptr;
   Main* main = nullptr;
 
+  std::vector< Main* > main_list;
+
   bool all_inline = true;
 
   struct snap_point_t {
@@ -99,6 +101,8 @@ private:
   std::map< Series*, SVG::BoundaryBox > series_legend_map;
 
   std::vector< snap_point_t > snap_points;
+
+  void GenChartData( Main* main, std::ostringstream& oss );
 
 };
 
