@@ -39,6 +39,10 @@ public:
 
   SVG::Group* GetGroup( void ) { return svg_g; }
 
+  // Used to move the completed chart (i.e. after Build()) to its
+  // final position in the grid,
+  void Move( SVG::U dx, SVG::U dy );
+
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
@@ -116,6 +120,8 @@ private:
 
   Ensemble* ensemble = nullptr;
   SVG::Group* svg_g = nullptr;
+  SVG::U g_dx = 0;
+  SVG::U g_dy = 0;
 
   SVG::U chart_w   = 1000;
   SVG::U chart_h   = 600;

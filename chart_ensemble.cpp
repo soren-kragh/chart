@@ -449,7 +449,7 @@ std::string Ensemble::Build( void )
     if ( elem.anchor_y == SVG::AnchorY::Min ) my = gy1 - elem.area_bb.min.y;
     if ( elem.anchor_y == SVG::AnchorY::Max ) my = gy2 - elem.area_bb.max.y;
 
-    elem.chart->GetGroup()->Move( mx, my );
+    elem.chart->Move( mx, my );
   }
 
   BuildBackground();

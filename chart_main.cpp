@@ -62,6 +62,15 @@ Main::~Main( void )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void Main::Move( SVG::U dx, SVG::U dy )
+{
+  svg_g->Move( dx, dy );
+  g_dx = dx;
+  g_dy = dy;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void Main::SetChartArea( SVG::U width, SVG::U height )
 {
   chart_w = std::max( U( 10 ), width );
