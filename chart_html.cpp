@@ -128,10 +128,10 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
 
   BoundaryBox area_bb;
   // Standard SVG coordinates (Y direction down) given here.
-  area_bb.min.x = 0;
-  area_bb.min.y = -main->chart_h;
-  area_bb.max.x = main->chart_w;
-  area_bb.max.y = 0;
+  area_bb.min.x = main->g_dx;
+  area_bb.min.y = -(main->g_dy + main->chart_h);
+  area_bb.max.x = main->g_dx + main->chart_w;
+  area_bb.max.y = -(main->g_dy);
 
   Color bg_color;
   if ( !main->ChartAreaColor()->IsClear() ) {
@@ -276,6 +276,8 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
     oss << "{";
     if ( series_legend_map.count( series ) > 0 ) {
       BoundaryBox bb = series_legend_map[ series ];
+      bb.min.x += main->g_dx; bb.min.y += main->g_dy;
+      bb.max.x += main->g_dx; bb.max.y += main->g_dy;
       std::swap( bb.min.y, bb.max.y );
       bb.min.y = -bb.min.y;
       bb.max.y = -bb.max.y;
@@ -401,7 +403,11 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     for ( const auto& sp : snap_points ) {
       std::ostringstream oss;
       oss << "id=\"" << id << '"';
-      g->Add( new Circle( sp.p, snap_point_radius ) );
+      g->Add(
+        new Circle(
+          sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
+        )
+      );
       g->Last()->Attr()->AddCustom( oss.str() );
       ++id;
     }
