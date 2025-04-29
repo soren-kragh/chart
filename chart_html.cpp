@@ -21,7 +21,6 @@ using namespace Chart;
 
 void HTML::NewChart( Main* main )
 {
-  this->main = main;
   main_list.push_back( main );
 }
 
@@ -70,7 +69,7 @@ void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
 
 void HTML::MoveLegends( SVG::U dx, SVG::U dy )
 {
-  for ( auto series : main->series_list ) {
+  for ( auto series : main_list.back()->series_list ) {
     auto it = series_legend_map.find( series );
     if ( it == series_legend_map.end() ) continue;
     it->second.min.x += dx;
@@ -398,20 +397,31 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     g->Attr()->SetLineWidth( 0 );
     g->Attr()->LineColor()->Clear();
     g->Attr()->FillColor()->Clear();
-    g = g->AddNewGroup();
-    uint32_t id = 0;
-    for ( const auto& sp : snap_points ) {
-      std::ostringstream oss;
-      oss << "id=\"" << id << '"';
-      g->Add(
-        new Circle(
-          sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
-        )
-      );
-      g->Last()->Attr()->AddCustom( oss.str() );
-      ++id;
+
+    uint32_t main_id = 0;
+    for ( auto main : main_list ) {
+      g = g->AddNewGroup();
+      uint32_t snap_id = 0;
+      for ( const auto& sp : snap_points ) {
+        std::ostringstream oss;
+        oss << "id=\"" << snap_id << '"';
+        g->Add(
+          new Circle(
+            sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
+          )
+        );
+        g->Last()->Attr()->AddCustom( oss.str() );
+        ++snap_id;
+      }
+      {
+        std::ostringstream oss;
+        oss << "fill=\"transparent\" style=\"pointer-events: all;\"";
+        oss << " id=\"snapPoints" << main_id << '"';
+        g->Attr()->AddCustom( oss.str() );
+      }
+      ++main_id;
     }
-    g->Attr()->AddCustom( "fill=\"transparent\" style=\"pointer-events: all;\" id=\"snapPoints\"" );
+
     oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
   }
 
@@ -422,7 +432,9 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   oss << "let chart;\n\n";
 
   oss << "const chart_list = [" << '\n';
-  GenChartData( main, oss );
+  for ( auto main : main_list ) {
+    GenChartData( main, oss );
+  }
   oss << "];" << '\n';
 
   #include <chart_html_part2.h>

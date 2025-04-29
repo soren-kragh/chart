@@ -755,18 +755,24 @@ svg_snap.addEventListener("mousemove", (event) => {
   const mouseX = svgPoint.x;
   const mouseY = svgPoint.y;
 
+  let chart_idx = undefined;
   chart = undefined;
-  chart_list.forEach(c => {
+  for (let i = 0; i < chart_list.length; i++) {
+    const c = chart_list[i];
     if (
       mouseX >= c.chart.x1 && mouseX <= c.chart.x2 &&
       mouseY >= c.chart.y1 && mouseY <= c.chart.y2
-    )
+    ) {
+      chart_idx = i;
       chart = c;
-  });
+      break;
+    }
+  }
 
   if (chart != undefined) {
     const elems = document.elementsFromPoint(event.clientX, event.clientY);
-    const snapCandidates = elems.filter(el => el.parentNode.id === 'snapPoints');
+    const snapCandidates =
+      elems.filter(el => el.parentNode.id === `snapPoints${chart_idx}`);
     const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;

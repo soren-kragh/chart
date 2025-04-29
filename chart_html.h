@@ -69,11 +69,8 @@ public:
 private:
 
   Ensemble* ensemble = nullptr;
-  Main* main = nullptr;
 
   std::vector< Main* > main_list;
-
-  bool all_inline = true;
 
   struct snap_point_t {
     uint32_t series_id;
@@ -82,6 +79,10 @@ private:
     std::string_view tag_x;
     std::string_view tag_y;
   };
+
+  std::vector< snap_point_t > snap_points;
+
+  bool all_inline = true;
 
   bool axis_swap = false;
 
@@ -99,8 +100,6 @@ private:
   axis_t y_axis[ 2 ];
 
   std::map< Series*, SVG::BoundaryBox > series_legend_map;
-
-  std::vector< snap_point_t > snap_points;
 
   void GenChartData( Main* main, std::ostringstream& oss );
 
