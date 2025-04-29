@@ -22,6 +22,7 @@ using namespace Chart;
 void HTML::NewChart( Main* main )
 {
   main_list.push_back( main );
+  cur_main = main;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +70,7 @@ void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
 
 void HTML::MoveLegends( SVG::U dx, SVG::U dy )
 {
-  for ( auto series : main_list.back()->series_list ) {
+  for ( auto series : cur_main->series_list ) {
     auto it = series_legend_map.find( series );
     if ( it == series_legend_map.end() ) continue;
     it->second.min.x += dx;
@@ -86,7 +87,7 @@ void HTML::AddSnapPoint(
   SVG::Point p, std::string_view tag_x, std::string_view tag_y
 )
 {
-  snap_points.push_back({ series->id, 0, p, tag_x, tag_y });
+  cur_main->html.snap_points.push_back({ series->id, 0, p, tag_x, tag_y });
   series->has_snap = true;
 }
 
@@ -95,7 +96,7 @@ void HTML::AddSnapPoint(
   SVG::Point p, uint32_t cat_idx, std::string_view tag_y
 )
 {
-  snap_points.push_back({ series->id, cat_idx, p, "", tag_y });
+  cur_main->html.snap_points.push_back({ series->id, cat_idx, p, "", tag_y });
   series->has_snap = true;
 }
 
@@ -241,9 +242,9 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   }
   oss << "],\n";
 
-  oss << "axisSwap : " << axis_swap << ",\n";
+  oss << "axisSwap : " << main->html.axis_swap << ",\n";
   oss << "hideMouseCursor : " << hide_mouse_cursor << ",\n";
-  oss << "inLine : " << all_inline << ",\n";
+  oss << "inLine : " << main->html.all_inline << ",\n";
 
   if ( !main->category_list.empty() ) {
     oss << "categories : [\n";
@@ -342,7 +343,7 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "],\n";
 
   oss << "snapPoints : [\n";
-  for ( const auto& sp : snap_points ) {
+  for ( const auto& sp : main->html.snap_points ) {
     oss << "{s:" << sp.series_id << ',';
     if ( sp.tag_x.empty() ) {
       oss << "x:" << sp.cat_idx << ',';
@@ -402,7 +403,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     for ( auto main : main_list ) {
       g = g->AddNewGroup();
       uint32_t snap_id = 0;
-      for ( const auto& sp : snap_points ) {
+      for ( const auto& sp : main->html.snap_points ) {
         std::ostringstream oss;
         oss << "id=\"" << snap_id << '"';
         g->Add(

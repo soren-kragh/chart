@@ -45,9 +45,6 @@ public:
     bool number_sign, bool logarithmic, bool is_cat = false
   );
 
-  // Specify if the chart X-axis is vertical.
-  void SwapAxis( bool swap = true ) { axis_swap = swap; };
-
   void LegendPos( Series* series, const SVG::BoundaryBox& bb );
   void MoveLegends( SVG::U dx, SVG::U dy );
 
@@ -60,31 +57,14 @@ public:
     SVG::Point p, uint32_t cat_idx, std::string_view tag_y
   );
 
-  // Informs if all snap points are in line; for multiple bars per category
-  // this will not be the case.
-  void SetAllInline( bool all_inline ) { this->all_inline = all_inline; };
-
   std::string GenHTML( SVG::Canvas* canvas );
 
 private:
 
   Ensemble* ensemble = nullptr;
+  Main* cur_main = nullptr;
 
   std::vector< Main* > main_list;
-
-  struct snap_point_t {
-    uint32_t series_id;
-    uint32_t cat_idx;
-    SVG::Point p;
-    std::string_view tag_x;
-    std::string_view tag_y;
-  };
-
-  std::vector< snap_point_t > snap_points;
-
-  bool all_inline = true;
-
-  bool axis_swap = false;
 
   struct axis_t {
     Axis*        axis = nullptr;

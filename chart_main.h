@@ -244,6 +244,43 @@ private:
 
   Axis* axis_x;
   Axis* axis_y[ 2 ];
+
+  // Used by HTML class.
+  struct html_t {
+    struct snap_point_t {
+      uint32_t series_id;
+      uint32_t cat_idx;
+      SVG::Point p;
+      std::string_view tag_x;
+      std::string_view tag_y;
+    };
+
+    std::vector< snap_point_t > snap_points;
+
+    // Informs if all snap points are in line; for multiple bars per category
+    // this will not be the case.
+    bool all_inline = true;
+
+    // Specify if the chart X-axis is vertical.
+    bool axis_swap = false;
+
+    struct axis_t {
+      Axis*        axis = nullptr;
+      bool         is_cat;
+      NumberFormat number_format;
+      bool         number_sign;
+      bool         logarithmic;
+      double       val1;
+      double       val2;
+    };
+
+    axis_t x_axis[ 2 ];
+    axis_t y_axis[ 2 ];
+
+    std::map< Series*, SVG::BoundaryBox > series_legend_map;
+  };
+  html_t html;
+
 };
 
 }

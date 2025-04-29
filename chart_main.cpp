@@ -1462,7 +1462,7 @@ void Main::SeriesPrepare(
   }
   bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
 
-  ensemble->html_db->SetAllInline( bar_tot <= 1 && lol_tot <= 1 );
+  html.all_inline = bar_tot <= 1 && lol_tot <= 1;
 
   return;
 }
@@ -1875,7 +1875,7 @@ void Main::PrepareHTML( void )
       }
     }
 
-    ensemble->html_db->SwapAxis();
+    html.axis_swap = true;
 
   }
 
