@@ -25,7 +25,7 @@ void HTML::NewChart( Main* main )
   cur_main = main;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 
 void HTML::DefAxisX(
   int n, Axis* axis, double val1, double val2,
@@ -33,7 +33,7 @@ void HTML::DefAxisX(
   bool number_sign, bool logarithmic, bool is_cat
 )
 {
-  x_axis[ n ] = {
+  cur_main->html.x_axis[ n ] = {
     .axis          = axis,
     .is_cat        = is_cat,
     .number_format = number_format,
@@ -50,7 +50,7 @@ void HTML::DefAxisY(
   bool number_sign, bool logarithmic, bool is_cat
 )
 {
-  y_axis[ n ] = {
+  cur_main->html.y_axis[ n ] = {
     .axis          = axis,
     .is_cat        = is_cat,
     .number_format = number_format,
@@ -61,18 +61,18 @@ void HTML::DefAxisY(
   };
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 
 void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
 {
-  series_legend_map[ series ] = bb;
+  cur_main->html.series_legend_map[ series ] = bb;
 }
 
 void HTML::MoveLegends( SVG::U dx, SVG::U dy )
 {
   for ( auto series : cur_main->series_list ) {
-    auto it = series_legend_map.find( series );
-    if ( it == series_legend_map.end() ) continue;
+    auto it = cur_main->html.series_legend_map.find( series );
+    if ( it == cur_main->html.series_legend_map.end() ) continue;
     it->second.min.x += dx;
     it->second.min.y += dy;
     it->second.max.x += dx;
@@ -80,7 +80,7 @@ void HTML::MoveLegends( SVG::U dx, SVG::U dy )
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 
 void HTML::AddSnapPoint(
   Series* series,
@@ -195,7 +195,7 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "y2:" << chart_bb.max.y.SVG( false ) << "},\n";
 
   oss << "axisX : [";
-  for ( auto a : x_axis ) {
+  for ( auto a : main->html.x_axis ) {
     oss << "{";
     oss << "show:" << (a.axis != nullptr) << ',';
     if ( a.axis ) {
@@ -219,7 +219,7 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "],\n";
 
   oss << "axisY : [";
-  for ( auto a : y_axis ) {
+  for ( auto a : main->html.y_axis ) {
     oss << "{";
     oss << "show:" << (a.axis != nullptr) << ',';
     if ( a.axis ) {
@@ -274,8 +274,8 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "seriesList : [\n";
   for ( auto series : main->series_list ) {
     oss << "{";
-    if ( series_legend_map.count( series ) > 0 ) {
-      BoundaryBox bb = series_legend_map[ series ];
+    if ( main->html.series_legend_map.count( series ) > 0 ) {
+      BoundaryBox bb = main->html.series_legend_map[ series ];
       bb.min.x += main->g_dx; bb.min.y += main->g_dy;
       bb.max.x += main->g_dx; bb.max.y += main->g_dy;
       std::swap( bb.min.y, bb.max.y );
@@ -290,10 +290,10 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
     int idx_x = -1;
     int idx_y = -1;
     for ( int i = 0; i < 2; i++ ) {
-     if ( series->axis_x == x_axis[ i ].axis ) idx_x = i;
-     if ( series->axis_y == x_axis[ i ].axis ) idx_x = i;
-     if ( series->axis_x == y_axis[ i ].axis ) idx_y = i;
-     if ( series->axis_y == y_axis[ i ].axis ) idx_y = i;
+     if ( series->axis_x == main->html.x_axis[ i ].axis ) idx_x = i;
+     if ( series->axis_y == main->html.x_axis[ i ].axis ) idx_x = i;
+     if ( series->axis_x == main->html.y_axis[ i ].axis ) idx_y = i;
+     if ( series->axis_y == main->html.y_axis[ i ].axis ) idx_y = i;
     }
     if ( idx_x >= 0 ) {
       oss << "axisX:" << idx_x << ',';

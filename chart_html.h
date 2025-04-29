@@ -25,8 +25,6 @@ class Series;
 
 class HTML
 {
-  friend class Axis;
-  friend class Series;
 
 public:
 
@@ -63,23 +61,7 @@ private:
 
   Ensemble* ensemble = nullptr;
   Main* cur_main = nullptr;
-
   std::vector< Main* > main_list;
-
-  struct axis_t {
-    Axis*        axis = nullptr;
-    bool         is_cat;
-    NumberFormat number_format;
-    bool         number_sign;
-    bool         logarithmic;
-    double       val1;
-    double       val2;
-  };
-
-  axis_t x_axis[ 2 ];
-  axis_t y_axis[ 2 ];
-
-  std::map< Series*, SVG::BoundaryBox > series_legend_map;
 
   void GenChartData( Main* main, std::ostringstream& oss );
 
