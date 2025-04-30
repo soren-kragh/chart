@@ -1573,7 +1573,6 @@ void Main::BuildSeries(
 //------------------------------------------------------------------------------
 
 void Main::AddTitle(
-  SVG::Group* chart_g,
   std::vector< SVG::Object* >& avoid_objects
 )
 {
@@ -1586,7 +1585,7 @@ void Main::AddTitle(
   BoundaryBox bb;
   std::vector< SVG::Object* > title_objs;
 
-  Group* text_g = chart_g->AddNewGroup();
+  Group* text_g = svg_g->AddNewGroup();
 
   U x = chart_w / 2;
   AnchorX a = AnchorX::Mid;
@@ -1739,31 +1738,29 @@ void Main::AddTitle(
 
 //------------------------------------------------------------------------------
 
-void Main::AddFootnotes(
-  SVG::Group* chart_g
-)
+void Main::AddFootnotes( void )
 {
   U dx = 16;
   U dy = 16;
 
-  BoundaryBox bb = chart_g->GetBB();
+  BoundaryBox bb = svg_g->GetBB();
   if ( footnote_line ) {
     dy = dy / 2;
-    chart_g->Add( new Line(
+    svg_g->Add( new Line(
       bb.min.x + dx, bb.min.y - dy, bb.max.x - dx, bb.min.y - dy
     ) );
-    chart_g->Last()->Attr()->LineColor()->Set( &text_color );
-    chart_g->Last()->Attr()->SetLineWidth( 1 );
+    svg_g->Last()->Attr()->LineColor()->Set( &text_color );
+    svg_g->Last()->Attr()->SetLineWidth( 1 );
   }
 
   for ( const auto& footnote : footnotes ) {
     if ( footnote.txt.empty() ) continue;
 
-    bb = chart_g->GetBB();
+    bb = svg_g->GetBB();
     U x = bb.min.x + dx;
     U y = bb.min.y - dy;
     AnchorX a = AnchorX::Min;
-    label_db->Create( chart_g, footnote.txt, 14 * footnote_size );
+    label_db->Create( svg_g, footnote.txt, 14 * footnote_size );
     if ( footnote.pos == Pos::Center ) {
       x = chart_w / 2;
       a = AnchorX::Mid;
@@ -1772,7 +1769,7 @@ void Main::AddFootnotes(
       x = bb.max.x - dx;
       a = AnchorX::Max;
     }
-    chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
+    svg_g->Last()->MoveTo( a, AnchorY::Max, x, y );
 
     dy = 2;
   }
@@ -1782,9 +1779,9 @@ void Main::AddFootnotes(
 
 //------------------------------------------------------------------------------
 
-void Main::AddChartPadding( SVG::Group* chart_g )
+void Main::AddChartPadding( void )
 {
-  BoundaryBox bb = chart_g->GetBB();
+  BoundaryBox bb = svg_g->GetBB();
 
   U delta = ensemble->enable_html ? +snap_point_radius : 0;
   for ( auto series : series_list ) {
@@ -1806,12 +1803,12 @@ void Main::AddChartPadding( SVG::Group* chart_g )
   bb.Update( -delta, -delta );
   bb.Update( chart_w + delta, chart_h + delta );
 
-  chart_g->Add( new Rect( bb.min, bb.max ) );
-  chart_g->Last()->Attr()->FillColor()->Clear();
-  chart_g->Last()->Attr()->LineColor()->Clear();
-  chart_g->Last()->Attr()->SetLineWidth( 0 );
+  svg_g->Add( new Rect( bb.min, bb.max ) );
+  svg_g->Last()->Attr()->FillColor()->Clear();
+  svg_g->Last()->Attr()->LineColor()->Clear();
+  svg_g->Last()->Attr()->SetLineWidth( 0 );
 
-  chart_g->FrontToBack();
+  svg_g->FrontToBack();
 
   return;
 }
@@ -1889,32 +1886,31 @@ void Main::PrepareHTML( void )
 
 void Main::Build( void )
 {
-  Group* chart_g = svg_g->AddNewGroup();
-  chart_g->Attr()->TextFont()->SetFamily(
+  svg_g->Attr()->TextFont()->SetFamily(
     "Noto Mono,Lucida Console,Courier New,monospace"
   );
-  chart_g->Attr()->TextFont()
+  svg_g->Attr()->TextFont()
     ->SetWidthFactor( width_adj )
     ->SetHeightFactor( height_adj )
     ->SetBaselineFactor( baseline_adj );
-  chart_g->Attr()->TextColor()->Set( &text_color );
-  chart_g->Attr()->LineColor()->Clear();
-  chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
+  svg_g->Attr()->TextColor()->Set( &text_color );
+  svg_g->Attr()->LineColor()->Clear();
+  svg_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
   if ( !ChartAreaColor()->IsClear() ) {
-    chart_g->Last()->Attr()->FillColor()->Set( ChartAreaColor() );
+    svg_g->Last()->Attr()->FillColor()->Set( ChartAreaColor() );
   }
 
-  Group* grid_minor_g          = chart_g->AddNewGroup();
-  Group* grid_major_g          = chart_g->AddNewGroup();
-  Group* grid_zero_g           = chart_g->AddNewGroup();
-  Group* label_bg_g            = chart_g->AddNewGroup();
-  Group* chartbox_below_axes_g = chart_g->AddNewGroup();
-  Group* axes_line_g           = chart_g->AddNewGroup();
-  Group* chartbox_above_axes_g = chart_g->AddNewGroup();
-  Group* axes_num_g            = chart_g->AddNewGroup();
-  Group* axes_label_g          = chart_g->AddNewGroup();
-  Group* tag_g                 = chart_g->AddNewGroup();
-  Group* legend_g              = chart_g->AddNewGroup();
+  Group* grid_minor_g          = svg_g->AddNewGroup();
+  Group* grid_major_g          = svg_g->AddNewGroup();
+  Group* grid_zero_g           = svg_g->AddNewGroup();
+  Group* label_bg_g            = svg_g->AddNewGroup();
+  Group* chartbox_below_axes_g = svg_g->AddNewGroup();
+  Group* axes_line_g           = svg_g->AddNewGroup();
+  Group* chartbox_above_axes_g = svg_g->AddNewGroup();
+  Group* axes_num_g            = svg_g->AddNewGroup();
+  Group* axes_label_g          = svg_g->AddNewGroup();
+  Group* tag_g                 = svg_g->AddNewGroup();
+  Group* legend_g              = svg_g->AddNewGroup();
 
   axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( &axis_color );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
@@ -1972,7 +1968,7 @@ void Main::Build( void )
   }
 
   if ( title_inside ) {
-    AddTitle( chart_g, avoid_objects );
+    AddTitle( avoid_objects );
   }
 
   CalcLegendBoxes( legend_g, lb_list, avoid_objects );
@@ -1982,7 +1978,7 @@ void Main::Build( void )
   PlaceLegends( avoid_objects, lb_list, legend_g );
 
   if ( !title_inside ) {
-    AddTitle( chart_g, avoid_objects );
+    AddTitle( avoid_objects );
   }
 
 /*
@@ -1994,11 +1990,11 @@ void Main::Build( void )
       bb.min.y -= 0.1;
       bb.max.x += 0.1;
       bb.max.y += 0.1;
-      chart_g->Add( new Rect( bb.min, bb.max ) );
-      chart_g->Last()->Attr()->FillColor()->Clear();
-      chart_g->Last()->Attr()->SetLineWidth( 4 );
-      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
-      chart_g->Last()->Attr()->LineColor()->SetTransparency( 0.5 );
+      svg_g->Add( new Rect( bb.min, bb.max ) );
+      svg_g->Last()->Attr()->FillColor()->Clear();
+      svg_g->Last()->Attr()->SetLineWidth( 4 );
+      svg_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
+      svg_g->Last()->Attr()->LineColor()->SetTransparency( 0.5 );
     }
   }
 */
@@ -2018,13 +2014,13 @@ void Main::Build( void )
     label_db->AddBackground( label_bg_g, area, partial_ok );
   }
 
-  AddChartPadding( chart_g );
-
-  AddFootnotes( chart_g );
-
   if ( ensemble->enable_html ) {
     PrepareHTML();
   }
+
+  AddChartPadding();
+
+  AddFootnotes();
 
   return;
 }

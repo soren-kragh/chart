@@ -177,19 +177,16 @@ private:
   );
 
   void AddTitle(
-    SVG::Group* chart_g,
     std::vector< SVG::Object* >& avoid_objects
   );
 
-  void AddFootnotes(
-    SVG::Group* chart_g
-  );
+  void AddFootnotes( void );
 
   // Create an invisible rectangle around the chart area with extra padding to
   // account for markers and/or lines which due to their width may spill out of
   // of the chart area. Doing this ensures consistent chart dimensions
   // independent of the data values close to the edge of the chart area.
-  void AddChartPadding( SVG::Group* chart_g );
+  void AddChartPadding( void );
 
   // Transfer various information to the HTML object (ensemble->html_db).
   void PrepareHTML( void );
