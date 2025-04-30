@@ -69,6 +69,8 @@ private:
   SVG::U padding      = 8;
   SVG::U grid_padding = 4;
 
+  SVG::U max_area_pad = 0;
+
   uint32_t grid_max_x = 0;
   uint32_t grid_max_y = 0;
 

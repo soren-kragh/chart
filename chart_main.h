@@ -180,13 +180,11 @@ private:
     std::vector< SVG::Object* >& avoid_objects
   );
 
-  void AddFootnotes( void );
+  void AddFootnotes( SVG::U area_pad );
 
-  // Create an invisible rectangle around the chart area with extra padding to
-  // account for markers and/or lines which due to their width may spill out of
-  // of the chart area. Doing this ensures consistent chart dimensions
-  // independent of the data values close to the edge of the chart area.
-  void AddChartPadding( void );
+  // Get the padding around the core chart area required to account for markers
+  // and/or lines which due to their width may spill out of of the chart area.
+  SVG::U GetAreaPadding( void );
 
   // Transfer various information to the HTML object (ensemble->html_db).
   void PrepareHTML( void );

@@ -111,6 +111,15 @@ void Ensemble::InitGrid( void )
     elem.area_bb.Update( 0, 0 );
     elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
 
+    elem.full_bb.Update(
+      elem.area_bb.min.x - max_area_pad / 2,
+      elem.area_bb.min.y - max_area_pad / 2
+    );
+    elem.full_bb.Update(
+      elem.area_bb.max.x + max_area_pad / 2,
+      elem.area_bb.max.y + max_area_pad / 2
+    );
+
     // Convert row location to Y grid coordinates.
     std::swap( elem.grid_y1, elem.grid_y2 );
     elem.grid_y1 = grid_max_y - elem.grid_y1;
@@ -389,6 +398,20 @@ void Ensemble::BuildBackground( void )
 {
   BoundaryBox bb = top_g->GetBB();
 
+  U delta = std::max( +max_area_pad, enable_html ? +snap_point_radius : 0 );
+  delta -= padding + border_width;
+  if ( delta < 0 ) delta = 0;
+  for ( auto& elem : element_list ) {
+    bb.Update(
+      elem.area_bb.min.x + elem.chart->g_dx - delta,
+      elem.area_bb.min.y + elem.chart->g_dy - delta
+    );
+    bb.Update(
+      elem.area_bb.max.x + elem.chart->g_dx + delta,
+      elem.area_bb.max.y + elem.chart->g_dy + delta
+    );
+  }
+
   bb.min.x -= margin + padding + border_width;
   bb.max.x += margin + padding + border_width;
   bb.min.y -= margin + padding + border_width;
@@ -428,8 +451,15 @@ std::string Ensemble::Build( void )
 
   top_g->Attr()->FillColor()->Set( BackgroundColor() );
 
+  max_area_pad = 0;
   for ( auto& elem : element_list ) {
     elem.chart->Build();
+    U area_pad = elem.chart->GetAreaPadding();
+    max_area_pad = std::max( max_area_pad, area_pad );
+  }
+
+  for ( auto& elem : element_list ) {
+    elem.chart->AddFootnotes( max_area_pad );
   }
 
   ComputeGrid();
@@ -551,7 +581,6 @@ void Ensemble::Test( void )
     elem.full_bb.max.x += 50;
     element_list.push_back( elem );
   }
-
 
   InitGrid();
 

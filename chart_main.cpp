@@ -1738,12 +1738,15 @@ void Main::AddTitle(
 
 //------------------------------------------------------------------------------
 
-void Main::AddFootnotes( void )
+void Main::AddFootnotes( SVG::U area_pad )
 {
   U dx = 16;
   U dy = 16;
 
   BoundaryBox bb = svg_g->GetBB();
+  bb.Update( -area_pad, 0 );
+  bb.Update( chart_w + area_pad, 0 );
+
   if ( footnote_line ) {
     dy = dy / 2;
     svg_g->Add( new Line(
@@ -1779,11 +1782,9 @@ void Main::AddFootnotes( void )
 
 //------------------------------------------------------------------------------
 
-void Main::AddChartPadding( void )
+SVG::U Main::GetAreaPadding( void )
 {
-  BoundaryBox bb = svg_g->GetBB();
-
-  U delta = ensemble->enable_html ? +snap_point_radius : 0;
+  U delta = 0;
   for ( auto series : series_list ) {
     if (
       series->has_line &&
@@ -1800,17 +1801,7 @@ void Main::AddChartPadding( void )
     }
   }
 
-  bb.Update( -delta, -delta );
-  bb.Update( chart_w + delta, chart_h + delta );
-
-  svg_g->Add( new Rect( bb.min, bb.max ) );
-  svg_g->Last()->Attr()->FillColor()->Clear();
-  svg_g->Last()->Attr()->LineColor()->Clear();
-  svg_g->Last()->Attr()->SetLineWidth( 0 );
-
-  svg_g->FrontToBack();
-
-  return;
+  return delta;
 }
 
 //------------------------------------------------------------------------------
@@ -2017,10 +2008,6 @@ void Main::Build( void )
   if ( ensemble->enable_html ) {
     PrepareHTML();
   }
-
-  AddChartPadding();
-
-  AddFootnotes();
 
   return;
 }
