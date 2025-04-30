@@ -1740,7 +1740,7 @@ void Main::AddTitle(
 
 void Main::AddFootnotes( SVG::U area_pad )
 {
-  U dx = 16;
+  U dx = 8;
   U dy = 16;
 
   BoundaryBox bb = svg_g->GetBB();

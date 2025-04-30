@@ -396,47 +396,65 @@ void Ensemble::ComputeGrid( void )
 
 void Ensemble::BuildBackground( void )
 {
-  BoundaryBox bb = top_g->GetBB();
+  BoundaryBox top_bb = top_g->GetBB();
 
-  U delta = std::max( +max_area_pad, enable_html ? +snap_point_radius : 0 );
-  delta -= padding + border_width;
-  if ( delta < 0 ) delta = 0;
   for ( auto& elem : element_list ) {
-    bb.Update(
-      elem.area_bb.min.x + elem.chart->g_dx - delta,
-      elem.area_bb.min.y + elem.chart->g_dy - delta
+    top_bb.Update(
+      elem.area_bb.min.x + elem.chart->g_dx - max_area_pad,
+      elem.area_bb.min.y + elem.chart->g_dy - max_area_pad
     );
-    bb.Update(
-      elem.area_bb.max.x + elem.chart->g_dx + delta,
-      elem.area_bb.max.y + elem.chart->g_dy + delta
+    top_bb.Update(
+      elem.area_bb.max.x + elem.chart->g_dx + max_area_pad,
+      elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
     );
   }
 
-  bb.min.x -= margin + padding + border_width;
-  bb.max.x += margin + padding + border_width;
-  bb.min.y -= margin + padding + border_width;
-  bb.max.y += margin + padding + border_width;
+  {
+    BoundaryBox bb{ top_bb };
 
-  top_g->Add( new Rect( bb.min, bb.max ) );
-  top_g->Last()->Attr()->FillColor()->Clear();
-  top_g->Last()->Attr()->LineColor()->Clear();
-  top_g->Last()->Attr()->SetLineWidth( 0 );
-  top_g->FrontToBack();
+    U delta = padding + border_width + margin;
+    bb.min.x -= delta;
+    bb.max.x += delta;
+    bb.min.y -= delta;
+    bb.max.y += delta;
 
-  bb.min.x += margin + border_width / 2;
-  bb.max.x -= margin + border_width / 2;
-  bb.min.y += margin + border_width / 2;
-  bb.max.y -= margin + border_width / 2;
+    if ( enable_html ) {
+      for ( auto& elem : element_list ) {
+        bb.Update(
+          elem.area_bb.min.x + elem.chart->g_dx - snap_point_radius,
+          elem.area_bb.min.y + elem.chart->g_dy - snap_point_radius
+        );
+        bb.Update(
+          elem.area_bb.max.x + elem.chart->g_dx + snap_point_radius,
+          elem.area_bb.max.y + elem.chart->g_dy + snap_point_radius
+        );
+      }
+    }
 
-  top_g->Add( new Rect( bb.min, bb.max ) );
-  top_g->Last()->Attr()->SetLineWidth( border_width );
-  if ( border_width > 0 ) {
-    top_g->Last()->Attr()->LineColor()->Set( BorderColor() );
-  } else {
+    top_g->Add( new Rect( bb.min, bb.max ) );
+    top_g->Last()->Attr()->FillColor()->Clear();
     top_g->Last()->Attr()->LineColor()->Clear();
+    top_g->Last()->Attr()->SetLineWidth( 0 );
+    top_g->FrontToBack();
   }
 
-  top_g->FrontToBack();
+  {
+    BoundaryBox bb{ top_bb };
+
+    bb.min.x -= padding + border_width / 2;
+    bb.max.x += padding + border_width / 2;
+    bb.min.y -= padding + border_width / 2;
+    bb.max.y += padding + border_width / 2;
+
+    top_g->Add( new Rect( bb.min, bb.max ) );
+    top_g->Last()->Attr()->SetLineWidth( border_width );
+    if ( border_width > 0 ) {
+      top_g->Last()->Attr()->LineColor()->Set( BorderColor() );
+    } else {
+      top_g->Last()->Attr()->LineColor()->Clear();
+    }
+    top_g->FrontToBack();
+  }
 
   return;
 }

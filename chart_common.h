@@ -30,7 +30,7 @@ namespace Chart {
   const SVG::U box_spacing = 8;
 
   // Snap attraction radius in HTML.
-  const SVG::U snap_point_radius = 20;
+  const SVG::U snap_point_radius = 15;
 
   // Spacing from series to tag.
   const SVG::U tag_spacing = box_spacing / 2;
