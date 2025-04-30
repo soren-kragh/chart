@@ -33,18 +33,18 @@ public:
   void NewChart( Main* main );
 
   void DefAxisX(
-    int n, Axis* axis, double val1, double val2,
+    Main* main, int n, Axis* axis, double val1, double val2,
     NumberFormat number_format,
     bool number_sign, bool logarithmic, bool is_cat = false
   );
   void DefAxisY(
-    int n, Axis* axis, double val1, double val2,
+    Main* main, int n, Axis* axis, double val1, double val2,
     NumberFormat number_format,
     bool number_sign, bool logarithmic, bool is_cat = false
   );
 
   void LegendPos( Series* series, const SVG::BoundaryBox& bb );
-  void MoveLegends( SVG::U dx, SVG::U dy );
+  void MoveLegends( Main* main, SVG::U dx, SVG::U dy );
 
   void AddSnapPoint(
     Series* series,
@@ -60,7 +60,6 @@ public:
 private:
 
   Ensemble* ensemble = nullptr;
-  Main* cur_main = nullptr;
   std::vector< Main* > main_list;
 
   void GenChartData( Main* main, std::ostringstream& oss );

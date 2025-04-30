@@ -22,18 +22,17 @@ using namespace Chart;
 void HTML::NewChart( Main* main )
 {
   main_list.push_back( main );
-  cur_main = main;
 }
 
 //------------------------------------------------------------------------------
 
 void HTML::DefAxisX(
-  int n, Axis* axis, double val1, double val2,
+  Main* main, int n, Axis* axis, double val1, double val2,
   NumberFormat number_format,
   bool number_sign, bool logarithmic, bool is_cat
 )
 {
-  cur_main->html.x_axis[ n ] = {
+  main->html.x_axis[ n ] = {
     .axis          = axis,
     .is_cat        = is_cat,
     .number_format = number_format,
@@ -45,12 +44,12 @@ void HTML::DefAxisX(
 }
 
 void HTML::DefAxisY(
-  int n, Axis* axis, double val1, double val2,
+  Main* main, int n, Axis* axis, double val1, double val2,
   NumberFormat number_format,
   bool number_sign, bool logarithmic, bool is_cat
 )
 {
-  cur_main->html.y_axis[ n ] = {
+  main->html.y_axis[ n ] = {
     .axis          = axis,
     .is_cat        = is_cat,
     .number_format = number_format,
@@ -65,14 +64,14 @@ void HTML::DefAxisY(
 
 void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
 {
-  cur_main->html.series_legend_map[ series ] = bb;
+  series->main->html.series_legend_map[ series ] = bb;
 }
 
-void HTML::MoveLegends( SVG::U dx, SVG::U dy )
+void HTML::MoveLegends( Main* main, SVG::U dx, SVG::U dy )
 {
-  for ( auto series : cur_main->series_list ) {
-    auto it = cur_main->html.series_legend_map.find( series );
-    if ( it == cur_main->html.series_legend_map.end() ) continue;
+  for ( auto series : main->series_list ) {
+    auto it = main->html.series_legend_map.find( series );
+    if ( it == main->html.series_legend_map.end() ) continue;
     it->second.min.x += dx;
     it->second.min.y += dy;
     it->second.max.x += dx;
@@ -87,7 +86,9 @@ void HTML::AddSnapPoint(
   SVG::Point p, std::string_view tag_x, std::string_view tag_y
 )
 {
-  cur_main->html.snap_points.push_back({ series->id, 0, p, tag_x, tag_y });
+  series->main->html.snap_points.push_back(
+    { series->id, 0, p, tag_x, tag_y }
+  );
   series->has_snap = true;
 }
 
@@ -96,7 +97,9 @@ void HTML::AddSnapPoint(
   SVG::Point p, uint32_t cat_idx, std::string_view tag_y
 )
 {
-  cur_main->html.snap_points.push_back({ series->id, cat_idx, p, "", tag_y });
+  series->main->html.snap_points.push_back(
+    { series->id, cat_idx, p, "", tag_y }
+  );
   series->has_snap = true;
 }
 

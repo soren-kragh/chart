@@ -176,7 +176,7 @@ void Main::SetBarMargin( float margin )
 
 Series* Main::AddSeries( SeriesType type )
 {
-  Series* series = new Series( type );
+  Series* series = new Series( this, type );
   int style = series_list.size() % 80;
   series->SetStyle( style );
   series_list.push_back( series );
@@ -778,6 +778,7 @@ void Main::PlaceLegends(
       );
       moved_bb = legend_g->Last()->GetBB();
       ensemble->html_db->MoveLegends(
+        this,
         moved_bb.min.x - build_bb.min.x,
         moved_bb.min.y - build_bb.min.y
       );
@@ -846,6 +847,7 @@ void Main::PlaceLegends(
     MoveObj( dir, legend, avoid_objects, mx, my );
     moved_bb = legend->GetBB();
     ensemble->html_db->MoveLegends(
+      this,
       moved_bb.min.x - build_bb.min.x,
       moved_bb.min.y - build_bb.min.y
     );
@@ -908,6 +910,7 @@ void Main::PlaceLegends(
     MoveObj( dir, legend, avoid_objects, mx, my );
     moved_bb = legend->GetBB();
     ensemble->html_db->MoveLegends(
+      this,
       moved_bb.min.x - build_bb.min.x,
       moved_bb.min.y - build_bb.min.y
     );
@@ -1821,14 +1824,14 @@ void Main::PrepareHTML( void )
 
     if ( axis_x->category_axis ) {
       ensemble->html_db->DefAxisX(
-        axis_x->cat_coor_is_max ? 0 : 1, axis_x,
+        this, axis_x->cat_coor_is_max ? 0 : 1, axis_x,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->reverse ? axis_x->min : axis_x->max,
         NumberFormat::Fixed, false, false, true
       );
     } else {
       ensemble->html_db->DefAxisX(
-        axis_x->orth_coor_is_max ? 0 : 1, axis_x,
+        this, axis_x->orth_coor_is_max ? 0 : 1, axis_x,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->number_format, axis_x->number_sign, axis_x->log_scale
@@ -1838,7 +1841,7 @@ void Main::PrepareHTML( void )
     for ( auto a : axis_y ) {
       if ( a->show ) {
         ensemble->html_db->DefAxisY(
-          a->orth_coor_is_max ? 1 : 0, a,
+          this, a->orth_coor_is_max ? 1 : 0, a,
           a->reverse ? a->min : a->max,
           a->reverse ? a->max : a->min,
           a->number_format, a->number_sign, a->log_scale
@@ -1850,14 +1853,14 @@ void Main::PrepareHTML( void )
 
     if ( axis_x->category_axis ) {
       ensemble->html_db->DefAxisY(
-        axis_x->cat_coor_is_max ? 1 : 0, axis_x,
+        this, axis_x->cat_coor_is_max ? 1 : 0, axis_x,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->reverse ? axis_x->max : axis_x->min,
         NumberFormat::Fixed, false, false, true
       );
     } else {
       ensemble->html_db->DefAxisY(
-        axis_x->orth_coor_is_max ? 1 : 0, axis_x,
+        this, axis_x->orth_coor_is_max ? 1 : 0, axis_x,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->number_format, axis_x->number_sign, axis_x->log_scale
@@ -1867,7 +1870,7 @@ void Main::PrepareHTML( void )
     for ( auto a : axis_y ) {
       if ( a->show ) {
         ensemble->html_db->DefAxisX(
-          a->orth_coor_is_max ? 0 : 1, a,
+          this, a->orth_coor_is_max ? 0 : 1, a,
           a->reverse ? a->max : a->min,
           a->reverse ? a->min : a->max,
           a->number_format, a->number_sign, a->log_scale

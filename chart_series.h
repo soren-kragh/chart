@@ -32,7 +32,7 @@ class Series
 
 public:
 
-  Series( SeriesType type );
+  Series( Main* main, SeriesType type );
   ~Series( void );
 
   void SetName( const std::string& name );
@@ -100,6 +100,8 @@ public:
   uint32_t Size( void ) { return datum_list.size(); }
 
 private:
+
+  Main* main = nullptr;
 
   void ApplyFillStyle( SVG::Object* obj );
   void ApplyLineStyle( SVG::Object* obj );

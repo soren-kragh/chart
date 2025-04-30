@@ -19,8 +19,9 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Series::Series( SeriesType type )
+Series::Series( Main* main, SeriesType type )
 {
+  this->main = main;
   id = 0;
 
   axis_x = nullptr;
