@@ -420,7 +420,6 @@ void Ensemble::BuildFootnotes( void )
   U dx = 8;
   U dy = 16;
 
-  Main* main = nullptr;                 // TBD
   BoundaryBox bb = top_g->GetBB();
   for ( auto& elem : element_list ) {
     bb.Update(
@@ -431,7 +430,6 @@ void Ensemble::BuildFootnotes( void )
       elem.area_bb.max.x + elem.chart->g_dx + max_area_pad,
       elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
     );
-    main = elem.chart;
   }
 
   if ( footnote_line ) {
@@ -450,7 +448,7 @@ void Ensemble::BuildFootnotes( void )
     U x = bb.min.x + dx;
     U y = bb.min.y - dy;
     AnchorX a = AnchorX::Min;
-    main->label_db->Create( top_g, footnote.txt, 14 * footnote_size );
+    Label::CreateLabel( top_g, footnote.txt, 14 * footnote_size );
     top_g->Last()->Attr()->TextColor()->Set( ForegroundColor() );
     if ( footnote.pos == Pos::Center ) {
       x = (bb.min.x + bb.max.x) / 2;

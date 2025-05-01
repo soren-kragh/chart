@@ -712,7 +712,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
       }
     }
     s += number_unit;
-    g = label_db->Create( g, s, 0, true );
+    g = label_db->CreateInDB( g, s );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
@@ -726,7 +726,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 
   if ( number_format == NumberFormat::Fixed ) {
     s += number_unit;
-    g = label_db->Create( g, s, 0, true );
+    g = label_db->CreateInDB( g, s );
     if ( bold ) g->Attr()->TextFont()->SetBold();
     return g;
   }
@@ -746,7 +746,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     } else {
       s += "×10";
     }
-    container = label_db->Create( g, s, 0, true );
+    container = label_db->CreateInDB( g, s );
   }
 
   // Build exponent part,
@@ -766,7 +766,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
     }
     bb = container->GetBB();
     U h = bb.max.y - bb.min.y;
-    label_db->Create( container, s, h * 0.8, true, true );
+    label_db->CreateInDB( container, s, h * 0.8, true );
     bool center = (num == 0 && angle == 0);
     container->Last()->MoveTo(
       center ? AnchorX::Mid : AnchorX::Min, AnchorY::Max,
@@ -777,7 +777,7 @@ SVG::Group* Axis::BuildNum( SVG::Group* g, double v, bool bold )
 
   if ( !number_unit.empty() ) {
     bb = container->GetBB();
-    label_db->Create( container, number_unit, 0, true, true );
+    label_db->CreateInDB( container, number_unit, 0, true );
     container->Last()->MoveTo(
       AnchorX::Min, AnchorY::Min, bb.max.x, bb.min.y
     );
@@ -1351,7 +1351,7 @@ void Axis::BuildUnit(
     inner_min = outer_min;
   }
 
-  Object* obj = label_db->Create( unit_g, unit, 16 * number_size, true );
+  Object* obj = label_db->CreateInDB( unit_g, unit, 16 * number_size );
   obj->Attr()->TextFont()->SetBold();
   bool collision = false;
 
@@ -1834,11 +1834,11 @@ void Axis::BuildLabel(
   Object* lab0 = nullptr;
   Object* lab1 = nullptr;
   if ( !label.empty() ) {
-    lab0 = label_db->Create( label_g, label, 24 * label_size );
+    lab0 = Label::CreateLabel( label_g, label, 24 * label_size );
     label_objs.push_back( lab0 );
   }
   if ( !sub_label.empty() ) {
-    lab1 = label_db->Create( label_g, sub_label, 16 * label_size );
+    lab1 = Label::CreateLabel( label_g, sub_label, 16 * label_size );
     label_objs.push_back( lab1 );
   }
 

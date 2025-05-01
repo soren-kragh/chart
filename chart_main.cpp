@@ -213,7 +213,7 @@ void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
   U char_h = bb.max.y - bb.min.y;
 
   if ( !legend_heading.empty() ) {
-    label_db->Create( g, legend_heading, char_h * 1.2 );
+    Label::CreateLabel( g, legend_heading, char_h * 1.2 );
     BoundaryBox bb = g->Last()->GetBB();
     g->DeleteFront();
     legend_dims.hx = bb.max.x - bb.min.x;
@@ -568,7 +568,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
       g->Last()->Attr()->SetLineWidth( 0 );
     }
     if ( !legend_heading.empty() ) {
-      Object* obj = label_db->Create( g, legend_heading, legend_dims.ch * 1.2 );
+      Object* obj = Label::CreateLabel( g, legend_heading, legend_dims.ch * 1.2 );
       obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
     }
   }
@@ -1582,21 +1582,21 @@ void Main::AddTitle(
   }
   U y = chart_h + space_y;
   if ( !sub_sub_title.empty() ) {
-    Object* obj = label_db->Create( text_g, sub_sub_title, 14 * title_size );
+    Object* obj = Label::CreateLabel( text_g, sub_sub_title, 14 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + 3;
   }
   if ( !sub_title.empty() ) {
-    Object* obj = label_db->Create( text_g, sub_title, 20 * title_size );
+    Object* obj = Label::CreateLabel( text_g, sub_title, 20 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + 3;
   }
   if ( !title.empty() ) {
-    Object* obj = label_db->Create( text_g, title, 36 * title_size );
+    Object* obj = Label::CreateLabel( text_g, title, 36 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();

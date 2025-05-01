@@ -28,15 +28,36 @@ Label::~Label( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+SVG::Group* Label::CreateInDB(
+  SVG::Group* g, const std::string& txt, SVG::U size, bool append
+)
+{
+  return Label::Create( this, g, txt, size, append );
+}
+
+//------------------------------------------------------------------------------
+
+// Static member.
+SVG::Group* Label::CreateLabel(
+  SVG::Group* g, const std::string& txt, SVG::U size
+)
+{
+  return Label::Create( nullptr, g, txt, size, false );
+}
+
+//------------------------------------------------------------------------------
+
+// Static member.
 SVG::Group* Label::Create(
-  SVG::Group* g, const std::string& txt,
-  SVG::U size, bool add_to_db, bool append
+  Label* label_db,
+  SVG::Group* g, const std::string& txt, SVG::U size,
+  bool append
 )
 {
   U y = 0;
   Entry e{ nullptr, 0, 0 };
   if ( append ) {
-    e.link = containers[ g ].link;
+    e.link = label_db->containers[ g ].link;
     if ( e.link ) {
       y = e.link->GetBB().min.y;
     }
@@ -86,7 +107,7 @@ SVG::Group* Label::Create(
         g->Last()->Attr()->TextFont()->SetSize( size );
       }
       y -= h;
-      if ( add_to_db ) entries[ g->Last() ] = e;
+      if ( label_db ) label_db->entries[ g->Last() ] = e;
       e.link = g->Last();
       e.leading_space = 0;
       e.trailing_space = 0;
@@ -96,11 +117,11 @@ SVG::Group* Label::Create(
     if ( it == txt.cend() ) break;
   }
 
-  if ( add_to_db ) {
+  if ( label_db ) {
     Container c;
     c.link = e.link;
     c.bb = g->GetBB();
-    containers[ g ] = c;
+    label_db->containers[ g ] = c;
   }
   return g;
 }

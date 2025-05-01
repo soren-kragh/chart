@@ -47,11 +47,19 @@ private:
 
   // Create the given label, which might be multi-line text. Return the created
   // container, which is a group of text objects (one per line). If append is
-  // true (implies add_to_db), then this text is instead appended to the
-  // previously created container given by g.
-  SVG::Group* Create(
-    SVG::Group* g, const std::string& txt,
-    SVG::U size = 0, bool add_to_db = false, bool append = false
+  // true, then this text is instead appended to the previously created
+  // container given by g.
+  static SVG::Group* Create(
+    Label* label_db,
+    SVG::Group* g, const std::string& txt, SVG::U size,
+    bool append
+  );
+  static SVG::Group* CreateLabel(
+    SVG::Group* g, const std::string& txt, SVG::U size = 0
+  );
+  SVG::Group* CreateInDB(
+    SVG::Group* g, const std::string& txt, SVG::U size = 0,
+    bool append = false
   );
 
   // If the text objects inside the container has been moved, then this must be
