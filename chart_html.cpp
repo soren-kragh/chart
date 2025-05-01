@@ -404,24 +404,24 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
 
     uint32_t main_id = 0;
     for ( auto main : main_list ) {
-      g = g->AddNewGroup();
+      Group* snap_g = g->AddNewGroup();
       uint32_t snap_id = 0;
       for ( const auto& sp : main->html.snap_points ) {
         std::ostringstream oss;
         oss << "id=\"" << snap_id << '"';
-        g->Add(
+        snap_g->Add(
           new Circle(
             sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
           )
         );
-        g->Last()->Attr()->AddCustom( oss.str() );
+        snap_g->Last()->Attr()->AddCustom( oss.str() );
         ++snap_id;
       }
       {
         std::ostringstream oss;
         oss << "fill=\"transparent\" style=\"pointer-events: all;\"";
         oss << " id=\"snapPoints" << main_id << '"';
-        g->Attr()->AddCustom( oss.str() );
+        snap_g->Attr()->AddCustom( oss.str() );
       }
       ++main_id;
     }
