@@ -68,17 +68,6 @@ public:
   // automatically.
   void SetTitleFrame( bool enable = true );
 
-  void AddFootnote( std::string& txt );
-
-  // Applies to the most recently added footnote.
-  void SetFootnotePos( Pos pos );
-
-  // A line above the footnotes.
-  void SetFootnoteLine( bool footnote_line = true );
-
-  // Footnote size scaling factor.
-  void SetFootnoteSize( float size ) { footnote_size = size; }
-
   void SetLegendHeading( const std::string& txt );
 
   // Force the legend frame to be drawn or not instead of it being determined
@@ -180,8 +169,6 @@ private:
     std::vector< SVG::Object* >& avoid_objects
   );
 
-  void AddFootnotes( SVG::U area_pad );
-
   // Get the padding around the core chart area required to account for markers
   // and/or lines which due to their width may spill out of of the chart area.
   SVG::U GetAreaPadding( void );
@@ -210,14 +197,6 @@ private:
 
   uint32_t bar_tot = 0;
   uint32_t lol_tot = 0;
-
-  struct footnote_t {
-    std::string txt;
-    Pos pos;
-  };
-  std::vector< footnote_t > footnotes;
-  bool footnote_line = false;
-  float footnote_size = 1.0;
 
   std::string legend_heading;
   bool        legend_frame;

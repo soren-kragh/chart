@@ -125,23 +125,6 @@ void Main::SetTitleFrame( bool enable )
   title_frame_specified = true;
 }
 
-void Main::AddFootnote(std::string& txt)
-{
-  footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
-}
-
-void Main::SetFootnotePos( Pos pos )
-{
-  if ( !footnotes.empty() ) {
-    footnotes.back().pos = pos;
-  }
-}
-
-void Main::SetFootnoteLine( bool footnote_line )
-{
-  this->footnote_line = footnote_line;
-}
-
 void Main::SetLegendHeading( const std::string& txt )
 {
   legend_heading = txt;
@@ -1731,50 +1714,6 @@ void Main::AddTitle(
     }
 
     avoid_objects.push_back( text_g );
-  }
-
-  return;
-}
-
-//------------------------------------------------------------------------------
-
-void Main::AddFootnotes( SVG::U area_pad )
-{
-  U dx = 8;
-  U dy = 16;
-
-  BoundaryBox bb = svg_g->GetBB();
-  bb.Update( -area_pad, 0 );
-  bb.Update( chart_w + area_pad, 0 );
-
-  if ( footnote_line ) {
-    dy = dy / 2;
-    svg_g->Add( new Line(
-      bb.min.x + dx, bb.min.y - dy, bb.max.x - dx, bb.min.y - dy
-    ) );
-    svg_g->Last()->Attr()->LineColor()->Set( &text_color );
-    svg_g->Last()->Attr()->SetLineWidth( 1 );
-  }
-
-  for ( const auto& footnote : footnotes ) {
-    if ( footnote.txt.empty() ) continue;
-
-    bb = svg_g->GetBB();
-    U x = bb.min.x + dx;
-    U y = bb.min.y - dy;
-    AnchorX a = AnchorX::Min;
-    label_db->Create( svg_g, footnote.txt, 14 * footnote_size );
-    if ( footnote.pos == Pos::Center ) {
-      x = chart_w / 2;
-      a = AnchorX::Mid;
-    }
-    if ( footnote.pos == Pos::Right ) {
-      x = bb.max.x - dx;
-      a = AnchorX::Max;
-    }
-    svg_g->Last()->MoveTo( a, AnchorY::Max, x, y );
-
-    dy = 2;
   }
 
   return;

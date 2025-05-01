@@ -92,6 +92,26 @@ bool Ensemble::NewChart(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::AddFootnote(std::string& txt)
+{
+  footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
+}
+
+void Ensemble::SetFootnotePos( Pos pos )
+{
+  if ( !footnotes.empty() ) {
+    footnotes.back().pos = pos;
+  }
+}
+
+void Ensemble::SetFootnoteLine( bool footnote_line )
+{
+  this->footnote_line = footnote_line;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::InitGrid( void )
 {
   for ( auto& elem : element_list ) {
@@ -394,6 +414,61 @@ void Ensemble::ComputeGrid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::BuildFootnotes( void )
+{
+  U dx = 8;
+  U dy = 16;
+
+  Main* main = nullptr;                 // TBD
+  BoundaryBox bb = top_g->GetBB();
+  for ( auto& elem : element_list ) {
+    bb.Update(
+      elem.area_bb.min.x + elem.chart->g_dx - max_area_pad,
+      elem.area_bb.min.y + elem.chart->g_dy - max_area_pad
+    );
+    bb.Update(
+      elem.area_bb.max.x + elem.chart->g_dx + max_area_pad,
+      elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
+    );
+    main = elem.chart;
+  }
+
+  if ( footnote_line ) {
+    dy = dy / 2;
+    top_g->Add( new Line(
+      bb.min.x + dx, bb.min.y - dy, bb.max.x - dx, bb.min.y - dy
+    ) );
+    top_g->Last()->Attr()->LineColor()->Set( main->TextColor() );
+    top_g->Last()->Attr()->SetLineWidth( 1 );
+  }
+
+  for ( const auto& footnote : footnotes ) {
+    if ( footnote.txt.empty() ) continue;
+
+    bb = top_g->GetBB();
+    U x = bb.min.x + dx;
+    U y = bb.min.y - dy;
+    AnchorX a = AnchorX::Min;
+    main->label_db->Create( top_g, footnote.txt, 14 * footnote_size );
+    top_g->Last()->Attr()->TextColor()->Set( main->TextColor() );
+    if ( footnote.pos == Pos::Center ) {
+      x = (bb.min.x + bb.max.x) / 2;
+      a = AnchorX::Mid;
+    }
+    if ( footnote.pos == Pos::Right ) {
+      x = bb.max.x - dx;
+      a = AnchorX::Max;
+    }
+    top_g->Last()->MoveTo( a, AnchorY::Max, x, y );
+
+    dy = 2;
+  }
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::BuildBackground( void )
 {
   BoundaryBox top_bb = top_g->GetBB();
@@ -476,10 +551,6 @@ std::string Ensemble::Build( void )
     max_area_pad = std::max( max_area_pad, area_pad );
   }
 
-  for ( auto& elem : element_list ) {
-    elem.chart->AddFootnotes( max_area_pad );
-  }
-
   ComputeGrid();
 
   for ( auto& elem : element_list ) {
@@ -499,6 +570,8 @@ std::string Ensemble::Build( void )
 
     elem.chart->Move( mx, my );
   }
+
+  BuildFootnotes();
 
   BuildBackground();
 

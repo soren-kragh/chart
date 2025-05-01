@@ -5,7 +5,7 @@ oss << R"EOF(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interactive SVG</title>
+  <title>Chartus</title>
   <style>
     text {
       font-family: "Noto Mono", "Lucida Console", "Courier New", monospace;

@@ -52,6 +52,17 @@ public:
   // Padding around elements in the grid,
   void SetGridPadding( SVG::U padding ) { grid_padding = padding; }
 
+  void AddFootnote( std::string& txt );
+
+  // Applies to the most recently added footnote.
+  void SetFootnotePos( Pos pos );
+
+  // A line above the footnotes.
+  void SetFootnoteLine( bool footnote_line = true );
+
+  // Footnote size scaling factor.
+  void SetFootnoteSize( float size ) { footnote_size = size; }
+
   std::string Build( void );
 
 private:
@@ -110,6 +121,16 @@ private:
   void SolveGridSpace( std::vector< space_t >& space_list );
 
   void ComputeGrid( void );
+
+  struct footnote_t {
+    std::string txt;
+    Pos pos;
+  };
+  std::vector< footnote_t > footnotes;
+  bool footnote_line = false;
+  float footnote_size = 1.0;
+
+  void BuildFootnotes( void );
 
   void BuildBackground( void );
 
