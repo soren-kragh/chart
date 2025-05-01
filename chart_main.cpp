@@ -25,7 +25,7 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   this->svg_g = svg_g;
   chart_area_color.Clear();
   axis_color.Set( ColorName::black );
-  text_color.Set( ColorName::black );
+  text_color.Set( ensemble->ForegroundColor() );
   frame_color.Undef();
   width_adj    = 1.0;
   height_adj   = 1.0;
@@ -1415,7 +1415,7 @@ void Main::SeriesPrepare(
     }
 
     if ( !series->tag_text_color.IsDefined() ) {
-      series->tag_text_color.Set( &text_color );
+      series->tag_text_color.Set( TextColor() );
     }
 
     if ( !series->tag_fill_color.IsDefined() ) {
@@ -1823,7 +1823,7 @@ void Main::Build( void )
     ->SetWidthFactor( width_adj )
     ->SetHeightFactor( height_adj )
     ->SetBaselineFactor( baseline_adj );
-  svg_g->Attr()->TextColor()->Set( &text_color );
+  svg_g->Attr()->TextColor()->Set( TextColor() );
   svg_g->Attr()->LineColor()->Clear();
   svg_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
   if ( !ChartAreaColor()->IsClear() ) {

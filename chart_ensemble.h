@@ -44,6 +44,7 @@ public:
   void SetMargin( SVG::U margin ) { this->margin = margin; }
   void SetBorderWidth( SVG::U width ) { border_width = width; }
   SVG::Color* BorderColor( void ) { return &border_color; }
+  SVG::Color* ForegroundColor( void ) { return &foreground_color; }
   SVG::Color* BackgroundColor( void ) { return &background_color; }
 
   // Padding around all elements.
@@ -73,6 +74,7 @@ private:
   bool enable_html = false;
   HTML* html_db = nullptr;
 
+  SVG::Color foreground_color;
   SVG::Color background_color;
   SVG::Color border_color;
   SVG::U border_width = 0;

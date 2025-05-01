@@ -27,6 +27,7 @@ Ensemble::Ensemble( void )
   top_g = canvas->TopGroup()->AddNewGroup();
   html_db = new HTML( this );
 
+  foreground_color.Set( ColorName::black );
   background_color.Set( ColorName::white );
   border_color.Set( ColorName::black );
 }
@@ -438,7 +439,7 @@ void Ensemble::BuildFootnotes( void )
     top_g->Add( new Line(
       bb.min.x + dx, bb.min.y - dy, bb.max.x - dx, bb.min.y - dy
     ) );
-    top_g->Last()->Attr()->LineColor()->Set( main->TextColor() );
+    top_g->Last()->Attr()->LineColor()->Set( ForegroundColor() );
     top_g->Last()->Attr()->SetLineWidth( 1 );
   }
 
@@ -450,7 +451,7 @@ void Ensemble::BuildFootnotes( void )
     U y = bb.min.y - dy;
     AnchorX a = AnchorX::Min;
     main->label_db->Create( top_g, footnote.txt, 14 * footnote_size );
-    top_g->Last()->Attr()->TextColor()->Set( main->TextColor() );
+    top_g->Last()->Attr()->TextColor()->Set( ForegroundColor() );
     if ( footnote.pos == Pos::Center ) {
       x = (bb.min.x + bb.max.x) / 2;
       a = AnchorX::Mid;
