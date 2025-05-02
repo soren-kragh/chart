@@ -50,7 +50,7 @@ public:
   SVG::Color* AxisColor( void ) { return &axis_color; }
   SVG::Color* TextColor( void ) { return &text_color; }
 
-  // Specify alternative background color of title and legend frames.
+  // Specify alternative background color of framed title and legend frames.
   SVG::Color* FrameColor( void ) { return &frame_color; }
 
   void SetLetterSpacing(

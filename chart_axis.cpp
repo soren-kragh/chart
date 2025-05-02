@@ -56,7 +56,6 @@ Axis::Axis( bool is_x_axis, Label* label_db )
   major = 0;
   sub_divs = 0;
   number_pos = Pos::Auto;
-  grid_color.Set( ColorName::black );
   grid_style = GridStyle::Auto;
   major_grid_enable = true;
   minor_grid_enable = true;

@@ -24,8 +24,6 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   this->ensemble = ensemble;
   this->svg_g = svg_g;
   chart_area_color.Clear();
-  axis_color.Set( ColorName::black );
-  text_color.Set( ensemble->ForegroundColor() );
   frame_color.Undef();
   width_adj    = 1.0;
   height_adj   = 1.0;
@@ -557,7 +555,7 @@ void Main::BuildLegends( Group* g, int nx, bool framed )
     };
     g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
     if ( framed ) {
-      g->Last()->Attr()->LineColor()->Set( &axis_color );
+      g->Last()->Attr()->LineColor()->Set( AxisColor() );
       g->Last()->Attr()->SetLineWidth( 1 );
       if ( FrameColor()->IsDefined() ) {
         g->Last()->Attr()->FillColor()->Set( FrameColor() );
@@ -932,6 +930,12 @@ int Main::CatStrideEmpty( void )
 
 void Main::AxisPrepare( SVG::Group* tag_g )
 {
+  for ( auto a : { axis_x, axis_y[ 0 ], axis_y[ 1 ] } ) {
+    if ( !a->GridColor()->IsDefined() ) {
+      a->GridColor()->Set( ensemble->ForegroundColor() );
+    }
+  }
+
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
   axis_x->chart_box   = chart_box;
@@ -1613,7 +1617,7 @@ void Main::AddTitle(
         box_spacing
       )
     );
-    text_g->Last()->Attr()->LineColor()->Set( &axis_color );
+    text_g->Last()->Attr()->LineColor()->Set( AxisColor() );
     text_g->Last()->Attr()->SetLineWidth( 1 );
     if ( FrameColor()->IsDefined() ) {
       text_g->Last()->Attr()->FillColor()->Set( FrameColor() );
@@ -1816,9 +1820,13 @@ void Main::PrepareHTML( void )
 
 void Main::Build( void )
 {
-  svg_g->Attr()->TextFont()->SetFamily(
-    "Noto Mono,Lucida Console,Courier New,monospace"
-  );
+  if ( !AxisColor()->IsDefined() ) {
+    AxisColor()->Set( ensemble->ForegroundColor() );
+  }
+  if ( !TextColor()->IsDefined() ) {
+    TextColor()->Set( ensemble->ForegroundColor() );
+  }
+
   svg_g->Attr()->TextFont()
     ->SetWidthFactor( width_adj )
     ->SetHeightFactor( height_adj )
@@ -1842,9 +1850,9 @@ void Main::Build( void )
   Group* tag_g                 = svg_g->AddNewGroup();
   Group* legend_g              = svg_g->AddNewGroup();
 
-  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( &axis_color );
+  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( AxisColor() );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
-  axes_line_g->Attr()->FillColor()->Set( &axis_color );
+  axes_line_g->Attr()->FillColor()->Set( AxisColor() );
 
   chartbox_below_axes_g->Attr()->FillColor()->Clear();
   chartbox_above_axes_g->Attr()->FillColor()->Clear();

@@ -541,6 +541,12 @@ std::string Ensemble::Build( void )
     NewChart( 0, 0, 0, 0 );
   }
 
+  top_g->Attr()->TextFont()->SetFamily(
+    "Noto Mono,Lucida Console,Courier New,monospace"
+  );
+
+  top_g->Attr()->TextColor()->Set( ForegroundColor() );
+  top_g->Attr()->LineColor()->Set( ForegroundColor() );
   top_g->Attr()->FillColor()->Set( BackgroundColor() );
 
   max_area_pad = 0;
