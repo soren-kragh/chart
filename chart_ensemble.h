@@ -41,6 +41,15 @@ public:
 
   void EnableHTML( bool enable = true ) { enable_html = enable; }
 
+  void SetHeading( const std::string& txt );
+  void SetSubHeading( const std::string& txt );
+  void SetSubSubHeading( const std::string& txt );
+  void SetHeadingPos( Pos pos ) { heading_pos = pos; }
+  void SetHeadingSize( float size ) { heading_size = size; }
+
+  // A line below the heading.
+  void SetHeadingLine( bool line = true ) { heading_line = line; }
+
   void SetMargin( SVG::U margin ) { this->margin = margin; }
   void SetBorderWidth( SVG::U width ) { border_width = width; }
   SVG::Color* BorderColor( void ) { return &border_color; }
@@ -125,6 +134,13 @@ private:
 
   void ComputeGrid( void );
 
+  std::string heading;
+  std::string sub_heading;
+  std::string sub_sub_heading;
+  Pos         heading_pos  = Pos::Center;
+  bool        heading_line = false;
+  float       heading_size = 1.0;
+
   struct footnote_t {
     std::string txt;
     Pos pos;
@@ -133,8 +149,10 @@ private:
   bool footnote_line = false;
   float footnote_size = 1.0;
 
-  void BuildFootnotes( void );
+  SVG::BoundaryBox TopBB( void );
 
+  void BuildHeading( void );
+  void BuildFootnotes( void );
   void BuildBackground( void );
 
 public:

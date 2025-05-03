@@ -93,6 +93,23 @@ bool Ensemble::NewChart(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::SetHeading( const std::string& txt )
+{
+  heading = txt;
+}
+
+void Ensemble::SetSubHeading( const std::string& txt )
+{
+  sub_heading = txt;
+}
+
+void Ensemble::SetSubSubHeading( const std::string& txt )
+{
+  sub_sub_heading = txt;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::AddFootnote(std::string& txt)
 {
   footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
@@ -410,11 +427,8 @@ void Ensemble::ComputeGrid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::BuildFootnotes( void )
+SVG::BoundaryBox Ensemble::TopBB( void )
 {
-  U dx = 8;
-  U dy = 16;
-
   BoundaryBox bb = top_g->GetBB();
   for ( auto& elem : element_list ) {
     bb.Update(
@@ -426,6 +440,71 @@ void Ensemble::BuildFootnotes( void )
       elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
     );
   }
+  return bb;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Ensemble::BuildHeading( void )
+{
+  U dx = 0;
+  U dy = 16;
+  U spacing = 4 * heading_size;
+
+  BoundaryBox bb = TopBB();
+
+  U line_y = bb.max.y + dy / 2;
+
+  U x = (bb.min.x + bb.max.x) / 2;
+  AnchorX a = AnchorX::Mid;
+  if ( heading_pos == Pos::Left ) {
+    x = bb.min.x + dx;
+    a = AnchorX::Min;
+  }
+  if ( heading_pos == Pos::Right ) {
+    x = bb.max.x - dx;
+    a = AnchorX::Max;
+  }
+
+  U y = bb.max.y + dy;
+  if ( !sub_sub_heading.empty() ) {
+    Object* obj =
+      Label::CreateLabel( top_g, sub_sub_heading, 14 * heading_size );
+    obj->MoveTo( a, AnchorY::Min, x, y );
+    bb = obj->GetBB();
+    y += bb.max.y - bb.min.y + spacing;
+  }
+  if ( !sub_heading.empty() ) {
+    Object* obj = Label::CreateLabel( top_g, sub_heading, 20 * heading_size );
+    obj->MoveTo( a, AnchorY::Min, x, y );
+    bb = obj->GetBB();
+    y += bb.max.y - bb.min.y + spacing;
+  }
+  if ( !heading.empty() ) {
+    Object* obj = Label::CreateLabel( top_g, heading, 36 * heading_size );
+    obj->MoveTo( a, AnchorY::Min, x, y );
+    bb = obj->GetBB();
+  }
+
+  if ( heading_line ) {
+    bb = TopBB();
+    top_g->Add( new Line( bb.min.x + dx, line_y, bb.max.x - dx, line_y ) );
+    top_g->Last()->Attr()->LineColor()->Set( ForegroundColor() );
+    top_g->Last()->Attr()->SetLineWidth( 1 );
+  }
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Ensemble::BuildFootnotes( void )
+{
+  U dx = 0;
+  U dy = 16;
+  U spacing = 2 * heading_size;
+
+  BoundaryBox bb = TopBB();
 
   if ( footnote_line ) {
     dy = dy / 2;
@@ -455,7 +534,7 @@ void Ensemble::BuildFootnotes( void )
     }
     top_g->Last()->MoveTo( a, AnchorY::Max, x, y );
 
-    dy = 2;
+    dy = spacing;
   }
 
   return;
@@ -571,6 +650,7 @@ std::string Ensemble::Build( void )
     elem.chart->Move( mx, my );
   }
 
+  BuildHeading();
   BuildFootnotes();
 
   BuildBackground();

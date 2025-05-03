@@ -1565,6 +1565,8 @@ void Main::BuildTitle(
 {
   if ( title.empty() && sub_title.empty() && sub_sub_title.empty() ) return;
 
+  U spacing = 4 * title_size;
+
   bool framed = title_frame_specified ? title_frame : title_inside;
 
   U space_x = 5 * box_spacing;
@@ -1590,21 +1592,20 @@ void Main::BuildTitle(
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
-    y += bb.max.y - bb.min.y + 3;
+    y += bb.max.y - bb.min.y + spacing;
   }
   if ( !sub_title.empty() ) {
     Object* obj = Label::CreateLabel( text_g, sub_title, 20 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
-    y += bb.max.y - bb.min.y + 3;
+    y += bb.max.y - bb.min.y + spacing;
   }
   if ( !title.empty() ) {
     Object* obj = Label::CreateLabel( text_g, title, 36 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
-    y += bb.max.y - bb.min.y;
   }
   MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
 
