@@ -165,7 +165,7 @@ private:
     SVG::Group* tag_g
   );
 
-  void AddTitle(
+  void BuildTitle(
     std::vector< SVG::Object* >& avoid_objects
   );
 

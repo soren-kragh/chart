@@ -1559,7 +1559,7 @@ void Main::BuildSeries(
 
 //------------------------------------------------------------------------------
 
-void Main::AddTitle(
+void Main::BuildTitle(
   std::vector< SVG::Object* >& avoid_objects
 )
 {
@@ -1908,7 +1908,7 @@ void Main::Build( void )
   }
 
   if ( title_inside ) {
-    AddTitle( avoid_objects );
+    BuildTitle( avoid_objects );
   }
 
   CalcLegendBoxes( legend_g, lb_list, avoid_objects );
@@ -1918,7 +1918,7 @@ void Main::Build( void )
   PlaceLegends( avoid_objects, lb_list, legend_g );
 
   if ( !title_inside ) {
-    AddTitle( avoid_objects );
+    BuildTitle( avoid_objects );
   }
 
 /*
