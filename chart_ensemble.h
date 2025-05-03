@@ -50,7 +50,8 @@ public:
   // Padding around all elements.
   void SetPadding( SVG::U padding ) { this->padding = padding; }
 
-  // Padding around elements in the grid,
+  // Padding around elements in the grid; a negative value means that
+  // only the core chart areas are considered when laying out the grid.
   void SetGridPadding( SVG::U padding ) { grid_padding = padding; }
 
   void AddFootnote( std::string& txt );

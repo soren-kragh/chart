@@ -123,26 +123,17 @@ void Ensemble::InitGrid( void )
   space_list_x.resize( grid_max_x + 1, space );
   space_list_y.resize( grid_max_y + 1, space );
   for ( auto& elem : element_list ) {
-    elem.full_bb = elem.chart->GetGroup()->GetBB();
-    elem.full_bb.min.x -= grid_padding;
-    elem.full_bb.max.x += grid_padding;
-    elem.full_bb.min.y -= grid_padding;
-    elem.full_bb.max.y += grid_padding;
-
     elem.area_bb.Update( 0, 0 );
     elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
 
-    elem.full_bb.Update(
-      elem.area_bb.min.x - max_area_pad / 2,
-      elem.area_bb.min.y - max_area_pad / 2
-    );
-    elem.full_bb.Update(
-      elem.area_bb.max.x + max_area_pad / 2,
-      elem.area_bb.max.y + max_area_pad / 2
-    );
-
-    if ( grid_padding == 0 ) {
+    if ( grid_padding < 0 ) {
       elem.full_bb = elem.area_bb;
+    } else {
+      elem.full_bb = elem.chart->GetGroup()->GetBB();
+      elem.full_bb.min.x -= grid_padding;
+      elem.full_bb.max.x += grid_padding;
+      elem.full_bb.min.y -= grid_padding;
+      elem.full_bb.max.y += grid_padding;
     }
 
     // Convert row location to Y grid coordinates.
