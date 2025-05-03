@@ -1834,7 +1834,9 @@ void Main::Build( void )
   svg_g->Attr()->TextColor()->Set( TextColor() );
   svg_g->Attr()->LineColor()->Clear();
   svg_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
-  if ( !ChartAreaColor()->IsClear() ) {
+  if ( ChartAreaColor()->IsClear() ) {
+    svg_g->Last()->Attr()->FillColor()->Clear();
+  } else {
     svg_g->Last()->Attr()->FillColor()->Set( ChartAreaColor() );
   }
 

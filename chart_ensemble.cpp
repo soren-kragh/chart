@@ -141,6 +141,10 @@ void Ensemble::InitGrid( void )
       elem.area_bb.max.y + max_area_pad / 2
     );
 
+    if ( grid_padding == 0 ) {
+      elem.full_bb = elem.area_bb;
+    }
+
     // Convert row location to Y grid coordinates.
     std::swap( elem.grid_y1, elem.grid_y2 );
     elem.grid_y1 = grid_max_y - elem.grid_y1;
