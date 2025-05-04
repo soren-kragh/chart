@@ -544,18 +544,7 @@ void Ensemble::BuildFootnotes( void )
 
 void Ensemble::BuildBackground( void )
 {
-  BoundaryBox top_bb = top_g->GetBB();
-
-  for ( auto& elem : element_list ) {
-    top_bb.Update(
-      elem.area_bb.min.x + elem.chart->g_dx - max_area_pad,
-      elem.area_bb.min.y + elem.chart->g_dy - max_area_pad
-    );
-    top_bb.Update(
-      elem.area_bb.max.x + elem.chart->g_dx + max_area_pad,
-      elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
-    );
-  }
+  BoundaryBox top_bb = TopBB();
 
   {
     BoundaryBox bb{ top_bb };
