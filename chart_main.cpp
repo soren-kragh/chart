@@ -384,10 +384,10 @@ void Main::PlaceLegends(
         ensemble,
         series_list,
         legend_heading,
+        legend_frame_specified ? legend_frame : true,
         legend_outline,
         AxisColor(), FrameColor(),
-        legend_g->AddNewGroup(), best_lb.nx,
-        legend_frame_specified ? legend_frame : true
+        legend_g->AddNewGroup(), best_lb.nx
       );
       build_bb = legend_g->Last()->GetBB();
       legend_g->Last()->MoveTo(
@@ -435,10 +435,10 @@ void Main::PlaceLegends(
       ensemble,
       series_list,
       legend_heading,
+      legend_frame_specified ? legend_frame : !legend_heading.empty(),
       legend_outline,
       AxisColor(), FrameColor(),
-      legend_g->AddNewGroup(), nx,
-      legend_frame_specified ? legend_frame : !legend_heading.empty()
+      legend_g->AddNewGroup(), nx
     );
     Object* legend = legend_g->Last();
     build_bb = legend->GetBB();
@@ -503,10 +503,10 @@ void Main::PlaceLegends(
       ensemble,
       series_list,
       legend_heading,
+      legend_frame_specified ? legend_frame : !legend_heading.empty(),
       legend_outline,
       AxisColor(), FrameColor(),
-      legend_g->AddNewGroup(), nx,
-      legend_frame_specified ? legend_frame : !legend_heading.empty()
+      legend_g->AddNewGroup(), nx
     );
     Object* legend = legend_g->Last();
     build_bb = legend->GetBB();

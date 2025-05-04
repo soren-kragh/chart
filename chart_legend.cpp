@@ -236,10 +236,10 @@ void Legend::BuildLegends(
   Ensemble* ensemble,
   std::vector< Series* >& series_list,
   const std::string& legend_heading,
-  bool legend_outline,
+  bool framed, bool legend_outline,
   SVG::Color* frame_line_color,
   SVG::Color* frame_fill_color,
-  Group* g, int nx, bool framed
+  Group* g, int nx
 )
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
