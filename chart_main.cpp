@@ -171,17 +171,6 @@ void Main::AddCategory( const std::string& category )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint32_t Main::LegendCnt( void )
-{
-  uint32_t n = 0;
-  for ( auto series : series_list ) {
-    if ( !series->name.empty() ) n++;
-  }
-  return n;
-}
-
-//-----------------------------------------------------------------------------
-
 // Determine potential placement of series legends in chart interior.
 void Main::CalcLegendBoxes(
   Group* g, std::vector< LegendBox >& lb_list,
@@ -195,7 +184,7 @@ void Main::CalcLegendBoxes(
     legend_outline,
     g, legend_dims
   );
-  uint32_t lc = LegendCnt();
+  uint32_t lc = Legend::LegendCnt( series_list );
 
   auto add_lbs = [&](
     AnchorX anchor_x, AnchorY anchor_y, bool can_move = true
@@ -348,192 +337,13 @@ void Main::CalcLegendBoxes(
 
 //-----------------------------------------------------------------------------
 
-void Main::BuildLegends( Group* g, int nx, bool framed )
-{
-  g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
-  Legend::LegendDims legend_dims;
-  Legend::CalcLegendDims(
-    series_list, legend_heading,
-    legend_frame_specified ? legend_frame : true,
-    legend_outline,
-    g, legend_dims
-  );
-  int ny = (LegendCnt() + nx - 1) / nx;
-
-  {
-    U mx = framed ? legend_dims.mx : U( 0 );
-    U my = framed ? legend_dims.my : U( 0 );
-    U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-    U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-    w += legend_dims.lx + legend_dims.rx;
-    U ey = legend_dims.hy;
-    U ex = std::max( 0.0, legend_dims.hx - w );
-    Point r1{
-      -mx / 2 - legend_dims.lx - ex / 2,
-      +my / 2 + ey
-    };
-    Point r2{
-      r1.x + w + ex + mx,
-      r1.y - h - ey - my
-    };
-    g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
-    if ( framed ) {
-      g->Last()->Attr()->LineColor()->Set( AxisColor() );
-      g->Last()->Attr()->SetLineWidth( 1 );
-      if ( FrameColor()->IsDefined() ) {
-        g->Last()->Attr()->FillColor()->Set( FrameColor() );
-      }
-    } else {
-      g->Last()->Attr()->FillColor()->Clear();
-      g->Last()->Attr()->LineColor()->Clear();
-      g->Last()->Attr()->SetLineWidth( 0 );
-    }
-    if ( !legend_heading.empty() ) {
-      Object* obj = Label::CreateLabel( g, legend_heading, legend_dims.ch * 1.2 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
-    }
-  }
-
-  int n = 0;
-  for ( auto series : series_list ) {
-    if ( series->name.empty() ) continue;
-    U px = (n % nx) * +(legend_dims.sx + legend_dims.dx);
-    U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
-    Point marker_p{ px + legend_dims.ow/2, py - legend_dims.sy/2 };
-
-    if ( ensemble->enable_html ) {
-      BoundaryBox bb;
-      bb.min.x = px - legend_dims.lx;
-      bb.min.y = py - legend_dims.sy;
-      bb.max.x = px + legend_dims.rx + legend_dims.sx;
-      bb.max.y = py;
-      ensemble->html_db->LegendPos( series, bb );
-    }
-
-    U line_w = series->line_width;
-    if ( !series->has_line ) line_w = 0;
-
-    bool has_outline =
-      legend_outline &&
-      series->has_line &&
-      series->type != SeriesType::Bar &&
-      series->type != SeriesType::StackedBar &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea;
-
-    if ( has_outline ) {
-      g->Add(
-        new Rect(
-          px + legend_dims.ow/2,
-          py - legend_dims.ow/2,
-          px - legend_dims.ow/2 + legend_dims.sx,
-          py + legend_dims.ow/2 - legend_dims.sy,
-          legend_dims.cr
-        )
-      );
-      series->ApplyLineStyle( g->Last() );
-    }
-
-    if (
-      series->has_line && !legend_outline &&
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Lollipop
-      )
-    ) {
-      g->Add(
-        new Line(
-          marker_p.x - legend_dims.ow/2 - legend_dims.lx, marker_p.y,
-          marker_p.x + legend_dims.ow/2 + legend_dims.lx, marker_p.y
-        )
-      );
-      series->ApplyLineStyle( g->Last() );
-    }
-
-    if (
-      series->marker_show &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea &&
-      series->marker_shape != MarkerShape::LineX &&
-      series->marker_shape != MarkerShape::LineY
-    ) {
-      marker_p.y -= (series->marker_out.y1 + series->marker_out.y2) / 2;
-      if ( series->marker_show_out ) {
-        series->BuildMarker( g, series->marker_out, marker_p );
-        series->ApplyMarkStyle( g->Last() );
-      }
-      if ( series->marker_show_int ) {
-        series->BuildMarker( g, series->marker_int, marker_p );
-        series->ApplyHoleStyle( g->Last() );
-      }
-    }
-
-    if (
-      series->type == SeriesType::Bar ||
-      series->type == SeriesType::StackedBar ||
-      series->type == SeriesType::Area ||
-      series->type == SeriesType::StackedArea
-    ) {
-      bool has_interior = legend_dims.ss > line_w + 1;
-      Point p1{ marker_p.x - legend_dims.ss, marker_p.y - legend_dims.ss };
-      Point p2{ marker_p.x + legend_dims.ss, marker_p.y + legend_dims.ss };
-      {
-        Point c1{ p1 };
-        Point c2{ p2 };
-        U db = std::min( 1.0, line_w / 2 );
-        c1.x += db; c2.x -= db;
-        c1.y += db; c2.y -= db;
-        g->Add( new Rect( c1, c2 ) );
-      }
-      if ( has_interior ) {
-        series->ApplyFillStyle( g->Last() );
-        if ( line_w > 0 ) {
-          p1.x += line_w / 2;
-          p1.y += line_w / 2;
-          p2.x -= line_w / 2;
-          p2.y -= line_w / 2;
-          g->Add( new Rect( p1, p2 ) );
-          series->ApplyLineStyle( g->Last() );
-          g->Last()->Attr()->SetLineJoin( LineJoin::Sharp );
-        }
-      } else {
-        series->ApplyMarkStyle( g->Last() );
-      }
-    }
-
-    int lines = 1;
-    for ( char c : series->name ) if ( c == '\n' ) lines++;
-    px += legend_dims.ow / 2 + legend_dims.tx;
-    py -= (legend_dims.sy - lines * legend_dims.ch) / 2;
-    std::string s;
-    auto cit = series->name.cbegin();
-    while ( cit != series->name.cend() ) {
-      auto oit = cit;
-      if ( Text::UTF8_CharAdv( series->name, cit ) ) {
-        if ( *oit != '\n' ) s.append( oit, cit );
-        if ( *oit == '\n' || cit == series->name.cend() ) {
-          if ( !s.empty() ) {
-            g->Add( new Text( px, py, s ) );
-          }
-          py -= legend_dims.ch;
-          s = "";
-        }
-      }
-    }
-
-    n++;
-  }
-}
-
-//-----------------------------------------------------------------------------
-
 void Main::PlaceLegends(
   std::vector< SVG::Object* >& avoid_objects,
   const std::vector< LegendBox >& lb_list,
   Group* legend_g
 )
 {
-  if ( LegendCnt() == 0 ) return;
+  if ( Legend::LegendCnt( series_list ) == 0 ) return;
 
   BoundaryBox build_bb;
   BoundaryBox moved_bb;
@@ -570,7 +380,12 @@ void Main::PlaceLegends(
       }
     }
     if ( best_lb_defined ) {
-      BuildLegends(
+      Legend::BuildLegends(
+        ensemble,
+        series_list,
+        legend_heading,
+        legend_outline,
+        AxisColor(), FrameColor(),
         legend_g->AddNewGroup(), best_lb.nx,
         legend_frame_specified ? legend_frame : true
       );
@@ -608,7 +423,7 @@ void Main::PlaceLegends(
     U avail_h = chart_h;
     uint32_t nx = 1;
     while ( 1 ) {
-      uint32_t ny = (LegendCnt() + nx - 1) / nx;
+      uint32_t ny = (Legend::LegendCnt( series_list ) + nx - 1) / nx;
       U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
       if ( need_h > avail_h && ny > 1 ) {
         nx++;
@@ -616,7 +431,12 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegends(
+    Legend::BuildLegends(
+      ensemble,
+      series_list,
+      legend_heading,
+      legend_outline,
+      AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx,
       legend_frame_specified ? legend_frame : !legend_heading.empty()
     );
@@ -668,10 +488,10 @@ void Main::PlaceLegends(
     U my = legend_dims.my / 2;
 
     U avail_w = chart_w;
-    uint32_t nx = LegendCnt();
+    uint32_t nx = Legend::LegendCnt( series_list );
     uint32_t ny = 1;
     while ( 1 ) {
-      nx = (LegendCnt() + ny - 1) / ny;
+      nx = (Legend::LegendCnt( series_list ) + ny - 1) / ny;
       U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
       if ( need_w > avail_w && nx > 1 ) {
         ny++;
@@ -679,7 +499,12 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegends(
+    Legend::BuildLegends(
+      ensemble,
+      series_list,
+      legend_heading,
+      legend_outline,
+      AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx,
       legend_frame_specified ? legend_frame : !legend_heading.empty()
     );

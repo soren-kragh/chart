@@ -51,6 +51,10 @@ private:
     SVG::U hy;  // Heading Y width.
   } LegendDims;
 
+  static uint32_t LegendCnt(
+    std::vector< Series* >& series_list
+  );
+
   static void CalcLegendDims(
     std::vector< Series* >& series_list,
     const std::string& legend_heading,
@@ -58,6 +62,15 @@ private:
     SVG::Group* g, Legend::LegendDims& legend_dims
   );
 
+  static void BuildLegends(
+    Ensemble* ensemble,
+    std::vector< Series* >& series_list,
+    const std::string& legend_heading,
+    bool legend_outline,
+    SVG::Color* frame_line_color,
+    SVG::Color* frame_fill_color,
+    SVG::Group* g, int nx, bool framed
+  );
 
 };
 

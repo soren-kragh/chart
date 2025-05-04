@@ -21,6 +21,7 @@ namespace Chart {
 class Ensemble
 {
   friend class Main;
+  friend class Legend;
   friend class HTML;
 
 public:

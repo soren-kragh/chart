@@ -117,12 +117,10 @@ private:
   SVG::U chart_h   = 600;
   bool   chart_box = false;
 
-  uint32_t LegendCnt( void );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& avoid_objects
   );
-  void BuildLegends( SVG::Group* g, int nx, bool framed );
   void PlaceLegends(
     std::vector< SVG::Object* >& avoid_objects,
     const std::vector< LegendBox >& lb_list,
