@@ -28,6 +28,7 @@ class Series
   friend class Main;
   friend class Axis;
   friend class Tag;
+  friend class Legend;
   friend class HTML;
 
 public:

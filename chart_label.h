@@ -23,6 +23,7 @@ class Label
   friend class Ensemble;
   friend class Main;
   friend class Axis;
+  friend class Legend;
 
 public:
 

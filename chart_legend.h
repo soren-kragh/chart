@@ -14,6 +14,8 @@
 #pragma once
 
 #include <chart_common.h>
+#include <chart_label.h>
+#include <chart_series.h>
 #include <chart_legend_box.h>
 
 namespace Chart {
@@ -49,6 +51,12 @@ private:
     SVG::U hy;  // Heading Y width.
   } LegendDims;
 
+  static void CalcLegendDims(
+    std::vector< Series* >& series_list,
+    const std::string& legend_heading,
+    bool framed, bool legend_outline,
+    SVG::Group* g, Legend::LegendDims& legend_dims
+  );
 
 
 };

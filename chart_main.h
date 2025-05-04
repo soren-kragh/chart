@@ -118,7 +118,6 @@ private:
   bool   chart_box = false;
 
   uint32_t LegendCnt( void );
-  void CalcLegendDims( SVG::Group* g, Legend::LegendDims& legend_dims );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& avoid_objects
