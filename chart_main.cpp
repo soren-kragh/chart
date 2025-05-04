@@ -182,7 +182,7 @@ uint32_t Main::LegendCnt( void )
 
 //-----------------------------------------------------------------------------
 
-void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
+void Main::CalcLegendDims( Group* g, Legend::LegendDims& legend_dims )
 {
   bool framed = legend_frame_specified ? legend_frame : true;
 
@@ -375,7 +375,7 @@ void Main::CalcLegendBoxes(
   const std::vector< SVG::Object* >& avoid_objects
 )
 {
-  LegendDims legend_dims;
+  Legend::LegendDims legend_dims;
   CalcLegendDims( g, legend_dims );
   uint32_t lc = LegendCnt();
 
@@ -533,7 +533,7 @@ void Main::CalcLegendBoxes(
 void Main::BuildLegends( Group* g, int nx, bool framed )
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
-  LegendDims legend_dims;
+  Legend::LegendDims legend_dims;
   CalcLegendDims( g, legend_dims );
   int ny = (LegendCnt() + nx - 1) / nx;
 
@@ -769,7 +769,7 @@ void Main::PlaceLegends(
     }
   }
 
-  LegendDims legend_dims;
+  Legend::LegendDims legend_dims;
   CalcLegendDims( legend_g, legend_dims );
 
   if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {

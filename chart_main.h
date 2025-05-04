@@ -21,6 +21,7 @@
 #include <chart_html.h>
 #include <chart_series.h>
 #include <chart_axis.h>
+#include <chart_legend.h>
 #include <chart_legend_box.h>
 
 namespace Chart {
@@ -116,28 +117,8 @@ private:
   SVG::U chart_h   = 600;
   bool   chart_box = false;
 
-  typedef struct {
-    SVG::U ch;  // Character height.
-    SVG::U ow;  // Max outline width.
-    SVG::U cr;  // Outline corner radius.
-    SVG::U mw;  // Marker width.
-    SVG::U mh;  // Marker height.
-    SVG::U ss;  // Symbol size "radius" (including markers).
-    SVG::U lx;  // Left extra X caused by symbol left overhang.
-    SVG::U rx;  // Right extra X caused by symbol left overhang.
-    SVG::U tx;  // Text indentation relative to center of symbol/marker.
-    SVG::U dx;  // Delta between individual legends in X direction.
-    SVG::U dy;  // Delta between individual legends in Y direction.
-    SVG::U sx;  // Size in X direction.
-    SVG::U sy;  // Size in Y direction.
-    SVG::U mx;  // Legend box margin in X direction.
-    SVG::U my;  // Legend box margin in Y direction.
-    SVG::U hx;  // Heading X width.
-    SVG::U hy;  // Heading Y width.
-  } LegendDims;
-
   uint32_t LegendCnt( void );
-  void CalcLegendDims( SVG::Group* g, LegendDims& legend_dims );
+  void CalcLegendDims( SVG::Group* g, Legend::LegendDims& legend_dims );
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& avoid_objects
