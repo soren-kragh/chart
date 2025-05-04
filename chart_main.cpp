@@ -485,7 +485,7 @@ void Main::PlaceLegends(
   } else {
 
     U mx = 40;
-    U my = legend_dims.my / 2;
+    U my = box_spacing;
 
     U avail_w = chart_w;
     uint32_t nx = Legend::LegendCnt( series_list );
