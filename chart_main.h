@@ -85,7 +85,7 @@ public:
   void SetLegendOutline( bool outline );
 
   // Legend text size scaling factor.
-  void SetLegendSize( float size ) { legend_size = size; }
+  void SetLegendSize( float size );
 
   // Specify the relative width of bars (0.0 to 1.0) and the relative width (0.0
   // to 1.0) of all bars belonging to the same X-value.
@@ -176,12 +176,9 @@ private:
   uint32_t bar_tot = 0;
   uint32_t lol_tot = 0;
 
-  Legend*     legend_obj;
-  bool        legend_frame;
-  bool        legend_frame_specified;
-  Pos         legend_pos;
-  bool        legend_outline;
-  float       legend_size;
+  Legend* legend_obj;
+  bool    legend_frame;
+  bool    legend_frame_specified;
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;

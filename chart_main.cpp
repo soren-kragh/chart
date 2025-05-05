@@ -21,6 +21,13 @@ using namespace Chart;
 
 Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
 {
+  label_db    = new Label();
+  legend_obj  = new Legend( ensemble );
+  tag_db      = new Tag();
+  axis_x      = new Axis( true , label_db );
+  axis_y[ 0 ] = new Axis( false, label_db );
+  axis_y[ 1 ] = new Axis( false, label_db );
+
   this->ensemble = ensemble;
   this->svg_g = svg_g;
   chart_area_color.Clear();
@@ -36,15 +43,6 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   title_frame_specified  = false;
   legend_frame           = false;
   legend_frame_specified = false;
-  SetLegendPos( Pos::Auto );
-  SetLegendOutline( true );
-  legend_size = 1.0;
-  label_db = new Label();
-  legend_obj = new Legend( ensemble );
-  tag_db = new Tag();
-  axis_x      = new Axis( true , label_db );
-  axis_y[ 0 ] = new Axis( false, label_db );
-  axis_y[ 1 ] = new Axis( false, label_db );
 }
 
 Main::~Main( void )
@@ -138,12 +136,17 @@ void Main::SetLegendFrame( bool enable )
 
 void Main::SetLegendPos( Pos pos )
 {
-  legend_pos = pos;
+  legend_obj->pos = pos;
 }
 
 void Main::SetLegendOutline( bool outline )
 {
-  legend_outline = outline;
+  legend_obj->outline = outline;
+}
+
+void Main::SetLegendSize( float size )
+{
+  legend_obj->size = size;
 }
 
 void Main::SetBarWidth( float one_width, float all_width )
@@ -182,7 +185,6 @@ void Main::CalcLegendBoxes(
   Legend::LegendDims legend_dims;
   legend_obj->CalcLegendDims(
     legend_frame_specified ? legend_frame : true,
-    legend_outline,
     g, legend_dims
   );
   uint32_t lc = legend_obj->Cnt();
@@ -353,7 +355,7 @@ void Main::PlaceLegends(
   if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
   if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
 
-  if ( legend_pos == Pos::Auto ) {
+  if ( legend_obj->pos == Pos::Auto ) {
     LegendBox best_lb;
     bool best_lb_defined = false;
     for ( const LegendBox& lb : lb_list ) {
@@ -383,7 +385,6 @@ void Main::PlaceLegends(
     if ( best_lb_defined ) {
       legend_obj->BuildLegends(
         legend_frame_specified ? legend_frame : true,
-        legend_outline,
         AxisColor(), FrameColor(),
         legend_g->AddNewGroup(), best_lb.nx
       );
@@ -401,18 +402,17 @@ void Main::PlaceLegends(
       );
       return;
     } else {
-      legend_pos = Pos::Bottom;
+      legend_obj->pos = Pos::Bottom;
     }
   }
 
   Legend::LegendDims legend_dims;
   legend_obj->CalcLegendDims(
     legend_frame_specified ? legend_frame : true,
-    legend_outline,
     legend_g, legend_dims
   );
 
-  if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
+  if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
 
     U mx = legend_dims.mx;
     U my = 10;
@@ -430,7 +430,6 @@ void Main::PlaceLegends(
     }
     legend_obj->BuildLegends(
       legend_frame_specified ? legend_frame : !legend_obj->legend_heading.empty(),
-      legend_outline,
       AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
     );
@@ -440,7 +439,7 @@ void Main::PlaceLegends(
     U x = 0 - mx;
     Dir dir = Dir::Left;
     AnchorX anchor_x = AnchorX::Max;
-    if ( legend_pos == Pos::Right ) {
+    if ( legend_obj->pos == Pos::Right ) {
       x = chart_w + mx;
       dir = Dir::Right;
       anchor_x = AnchorX::Min;
@@ -458,7 +457,7 @@ void Main::PlaceLegends(
       BoundaryBox bb = legend->GetBB();
       if (
         !best_found ||
-        ((legend_pos == Pos::Right) ? (bb.min.x < best_x) : (bb.min.x > best_x))
+        ((legend_obj->pos == Pos::Right) ? (bb.min.x < best_x) : (bb.min.x > best_x))
       ) {
         best_anchor_y = anchor_y;
         best_x = bb.min.x;
@@ -495,7 +494,6 @@ void Main::PlaceLegends(
     }
     legend_obj->BuildLegends(
       legend_frame_specified ? legend_frame : !legend_obj->legend_heading.empty(),
-      legend_outline,
       AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
     );
@@ -505,7 +503,7 @@ void Main::PlaceLegends(
     U y = 0 - my;
     Dir dir = Dir::Down;
     AnchorY anchor_y = AnchorY::Max;
-    if ( legend_pos == Pos::Top ) {
+    if ( legend_obj->pos == Pos::Top ) {
       y = chart_h + my;
       dir = Dir::Up;
       anchor_y = AnchorY::Min;
@@ -523,7 +521,10 @@ void Main::PlaceLegends(
       BoundaryBox bb = legend->GetBB();
       if (
         !best_found ||
-        ((legend_pos == Pos::Top) ? (bb.min.y < best_y) : (bb.min.y > best_y))
+        ( (legend_obj->pos == Pos::Top)
+          ? (bb.min.y < best_y)
+          : (bb.min.y > best_y)
+        )
       ) {
         best_anchor_x = anchor_x;
         best_x = x;
@@ -1517,7 +1518,7 @@ void Main::Build( void )
     ->SetHeightFactor( 0.80 )
     ->SetBaselineFactor( 0.30 );
 
-  legend_g->Attr()->TextFont()->SetSize( 14 * legend_size );
+  legend_g->Attr()->TextFont()->SetSize( 14 * legend_obj->size );
 
   std::vector< LegendBox > lb_list;
 

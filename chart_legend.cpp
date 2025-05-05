@@ -43,7 +43,7 @@ uint32_t Legend::Cnt( void )
 ////////////////////////////////////////////////////////////////////////////////
 
 void Legend::CalcLegendDims(
-  bool framed, bool legend_outline,
+  bool framed,
   Group* g, Legend::LegendDims& legend_dims
 )
 {
@@ -85,7 +85,7 @@ void Legend::CalcLegendDims(
   for ( auto series : series_list ) {
     if ( series->name.empty() ) continue;
     bool has_outline =
-      legend_outline &&
+      outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -98,7 +98,7 @@ void Legend::CalcLegendDims(
 
   // No outline if it is too fat.
   if ( legend_dims.ow > char_h * 0.8 ) {
-    legend_outline = false;
+    outline = false;
     legend_dims.ow = 0;
   }
   U how = legend_dims.ow / 2;
@@ -120,7 +120,7 @@ void Legend::CalcLegendDims(
 
   legend_dims.ss = std::max( legend_dims.mw, legend_dims.mh ) / 2;
 
-  U line_symbol_width = legend_outline ? 0 : (2.8 * char_w);
+  U line_symbol_width = outline ? 0 : (2.8 * char_w);
 
   for ( auto series : series_list ) {
     if ( series->name.empty() ) continue;
@@ -142,7 +142,7 @@ void Legend::CalcLegendDims(
       }
     }
     if (
-      series->has_line && !legend_outline &&
+      series->has_line && !outline &&
       ( series->type == SeriesType::XY ||
         series->type == SeriesType::Line ||
         series->type == SeriesType::Lollipop
@@ -194,7 +194,7 @@ void Legend::CalcLegendDims(
     U text_h = char_h * max_lines;
 
     bool has_outline =
-      legend_outline &&
+      outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -231,7 +231,7 @@ void Legend::CalcLegendDims(
 ////////////////////////////////////////////////////////////////////////////////
 
 void Legend::BuildLegends(
-  bool framed, bool legend_outline,
+  bool framed,
   SVG::Color* frame_line_color,
   SVG::Color* frame_fill_color,
   Group* g, int nx
@@ -239,10 +239,7 @@ void Legend::BuildLegends(
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
   Legend::LegendDims legend_dims;
-  CalcLegendDims(
-    framed, legend_outline,
-    g, legend_dims
-  );
+  CalcLegendDims( framed, g, legend_dims );
   int ny = (Cnt() + nx - 1) / nx;
 
   {
@@ -299,7 +296,7 @@ void Legend::BuildLegends(
     if ( !series->has_line ) line_w = 0;
 
     bool has_outline =
-      legend_outline &&
+      outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -320,7 +317,7 @@ void Legend::BuildLegends(
     }
 
     if (
-      series->has_line && !legend_outline &&
+      series->has_line && !outline &&
       ( series->type == SeriesType::XY ||
         series->type == SeriesType::Line ||
         series->type == SeriesType::Lollipop

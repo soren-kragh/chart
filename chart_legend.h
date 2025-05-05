@@ -35,6 +35,9 @@ private:
 
   std::vector< Series* > series_list;
   std::string legend_heading;
+  bool outline = true;
+  Pos pos = Pos::Auto;
+  float size = 1.0;
 
   void Add( Series* series );
 
@@ -61,12 +64,12 @@ private:
   } LegendDims;
 
   void CalcLegendDims(
-    bool framed, bool legend_outline,
+    bool framed,
     SVG::Group* g, Legend::LegendDims& legend_dims
   );
 
   void BuildLegends(
-    bool framed, bool legend_outline,
+    bool framed,
     SVG::Color* frame_line_color,
     SVG::Color* frame_fill_color,
     SVG::Group* g, int nx
