@@ -34,7 +34,7 @@ private:
   Ensemble* ensemble;
 
   std::vector< Series* > series_list;
-  std::string legend_heading;
+  std::string heading;
   bool outline = true;
   Pos pos = Pos::Auto;
   float size = 1.0;

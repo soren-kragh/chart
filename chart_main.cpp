@@ -125,7 +125,7 @@ void Main::SetTitleFrame( bool enable )
 
 void Main::SetLegendHeading( const std::string& txt )
 {
-  legend_obj->legend_heading = txt;
+  legend_obj->heading = txt;
 }
 
 void Main::SetLegendFrame( bool enable )
@@ -406,11 +406,11 @@ void Main::PlaceLegends(
     }
   }
 
+  bool framed =
+    legend_frame_specified ? legend_frame : !legend_obj->heading.empty();
+
   Legend::LegendDims legend_dims;
-  legend_obj->CalcLegendDims(
-    legend_frame_specified ? legend_frame : true,
-    legend_g, legend_dims
-  );
+  legend_obj->CalcLegendDims( framed, legend_g, legend_dims );
 
   if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
 
@@ -429,8 +429,7 @@ void Main::PlaceLegends(
       break;
     }
     legend_obj->BuildLegends(
-      legend_frame_specified ? legend_frame : !legend_obj->legend_heading.empty(),
-      AxisColor(), FrameColor(),
+      framed, AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
     );
     Object* legend = legend_g->Last();
@@ -493,8 +492,7 @@ void Main::PlaceLegends(
       break;
     }
     legend_obj->BuildLegends(
-      legend_frame_specified ? legend_frame : !legend_obj->legend_heading.empty(),
-      AxisColor(), FrameColor(),
+      framed, AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
     );
     Object* legend = legend_g->Last();

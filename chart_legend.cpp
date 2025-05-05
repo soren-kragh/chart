@@ -71,8 +71,8 @@ void Legend::CalcLegendDims(
   U char_w = bb.max.x - bb.min.x;
   U char_h = bb.max.y - bb.min.y;
 
-  if ( !legend_heading.empty() ) {
-    Label::CreateLabel( g, legend_heading, char_h * 1.2 );
+  if ( !heading.empty() ) {
+    Label::CreateLabel( g, heading, char_h * 1.2 );
     BoundaryBox bb = g->Last()->GetBB();
     g->DeleteFront();
     legend_dims.hx = bb.max.x - bb.min.x;
@@ -270,8 +270,8 @@ void Legend::BuildLegends(
       g->Last()->Attr()->LineColor()->Clear();
       g->Last()->Attr()->SetLineWidth( 0 );
     }
-    if ( !legend_heading.empty() ) {
-      Object* obj = Label::CreateLabel( g, legend_heading, legend_dims.ch * 1.2 );
+    if ( !heading.empty() ) {
+      Object* obj = Label::CreateLabel( g, heading, legend_dims.ch * 1.2 );
       obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
     }
   }
