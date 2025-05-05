@@ -40,6 +40,7 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   SetLegendOutline( true );
   legend_size = 1.0;
   label_db = new Label();
+  legend_obj = new Legend( ensemble );
   tag_db = new Tag();
   axis_x      = new Axis( true , label_db );
   axis_y[ 0 ] = new Axis( false, label_db );
@@ -55,6 +56,7 @@ Main::~Main( void )
   delete axis_y[ 0 ];
   delete axis_y[ 1 ];
   delete label_db;
+  delete legend_obj;
   delete tag_db;
 }
 
@@ -125,7 +127,7 @@ void Main::SetTitleFrame( bool enable )
 
 void Main::SetLegendHeading( const std::string& txt )
 {
-  legend_heading = txt;
+  legend_obj->legend_heading = txt;
 }
 
 void Main::SetLegendFrame( bool enable )
@@ -178,13 +180,12 @@ void Main::CalcLegendBoxes(
 )
 {
   Legend::LegendDims legend_dims;
-  Legend::CalcLegendDims(
-    series_list, legend_heading,
+  legend_obj->CalcLegendDims(
     legend_frame_specified ? legend_frame : true,
     legend_outline,
     g, legend_dims
   );
-  uint32_t lc = Legend::LegendCnt( series_list );
+  uint32_t lc = legend_obj->Cnt();
 
   auto add_lbs = [&](
     AnchorX anchor_x, AnchorY anchor_y, bool can_move = true
@@ -343,7 +344,7 @@ void Main::PlaceLegends(
   Group* legend_g
 )
 {
-  if ( Legend::LegendCnt( series_list ) == 0 ) return;
+  if ( legend_obj->Cnt() == 0 ) return;
 
   BoundaryBox build_bb;
   BoundaryBox moved_bb;
@@ -380,10 +381,7 @@ void Main::PlaceLegends(
       }
     }
     if ( best_lb_defined ) {
-      Legend::BuildLegends(
-        ensemble,
-        series_list,
-        legend_heading,
+      legend_obj->BuildLegends(
         legend_frame_specified ? legend_frame : true,
         legend_outline,
         AxisColor(), FrameColor(),
@@ -408,8 +406,7 @@ void Main::PlaceLegends(
   }
 
   Legend::LegendDims legend_dims;
-  Legend::CalcLegendDims(
-    series_list, legend_heading,
+  legend_obj->CalcLegendDims(
     legend_frame_specified ? legend_frame : true,
     legend_outline,
     legend_g, legend_dims
@@ -423,7 +420,7 @@ void Main::PlaceLegends(
     U avail_h = chart_h;
     uint32_t nx = 1;
     while ( 1 ) {
-      uint32_t ny = (Legend::LegendCnt( series_list ) + nx - 1) / nx;
+      uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
       U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
       if ( need_h > avail_h && ny > 1 ) {
         nx++;
@@ -431,11 +428,8 @@ void Main::PlaceLegends(
       }
       break;
     }
-    Legend::BuildLegends(
-      ensemble,
-      series_list,
-      legend_heading,
-      legend_frame_specified ? legend_frame : !legend_heading.empty(),
+    legend_obj->BuildLegends(
+      legend_frame_specified ? legend_frame : !legend_obj->legend_heading.empty(),
       legend_outline,
       AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
@@ -488,10 +482,10 @@ void Main::PlaceLegends(
     U my = box_spacing;
 
     U avail_w = chart_w;
-    uint32_t nx = Legend::LegendCnt( series_list );
+    uint32_t nx = legend_obj->Cnt();
     uint32_t ny = 1;
     while ( 1 ) {
-      nx = (Legend::LegendCnt( series_list ) + ny - 1) / ny;
+      nx = (legend_obj->Cnt() + ny - 1) / ny;
       U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
       if ( need_w > avail_w && nx > 1 ) {
         ny++;
@@ -499,11 +493,8 @@ void Main::PlaceLegends(
       }
       break;
     }
-    Legend::BuildLegends(
-      ensemble,
-      series_list,
-      legend_heading,
-      legend_frame_specified ? legend_frame : !legend_heading.empty(),
+    legend_obj->BuildLegends(
+      legend_frame_specified ? legend_frame : !legend_obj->legend_heading.empty(),
       legend_outline,
       AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
@@ -1042,6 +1033,10 @@ void Main::SeriesPrepare(
   uint32_t series_id = 0;
   for ( auto series : series_list ) {
     series->id = series_id++;
+
+    if ( !series->name.empty() ) {
+      legend_obj->Add( series );
+    }
 
     series->chart_area.min.x = 0;
     series->chart_area.max.x = chart_w;

@@ -26,10 +26,19 @@ class Legend
 
 public:
 
-  Legend( void );
+  Legend( Ensemble* ensemble );
   ~Legend( void );
 
 private:
+
+  Ensemble* ensemble;
+
+  std::vector< Series* > series_list;
+  std::string legend_heading;
+
+  void Add( Series* series );
+
+  uint32_t Cnt( void );
 
   typedef struct {
     SVG::U ch;  // Character height.
@@ -51,21 +60,12 @@ private:
     SVG::U hy;  // Heading Y width.
   } LegendDims;
 
-  static uint32_t LegendCnt(
-    std::vector< Series* >& series_list
-  );
-
-  static void CalcLegendDims(
-    std::vector< Series* >& series_list,
-    const std::string& legend_heading,
+  void CalcLegendDims(
     bool framed, bool legend_outline,
     SVG::Group* g, Legend::LegendDims& legend_dims
   );
 
-  static void BuildLegends(
-    Ensemble* ensemble,
-    std::vector< Series* >& series_list,
-    const std::string& legend_heading,
+  void BuildLegends(
     bool framed, bool legend_outline,
     SVG::Color* frame_line_color,
     SVG::Color* frame_fill_color,

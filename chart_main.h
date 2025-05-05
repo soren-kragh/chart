@@ -176,7 +176,7 @@ private:
   uint32_t bar_tot = 0;
   uint32_t lol_tot = 0;
 
-  std::string legend_heading;
+  Legend*     legend_obj;
   bool        legend_frame;
   bool        legend_frame_specified;
   Pos         legend_pos;

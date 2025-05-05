@@ -19,8 +19,9 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Legend::Legend( void )
+Legend::Legend( Ensemble* ensemble )
 {
+  this->ensemble = ensemble;
 }
 
 Legend::~Legend( void )
@@ -29,22 +30,19 @@ Legend::~Legend( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-uint32_t Legend::LegendCnt(
-  std::vector< Series* >& series_list
-)
+void Legend::Add( Series* series )
 {
-  uint32_t n = 0;
-  for ( auto series : series_list ) {
-    if ( !series->name.empty() ) n++;
-  }
-  return n;
+  series_list.push_back( series );
+}
+
+uint32_t Legend::Cnt( void )
+{
+  return series_list.size();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void Legend::CalcLegendDims(
-  std::vector< Series* >& series_list,
-  const std::string& legend_heading,
   bool framed, bool legend_outline,
   Group* g, Legend::LegendDims& legend_dims
 )
@@ -233,9 +231,6 @@ void Legend::CalcLegendDims(
 ////////////////////////////////////////////////////////////////////////////////
 
 void Legend::BuildLegends(
-  Ensemble* ensemble,
-  std::vector< Series* >& series_list,
-  const std::string& legend_heading,
   bool framed, bool legend_outline,
   SVG::Color* frame_line_color,
   SVG::Color* frame_fill_color,
@@ -244,12 +239,11 @@ void Legend::BuildLegends(
 {
   g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
   Legend::LegendDims legend_dims;
-  Legend::CalcLegendDims(
-    series_list, legend_heading,
+  CalcLegendDims(
     framed, legend_outline,
     g, legend_dims
   );
-  int ny = (LegendCnt( series_list ) + nx - 1) / nx;
+  int ny = (Cnt() + nx - 1) / nx;
 
   {
     U mx = framed ? legend_dims.mx : U( 0 );
