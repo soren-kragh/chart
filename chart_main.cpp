@@ -414,8 +414,8 @@ void Main::PlaceLegends(
 
   if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
 
-    U mx = legend_dims.mx;
-    U my = 10;
+    U mx = framed ? +box_spacing : 20;
+    U my = box_spacing;
 
     U avail_h = chart_h;
     uint32_t nx = 1;
@@ -456,7 +456,10 @@ void Main::PlaceLegends(
       BoundaryBox bb = legend->GetBB();
       if (
         !best_found ||
-        ((legend_obj->pos == Pos::Right) ? (bb.min.x < best_x) : (bb.min.x > best_x))
+        ( (legend_obj->pos == Pos::Right)
+          ? (bb.min.x + epsilon < best_x)
+          : (bb.min.x - epsilon > best_x)
+        )
       ) {
         best_anchor_y = anchor_y;
         best_x = bb.min.x;
@@ -520,8 +523,8 @@ void Main::PlaceLegends(
       if (
         !best_found ||
         ( (legend_obj->pos == Pos::Top)
-          ? (bb.min.y < best_y)
-          : (bb.min.y > best_y)
+          ? (bb.min.y + epsilon < best_y)
+          : (bb.min.y - epsilon > best_y)
         )
       ) {
         best_anchor_x = anchor_x;
