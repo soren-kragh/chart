@@ -26,6 +26,7 @@ Ensemble::Ensemble( void )
   canvas = new Canvas();
   top_g = canvas->TopGroup()->AddNewGroup();
   html_db = new HTML( this );
+  legend_obj = new Legend( this );
 
   foreground_color.Set( ColorName::black );
   background_color.Set( ColorName::white );
@@ -34,10 +35,11 @@ Ensemble::Ensemble( void )
 
 Ensemble::~Ensemble( void )
 {
-  delete html_db;
   for ( auto& elem : element_list ) {
     delete elem.chart;
   }
+  delete legend_obj;
+  delete html_db;
   delete canvas;
 }
 
@@ -110,6 +112,29 @@ void Ensemble::SetSubSubHeading( const std::string& txt )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::SetLegendHeading( const std::string& txt )
+{
+  legend_obj->heading = txt;
+}
+
+void Ensemble::SetLegendFrame( bool enable )
+{
+  legend_frame = enable;
+  legend_frame_specified = true;
+}
+
+void Ensemble::SetLegendPos( Pos pos )
+{
+  legend_obj->pos = pos;
+}
+
+void Ensemble::SetLegendSize( float size )
+{
+  legend_obj->size = size;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::AddFootnote(std::string& txt)
 {
   footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
@@ -126,7 +151,6 @@ void Ensemble::SetFootnoteLine( bool footnote_line )
 {
   this->footnote_line = footnote_line;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 

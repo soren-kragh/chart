@@ -22,6 +22,7 @@ namespace Chart {
 
 class Legend
 {
+  friend class Ensemble;
   friend class Main;
 
 public:

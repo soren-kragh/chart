@@ -64,6 +64,12 @@ public:
   // only the core chart areas are considered when laying out the grid.
   void SetGridPadding( SVG::U padding ) { grid_padding = padding; }
 
+  void SetLegendHeading( const std::string& txt );
+  void SetLegendFrame( bool enable = true );
+  void SetLegendPos( Pos pos );
+  void SetLegendSize( float size );
+  SVG::Color* LegendColor( void ) { return &legend_color; }
+
   void AddFootnote( std::string& txt );
 
   // Applies to the most recently added footnote.
@@ -141,6 +147,11 @@ private:
   Pos         heading_pos  = Pos::Center;
   bool        heading_line = false;
   float       heading_size = 1.0;
+
+  Legend*    legend_obj;
+  bool       legend_frame;
+  bool       legend_frame_specified;
+  SVG::Color legend_color;
 
   struct footnote_t {
     std::string txt;
