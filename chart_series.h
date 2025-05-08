@@ -44,6 +44,9 @@ public:
     this-> anonymous_snap = anonymous_snap;
   }
 
+  // Indicate if legend should be shared with other charts.
+  void SetSharedLegend( bool shared = true ) { shared_legend = shared; }
+
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
 
@@ -192,6 +195,8 @@ private:
   Axis* axis_x;
   Axis* axis_y;
   int axis_y_n;
+
+  bool shared_legend = false;
 
   SeriesType type;
   std::string name;
