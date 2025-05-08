@@ -44,6 +44,7 @@ public:
   );
 
   void LegendPos( Series* series, const SVG::BoundaryBox& bb );
+  void MoveLegend( Series* series, SVG::U dx, SVG::U dy );
   void MoveLegends( Main* main, SVG::U dx, SVG::U dy );
 
   void AddSnapPoint(

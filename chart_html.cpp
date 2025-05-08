@@ -67,15 +67,21 @@ void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
   series->main->html.series_legend_map[ series ] = bb;
 }
 
-void HTML::MoveLegends( Main* main, SVG::U dx, SVG::U dy )
+void HTML::MoveLegend( Series* series, SVG::U dx, SVG::U dy )
 {
-  for ( auto series : main->series_list ) {
-    auto it = main->html.series_legend_map.find( series );
-    if ( it == main->html.series_legend_map.end() ) continue;
+  auto it = series->main->html.series_legend_map.find( series );
+  if ( it != series->main->html.series_legend_map.end() ) {
     it->second.min.x += dx;
     it->second.min.y += dy;
     it->second.max.x += dx;
     it->second.max.y += dy;
+  }
+}
+
+void HTML::MoveLegends( Main* main, SVG::U dx, SVG::U dy )
+{
+  for ( auto series : main->series_list ) {
+    MoveLegend( series, dx, dy );
   }
 }
 
