@@ -163,6 +163,7 @@ private:
 
   SVG::BoundaryBox TopBB( void );
 
+  void BuildLegends( void );
   void BuildHeading( void );
   void BuildFootnotes( void );
   void BuildBackground( void );

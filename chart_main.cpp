@@ -351,11 +351,11 @@ void Main::PlaceLegends(
   BoundaryBox build_bb;
   BoundaryBox moved_bb;
 
-  AnchorX title_anchor_x = AnchorX::Mid;
-  if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
-  if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
-
   if ( legend_obj->pos == Pos::Auto ) {
+    AnchorX title_anchor_x = AnchorX::Mid;
+    if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
+    if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
+
     LegendBox best_lb;
     bool best_lb_defined = false;
     for ( const LegendBox& lb : lb_list ) {
@@ -1037,7 +1037,11 @@ void Main::SeriesPrepare(
     series->id = series_id++;
 
     if ( !series->name.empty() ) {
-      legend_obj->Add( series );
+      if ( series->shared_legend ) {
+        ensemble->legend_obj->Add( series );
+      } else {
+        legend_obj->Add( series );
+      }
     }
 
     series->chart_area.min.x = 0;

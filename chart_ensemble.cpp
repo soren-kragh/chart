@@ -469,6 +469,17 @@ SVG::BoundaryBox Ensemble::TopBB( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::BuildLegends( void )
+{
+  if ( legend_obj->Cnt() == 0 ) return;
+
+
+
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::BuildHeading( void )
 {
   U dx = 0;
@@ -662,6 +673,8 @@ std::string Ensemble::Build( void )
 
     elem.chart->Move( mx, my );
   }
+
+  BuildLegends();
 
   BuildHeading();
   BuildFootnotes();
