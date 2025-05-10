@@ -64,13 +64,13 @@ void HTML::DefAxisY(
 
 void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
 {
-  series->main->html.series_legend_map[ series ] = bb;
+  series_legend_map[ series ] = bb;
 }
 
 void HTML::MoveLegend( Series* series, SVG::U dx, SVG::U dy )
 {
-  auto it = series->main->html.series_legend_map.find( series );
-  if ( it != series->main->html.series_legend_map.end() ) {
+  auto it = series_legend_map.find( series );
+  if ( it != series_legend_map.end() ) {
     it->second.min.x += dx;
     it->second.min.y += dy;
     it->second.max.x += dx;
@@ -283,8 +283,8 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "seriesList : [\n";
   for ( auto series : main->series_list ) {
     oss << "{";
-    if ( main->html.series_legend_map.count( series ) > 0 ) {
-      BoundaryBox bb = main->html.series_legend_map[ series ];
+    if ( series_legend_map.count( series ) > 0 ) {
+      BoundaryBox bb = series_legend_map[ series ];
       bb.min.x += main->g_dx; bb.min.y += main->g_dy;
       bb.max.x += main->g_dx; bb.max.y += main->g_dy;
       std::swap( bb.min.y, bb.max.y );

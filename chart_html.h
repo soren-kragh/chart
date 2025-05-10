@@ -65,6 +65,7 @@ private:
 
   void GenChartData( Main* main, std::ostringstream& oss );
 
+  std::map< Series*, SVG::BoundaryBox > series_legend_map;
 };
 
 }

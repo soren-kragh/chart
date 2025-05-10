@@ -225,8 +225,6 @@ private:
 
     axis_t x_axis[ 2 ];
     axis_t y_axis[ 2 ];
-
-    std::map< Series*, SVG::BoundaryBox > series_legend_map;
   };
   html_t html;
 
