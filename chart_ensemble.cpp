@@ -473,7 +473,89 @@ void Ensemble::BuildLegends( void )
 {
   if ( legend_obj->Cnt() == 0 ) return;
 
+  BoundaryBox build_bb;
+  BoundaryBox moved_bb;
+  BoundaryBox all_bb = top_g->GetBB();
 
+  Group* legend_g = top_g->AddNewGroup();
+  legend_g->Attr()->TextFont()->SetSize( 14 * legend_obj->size );
+
+  bool framed =
+    legend_frame_specified ? legend_frame : !legend_obj->heading.empty();
+
+  Legend::LegendDims legend_dims;
+  legend_obj->CalcLegendDims( framed, legend_g, legend_dims );
+
+  if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
+
+    U mx = framed ? +box_spacing : 20;
+    U x = all_bb.min.x - mx;
+    U y = all_bb.max.y;
+    AnchorX anchor_x = AnchorX::Max;
+    if ( legend_obj->pos == Pos::Right ) {
+      x = all_bb.max.x + mx;
+      anchor_x = AnchorX::Min;
+    }
+    U avail_h = all_bb.max.y - all_bb.min.y;
+    uint32_t nx = 1;
+    while ( 1 ) {
+      uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
+      U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+      if ( need_h > avail_h && ny > 1 ) {
+        nx++;
+        continue;
+      }
+      break;
+    }
+    legend_obj->BuildLegends(
+      framed, ForegroundColor(), LegendColor(),
+      legend_g->AddNewGroup(), nx
+    );
+    Object* legend = legend_g->Last();
+    build_bb = legend->GetBB();
+    legend->MoveTo( anchor_x, AnchorY::Max, x, y );
+    moved_bb = legend->GetBB();
+
+  } else {
+
+    U my = box_spacing;
+    U x = (all_bb.min.x + all_bb.max.x) / 2;
+    U y = all_bb.min.y - my;
+    AnchorY anchor_y = AnchorY::Max;
+    if ( legend_obj->pos == Pos::Top ) {
+      y = all_bb.max.y + my;
+      anchor_y = AnchorY::Min;
+    }
+    U avail_w = all_bb.max.x - all_bb.min.x;
+    uint32_t nx = legend_obj->Cnt();
+    uint32_t ny = 1;
+    while ( 1 ) {
+      nx = (legend_obj->Cnt() + ny - 1) / ny;
+      U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+      if ( need_w > avail_w && nx > 1 ) {
+        ny++;
+        continue;
+      }
+      break;
+    }
+    legend_obj->BuildLegends(
+      framed, ForegroundColor(), LegendColor(),
+      legend_g->AddNewGroup(), nx
+    );
+    Object* legend = legend_g->Last();
+    build_bb = legend->GetBB();
+    legend->MoveTo( AnchorX::Mid, anchor_y, x, y );
+    moved_bb = legend->GetBB();
+
+  }
+
+  for ( auto series : legend_obj->series_list ) {
+    html_db->MoveLegend(
+      series,
+      moved_bb.min.x - build_bb.min.x,
+      moved_bb.min.y - build_bb.min.y
+    );
+  }
 
   return;
 }
