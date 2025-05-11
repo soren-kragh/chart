@@ -84,8 +84,12 @@ void Legend::CalcLegendDims(
 
   for ( auto series : series_list ) {
     if ( series->name.empty() ) continue;
+    if ( series->line_width > char_h * 0.8 ) {
+      // No outline if it is too fat.
+      series->legend_outline = false;
+    }
     bool has_outline =
-      outline &&
+      series->legend_outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -94,12 +98,6 @@ void Legend::CalcLegendDims(
     if ( has_outline ) {
       legend_dims.ow = std::max( legend_dims.ow, series->line_width );
     }
-  }
-
-  // No outline if it is too fat.
-  if ( legend_dims.ow > char_h * 0.8 ) {
-    outline = false;
-    legend_dims.ow = 0;
   }
   U how = legend_dims.ow / 2;
 
@@ -120,8 +118,7 @@ void Legend::CalcLegendDims(
 
   legend_dims.ss = std::max( legend_dims.mw, legend_dims.mh ) / 2;
 
-  U line_symbol_width = outline ? 0 : (2.8 * char_w);
-
+  U line_symbol_width = -1;
   for ( auto series : series_list ) {
     if ( series->name.empty() ) continue;
     if (
@@ -142,12 +139,15 @@ void Legend::CalcLegendDims(
       }
     }
     if (
-      series->has_line && !outline &&
+      series->has_line && !series->legend_outline &&
       ( series->type == SeriesType::XY ||
         series->type == SeriesType::Line ||
         series->type == SeriesType::Lollipop
       )
     ) {
+      if ( line_symbol_width < 0 ) {
+        line_symbol_width = 2.8 * char_w;
+      }
       legend_dims.ss = std::max( +legend_dims.ss, series->line_width / 2 );
       line_symbol_width =
         std::max(
@@ -156,6 +156,9 @@ void Legend::CalcLegendDims(
       line_symbol_width = std::max( +line_symbol_width, 3 * series->line_width );
       line_symbol_width = std::max( +line_symbol_width, 3 * legend_dims.mw );
     }
+  }
+  if ( line_symbol_width < 0 ) {
+    line_symbol_width = 0;
   }
 
   legend_dims.ch = char_h;
@@ -194,7 +197,7 @@ void Legend::CalcLegendDims(
     U text_h = char_h * max_lines;
 
     bool has_outline =
-      outline &&
+      series->legend_outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -296,7 +299,7 @@ void Legend::BuildLegends(
     if ( !series->has_line ) line_w = 0;
 
     bool has_outline =
-      outline &&
+      series->legend_outline &&
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
@@ -317,7 +320,7 @@ void Legend::BuildLegends(
     }
 
     if (
-      series->has_line && !outline &&
+      series->has_line && !series->legend_outline &&
       ( series->type == SeriesType::XY ||
         series->type == SeriesType::Line ||
         series->type == SeriesType::Lollipop

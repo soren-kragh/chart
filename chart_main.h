@@ -80,10 +80,6 @@ public:
   // specify a location outside the chart area.
   void SetLegendPos( Pos pos );
 
-  // Specify if line style legends are shown with an outline around the legend
-  // text, or with a small line segment in front of the legend text.
-  void SetLegendOutline( bool outline );
-
   // Legend text size scaling factor.
   void SetLegendSize( float size );
 

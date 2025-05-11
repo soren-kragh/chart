@@ -139,11 +139,6 @@ void Main::SetLegendPos( Pos pos )
   legend_obj->pos = pos;
 }
 
-void Main::SetLegendOutline( bool outline )
-{
-  legend_obj->outline = outline;
-}
-
 void Main::SetLegendSize( float size )
 {
   legend_obj->size = size;
