@@ -228,6 +228,9 @@ private:
   uint32_t line_color_same_cnt = 0;
   uint32_t fill_color_same_cnt = 0;
 
+  // Used by Chart::Legend
+  Series* same_legend_series = nullptr;
+
   std::vector< SVG::Color > color_list;
   SVG::Color line_color;
   SVG::U line_width;
@@ -270,6 +273,9 @@ private:
 
   // Compute derived marker_* variables and other visual properties.
   void DetermineVisualProperties( void );
+
+  // Returns true if the two given series have the same legend.
+  static bool SameLegend( Series* s1, Series* s2 );
 
   // Build marker based on marker_* variables.
   void BuildMarker( SVG::Group* g, const MarkerDims& m, SVG::Point p );

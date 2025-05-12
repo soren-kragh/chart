@@ -1031,14 +1031,6 @@ void Main::SeriesPrepare(
   for ( auto series : series_list ) {
     series->id = series_id++;
 
-    if ( !series->name.empty() ) {
-      if ( series->shared_legend ) {
-        ensemble->legend_obj->Add( series );
-      } else {
-        legend_obj->Add( series );
-      }
-    }
-
     series->chart_area.min.x = 0;
     series->chart_area.max.x = chart_w;
     series->chart_area.min.y = 0;
@@ -1098,6 +1090,14 @@ void Main::SeriesPrepare(
     }
 
     series->DetermineVisualProperties();
+
+    if ( !series->name.empty() ) {
+      if ( series->shared_legend ) {
+        ensemble->legend_obj->Add( series );
+      } else {
+        legend_obj->Add( series );
+      }
+    }
   }
   bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
 

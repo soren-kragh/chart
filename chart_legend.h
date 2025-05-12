@@ -24,6 +24,7 @@ class Legend
 {
   friend class Ensemble;
   friend class Main;
+  friend class HTML;
 
 public:
 

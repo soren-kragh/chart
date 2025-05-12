@@ -32,7 +32,15 @@ Legend::~Legend( void )
 
 void Legend::Add( Series* series )
 {
+  for ( Series* s : series_list ) {
+    if ( Series::SameLegend( s, series ) ) {
+      series->same_legend_series = s->same_legend_series;
+      s->same_legend_series = series;
+      return;
+    }
+  }
   series_list.push_back( series );
+  return;
 }
 
 uint32_t Legend::Cnt( void )
@@ -292,7 +300,9 @@ void Legend::BuildLegends(
       bb.min.y = py - legend_dims.sy;
       bb.max.x = px + legend_dims.rx + legend_dims.sx;
       bb.max.y = py;
-      ensemble->html_db->LegendPos( series, bb );
+      for ( Series* s = series; s != nullptr; s = s->same_legend_series ) {
+        ensemble->html_db->LegendPos( s, bb );
+      }
     }
 
     U line_w = series->line_width;
