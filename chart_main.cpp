@@ -32,9 +32,6 @@ Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
   this->svg_g = svg_g;
   chart_area_color.Clear();
   frame_color.Undef();
-  width_adj    = 1.0;
-  height_adj   = 1.0;
-  baseline_adj = 1.0;
   title_pos_x  = Pos::Center;
   title_pos_y  = Pos::Top;
   title_inside = false;
@@ -78,15 +75,6 @@ void Main::SetChartArea( SVG::U width, SVG::U height )
 void Main::SetChartBox( bool chart_box )
 {
   this->chart_box = chart_box;
-}
-
-void Main::SetLetterSpacing(
-  float width_adj, float height_adj, float baseline_adj
-)
-{
-  this->width_adj    = width_adj;
-  this->height_adj   = height_adj;
-  this->baseline_adj = baseline_adj;
 }
 
 void Main::SetTitle( const std::string& txt )
@@ -1477,10 +1465,6 @@ void Main::Build( void )
     TextColor()->Set( ensemble->ForegroundColor() );
   }
 
-  svg_g->Attr()->TextFont()
-    ->SetWidthFactor( width_adj )
-    ->SetHeightFactor( height_adj )
-    ->SetBaselineFactor( baseline_adj );
   svg_g->Attr()->TextColor()->Set( TextColor() );
   svg_g->Attr()->LineColor()->Clear();
   svg_g->Add( new Rect( 0, 0, chart_w, chart_h ) );

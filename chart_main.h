@@ -54,10 +54,6 @@ public:
   // Specify alternative background color of framed title and legend frames.
   SVG::Color* FrameColor( void ) { return &frame_color; }
 
-  void SetLetterSpacing(
-    float width_adj, float height_adj = 1.0, float baseline_adj = 1.0
-  );
-
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
   void SetSubSubTitle( const std::string& txt );
@@ -154,10 +150,6 @@ private:
   SVG::Color axis_color;
   SVG::Color text_color;
   SVG::Color frame_color;
-
-  float width_adj;
-  float height_adj;
-  float baseline_adj;
 
   std::string title;
   std::string sub_title;

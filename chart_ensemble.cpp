@@ -95,6 +95,17 @@ bool Ensemble::NewChart(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::SetLetterSpacing(
+  float width_adj, float height_adj, float baseline_adj
+)
+{
+  this->width_adj    = width_adj;
+  this->height_adj   = height_adj;
+  this->baseline_adj = baseline_adj;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Ensemble::SetHeading( const std::string& txt )
 {
   heading = txt;
@@ -724,6 +735,10 @@ std::string Ensemble::Build( void )
   top_g->Attr()->TextFont()->SetFamily(
     "Noto Mono,Lucida Console,Courier New,monospace"
   );
+  top_g->Attr()->TextFont()
+    ->SetWidthFactor( width_adj )
+    ->SetHeightFactor( height_adj )
+    ->SetBaselineFactor( baseline_adj );
 
   top_g->Attr()->TextColor()->Set( ForegroundColor() );
   top_g->Attr()->LineColor()->Set( ForegroundColor() );

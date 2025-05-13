@@ -40,6 +40,10 @@ public:
     Pos align_ver = Pos::Auto
   );
 
+  void SetLetterSpacing(
+    float width_adj, float height_adj = 1.0, float baseline_adj = 1.0
+  );
+
   void EnableHTML( bool enable = true ) { enable_html = enable; }
 
   void SetHeading( const std::string& txt );
@@ -90,6 +94,10 @@ private:
 
   bool enable_html = false;
   HTML* html_db = nullptr;
+
+  float width_adj    = 1.0;
+  float height_adj   = 1.0;
+  float baseline_adj = 1.0;
 
   SVG::Color foreground_color;
   SVG::Color background_color;
