@@ -87,4 +87,8 @@ namespace Chart {
     SVG::Color* color, SVG::Color* bg_color, float min_visibility = 0.3
   );
 
+  // Detect if the given string most likely contains only normal width UTF-8
+  // characters.
+  bool NormalWidthUTF8( const std::string& s );
+
 }

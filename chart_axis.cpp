@@ -1149,13 +1149,11 @@ void Axis::BuildCategories(
   SVG::Group* minor_g, SVG::Group* major_g, SVG::Group* cat_g
 )
 {
-  bool ascii_letters_only = true;
+  bool normal_width = true;
   for ( const auto& cat : category_list ) {
-    for ( const auto c : cat ) {
-      if ( uint8_t( c ) >= 0x80 ) ascii_letters_only = false;
-    }
+    normal_width = normal_width && NormalWidthUTF8( cat );
   }
-  if ( ascii_letters_only ) {
+  if ( normal_width ) {
     cat_g->Attr()->TextFont()
       ->SetWidthFactor( 1.0 )
       ->SetHeightFactor( 1.0 )
