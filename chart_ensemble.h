@@ -15,6 +15,7 @@
 
 #include <chart_common.h>
 #include <chart_main.h>
+#include <chart_grid.h>
 
 namespace Chart {
 
@@ -175,11 +176,6 @@ private:
   void BuildHeading( void );
   void BuildFootnotes( void );
   void BuildBackground( void );
-
-public:
-  void DisplayGridSpace( std::vector< space_t >& space_list );
-  void RenumberGridSpace( std::vector< space_t >& space_list );
-  void Test( void );
 
 };
 
