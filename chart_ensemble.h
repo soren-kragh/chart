@@ -30,9 +30,9 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
-  bool Empty( void ) { return element_list.empty(); }
+  bool Empty( void ) { return grid.element_list.empty(); }
 
-  Main* LastChart( void ) { return element_list.back().chart; }
+  Main* LastChart( void ) { return grid.element_list.back().chart; }
 
   bool NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
@@ -110,44 +110,9 @@ private:
 
   SVG::U max_area_pad = 0;
 
-  uint32_t grid_max_x = 0;
-  uint32_t grid_max_y = 0;
-
-  struct element_t {
-    Main* chart = nullptr;
-    SVG::BoundaryBox full_bb;
-    SVG::BoundaryBox area_bb;
-    uint32_t grid_x1 = 0;
-    uint32_t grid_y1 = 0;
-    uint32_t grid_x2 = 0;
-    uint32_t grid_y2 = 0;
-    bool anchor_x_defined = false;
-    bool anchor_y_defined = false;
-    SVG::AnchorX anchor_x = SVG::AnchorX::Mid;
-    SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
-  };
-
-  struct edge_t {
-    SVG::U coor;        // Coordinate of this core chart area edge
-    SVG::U adj;         // Iterative adjustment to coor
-    SVG::U pad;         // Padding caused by decorations outside core chart area
-    bool pad_use;
-  };
-
-  struct space_t {
-    edge_t e1;
-    edge_t e2;
-  };
-
-  std::vector< element_t > element_list;
-
-  std::vector< space_t > space_list_x;
-  std::vector< space_t > space_list_y;
+  Grid grid;
 
   void InitGrid( void );
-
-  void SolveGridSpace( std::vector< space_t >& space_list );
-
   void ComputeGrid( void );
 
   std::string heading;

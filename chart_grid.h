@@ -26,6 +26,9 @@ public:
   Grid( void );
   ~Grid( void );
 
+  uint32_t max_x = 0;
+  uint32_t max_y = 0;
+
   struct element_t {
     Main* chart = nullptr;
     SVG::BoundaryBox full_bb;
@@ -57,6 +60,7 @@ public:
   std::vector< space_t > space_list_x;
   std::vector< space_t > space_list_y;
 
+  void Init( void );
   void SolveSpace( std::vector< space_t >& space_list );
 
   void DisplayGridSpace( std::vector< space_t >& space_list );

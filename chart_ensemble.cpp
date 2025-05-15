@@ -35,7 +35,7 @@ Ensemble::Ensemble( void )
 
 Ensemble::~Ensemble( void )
 {
-  for ( auto& elem : element_list ) {
+  for ( auto& elem : grid.element_list ) {
     delete elem.chart;
   }
   delete legend_obj;
@@ -52,7 +52,7 @@ bool Ensemble::NewChart(
   Pos align_ver
 )
 {
-  for ( auto& elem : element_list ) {
+  for ( auto& elem : grid.element_list ) {
     if (
       !(grid_col1 < elem.grid_x1 && grid_col2 < elem.grid_x1) &&
       !(grid_col1 > elem.grid_x2 && grid_col2 > elem.grid_x2) &&
@@ -62,7 +62,7 @@ bool Ensemble::NewChart(
       return false;
   }
 
-  element_t elem;
+  Grid::element_t elem;
   elem.chart = new Main( this, top_g->AddNewGroup() );
   html_db->NewChart( elem.chart );
 
@@ -88,7 +88,7 @@ bool Ensemble::NewChart(
     elem.anchor_y_defined = true;
   }
 
-  element_list.push_back( elem );
+  grid.element_list.push_back( elem );
 
   return true;
 }
@@ -167,14 +167,9 @@ void Ensemble::SetFootnoteLine( bool footnote_line )
 
 void Ensemble::InitGrid( void )
 {
-  for ( auto& elem : element_list ) {
-    grid_max_x = std::max( grid_max_x, elem.grid_x2 );
-    grid_max_y = std::max( grid_max_y, elem.grid_y2 );
-  }
-  space_t space;
-  space_list_x.resize( grid_max_x + 1, space );
-  space_list_y.resize( grid_max_y + 1, space );
-  for ( auto& elem : element_list ) {
+  grid.Init();
+
+  for ( auto& elem : grid.element_list ) {
     elem.area_bb.Update( 0, 0 );
     elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
 
@@ -190,23 +185,23 @@ void Ensemble::InitGrid( void )
 
     // Convert row location to Y grid coordinates.
     std::swap( elem.grid_y1, elem.grid_y2 );
-    elem.grid_y1 = grid_max_y - elem.grid_y1;
-    elem.grid_y2 = grid_max_y - elem.grid_y2;
+    elem.grid_y1 = grid.max_y - elem.grid_y1;
+    elem.grid_y2 = grid.max_y - elem.grid_y2;
 
     if ( !elem.anchor_x_defined ) {
-      if ( elem.grid_x1 == 0 && elem.grid_x2 < grid_max_x ) {
+      if ( elem.grid_x1 == 0 && elem.grid_x2 < grid.max_x ) {
         elem.anchor_x = SVG::AnchorX::Min;
       }
-      if ( elem.grid_x1 > 0 && elem.grid_x2 == grid_max_x ) {
+      if ( elem.grid_x1 > 0 && elem.grid_x2 == grid.max_x ) {
         elem.anchor_x = SVG::AnchorX::Max;
       }
     }
 
     if ( !elem.anchor_y_defined ) {
-      if ( elem.grid_y1 == 0 && elem.grid_y2 < grid_max_y ) {
+      if ( elem.grid_y1 == 0 && elem.grid_y2 < grid.max_y ) {
         elem.anchor_y = SVG::AnchorY::Min;
       }
-      if ( elem.grid_y1 > 0 && elem.grid_y2 == grid_max_y ) {
+      if ( elem.grid_y1 > 0 && elem.grid_y2 == grid.max_y ) {
         elem.anchor_y = SVG::AnchorY::Max;
       }
       elem.anchor_y_defined = true;
@@ -216,248 +211,11 @@ void Ensemble::InitGrid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::SolveGridSpace( std::vector< space_t >& space_list )
-{
-  bool is_x = &space_list == &space_list_x;
-
-  // Create element sorting based on grid position.
-  std::vector< size_t > sorted_indices( element_list.size() );
-  std::iota( sorted_indices.begin(), sorted_indices.end(), 0 );
-  std::sort(
-    sorted_indices.begin(), sorted_indices.end(),
-    [&]( size_t a_index, size_t b_index ) {
-      const auto& a = element_list[ a_index ];
-      const auto& b = element_list[ b_index ];
-      uint32_t a1 = is_x ? a.grid_x1 : a.grid_y1;
-      uint32_t a2 = is_x ? a.grid_x2 : a.grid_y2;
-      uint32_t b1 = is_x ? b.grid_x1 : b.grid_y1;
-      uint32_t b2 = is_x ? b.grid_x2 : b.grid_y2;
-      return (a1 != b1) ? (a1 < b1) : (a2 < b2);
-    }
-  );
-
-  auto update_pad = [&]( void ) {
-    for ( auto& elem : element_list ) {
-      U f1 = is_x ? elem.full_bb.min.x : elem.full_bb.min.y;
-      U f2 = is_x ? elem.full_bb.max.x : elem.full_bb.max.y;
-      U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
-      U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
-      uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
-      uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
-
-      U ar = (a2 - a1) / 2;
-
-      U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
-      if (
-        is_x
-        ? (elem.anchor_x == SVG::AnchorX::Min)
-        : (elem.anchor_y == SVG::AnchorY::Min)
-      ) {
-        c = space_list[ g1 ].e1.coor + ar;
-      }
-      if (
-        is_x
-        ? (elem.anchor_x == SVG::AnchorX::Max)
-        : (elem.anchor_y == SVG::AnchorY::Max)
-      ) {
-        c = space_list[ g2 ].e2.coor - ar;
-      }
-
-      space_list[ g1 ].e1.pad =
-        std::max(
-          +space_list[ g1 ].e1.pad,
-          space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
-        );
-      space_list[ g2 ].e2.pad =
-        std::max(
-          +space_list[ g2 ].e2.pad,
-          (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
-        );
-    }
-  };
-
-  for ( auto& s : space_list ) {
-    s.e1.coor    = 0;
-    s.e1.pad     = 0;
-    s.e1.pad_use = 0;
-    s.e2.coor    = 0;
-    s.e2.pad     = 0;
-    s.e2.pad_use = 0;
-  }
-
-  bool solved = false;
-
-  uint32_t tot_iter = 0;
-
-  uint32_t max_trial = 5;
-  uint32_t cur_trial = 0;
-
-  while ( !solved && cur_trial < max_trial ) {
-    cur_trial++;
-
-    if ( cur_trial == max_trial ) {
-      // At last trial, just include all padding in the solver such that they
-      // can have a chance to take some effect before we bail out.
-      for ( auto& s : space_list ) {
-        s.e1.pad_use = true;
-        s.e2.pad_use = true;
-      }
-    }
-
-    // Initial placement (not really needed, but gives much faster convergence
-    // in some cases).
-    {
-      for ( auto i : sorted_indices ) {
-        auto& elem = element_list[ i ];
-
-        U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
-        U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
-        uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
-        uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
-
-        space_list[ g2 ].e2.coor =
-          std::max(
-            +space_list[ g2 ].e2.coor,
-            space_list[ g1 ].e1.coor + (a2 - a1)
-          );
-
-        U coor = space_list[ g2 ].e2.coor;
-        for ( uint32_t g = g2 + 1; g < space_list.size(); g++ ) {
-          space_list[ g ].e1.coor = std::max( space_list[ g ].e1.coor, coor );
-          coor = space_list[ g ].e1.coor;
-          space_list[ g ].e2.coor = std::max( space_list[ g ].e2.coor, coor );
-          coor = space_list[ g ].e2.coor;
-        }
-      }
-
-      for ( auto& s : space_list ) {
-        s.e1.pad = 0;
-        s.e2.pad = 0;
-      }
-      update_pad();
-
-      U coor = -num_hi;
-      for ( auto& s : space_list ) {
-        U aw = s.e2.coor - s.e1.coor;
-        s.e1.coor =
-          std::max( +s.e1.coor, coor + (s.e1.pad_use ? +s.e1.pad : 0) );
-        s.e2.coor = s.e1.coor + aw;
-        coor = s.e2.coor + (s.e2.pad_use ? +s.e2.pad : 0);
-      }
-    }
-
-/*
-    printf( "Trial %1d initial placement:\n", cur_trial );
-    RenumberGridSpace( space_list );
-    DisplayGridSpace( space_list );
-*/
-
-    uint32_t max_iter = 100000;
-    uint32_t cur_iter = 0;
-
-    while ( !solved && cur_iter < max_iter ) {
-      cur_iter++;
-      tot_iter++;
-
-      for ( auto& s : space_list ) {
-        s.e1.pad = 0;
-        s.e2.pad = 0;
-        s.e1.adj = (s.e2.coor - s.e1.coor) / 2;
-        s.e2.adj = (s.e1.coor - s.e2.coor) / 2;
-      }
-
-      update_pad();
-
-      for ( auto& elem : element_list ) {
-        U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
-        U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
-        uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
-        uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
-
-        U aw = a2 - a1;
-        U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
-
-        space_list[ g1 ].e1.adj =
-          std::min( +space_list[ g1 ].e1.adj, (sw - aw) / 2 );
-        space_list[ g2 ].e2.adj =
-          std::max( +space_list[ g2 ].e2.adj, (aw - sw) / 2 );
-      }
-
-      {
-        edge_t* e1 = nullptr;
-        edge_t* e2 = nullptr;
-        for ( auto& s : space_list ) {
-          e1 = &s.e1;
-          if ( e2 ) {
-            U overlap =
-              (e2->coor + (e2->pad_use ? +e2->pad : 0)) -
-              (e1->coor - (e1->pad_use ? +e1->pad : 0));
-            e2->adj -= overlap / 2;
-            e1->adj += overlap / 2;
-          }
-          e2 = &s.e2;
-        }
-      }
-
-      U acu_adj = 0;
-      for ( auto& s : space_list ) {
-        s.e1.coor += s.e1.adj * 0.9;
-        s.e2.coor += s.e2.adj * 0.9;
-        acu_adj += std::abs( s.e1.adj );
-        acu_adj += std::abs( s.e2.adj );
-      }
-
-      U converge_limit = 1e-3;
-
-/*
-      printf(
-        "-    %4d    %10d    %12.6f    %12.10f\n",
-        cur_trial, tot_iter, +acu_adj, +converge_limit
-      );
-*/
-
-      // To get alignment of the core chart areas, we initially do not take
-      // padding into account. Therefore, when we have converged, check if the
-      // padding collides and if so we have to take padding into consideration
-      // and iterate more.
-      solved = acu_adj < converge_limit;
-      if ( solved || cur_iter == max_iter ) {
-        edge_t* e1 = nullptr;
-        edge_t* e2 = nullptr;
-        for ( auto& s : space_list ) {
-          e1 = &s.e1;
-          if ( e2 ) {
-            U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
-            if ( overlap > 4 * converge_limit ) {
-              e2->pad_use = true;
-              e1->pad_use = true;
-              solved = false;
-            }
-          }
-          e2 = &s.e2;
-        }
-        break;
-      }
-
-    }
-
-/*
-    printf( "Trial %1d final placement:\n", cur_trial );
-    RenumberGridSpace( space_list );
-    DisplayGridSpace( space_list );
-*/
-  }
-
-  return;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 void Ensemble::ComputeGrid( void )
 {
   InitGrid();
-  SolveGridSpace( space_list_x );
-  SolveGridSpace( space_list_y );
+  grid.SolveSpace( grid.space_list_x );
+  grid.SolveSpace( grid.space_list_y );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -465,7 +223,7 @@ void Ensemble::ComputeGrid( void )
 SVG::BoundaryBox Ensemble::TopBB( void )
 {
   BoundaryBox bb = top_g->GetBB();
-  for ( auto& elem : element_list ) {
+  for ( auto& elem : grid.element_list ) {
     bb.Update(
       elem.area_bb.min.x + elem.chart->g_dx - max_area_pad,
       elem.area_bb.min.y + elem.chart->g_dy - max_area_pad
@@ -684,7 +442,7 @@ void Ensemble::BuildBackground( void )
     bb.max.y += delta;
 
     if ( enable_html ) {
-      for ( auto& elem : element_list ) {
+      for ( auto& elem : grid.element_list ) {
         bb.Update(
           elem.area_bb.min.x + elem.chart->g_dx - snap_point_radius,
           elem.area_bb.min.y + elem.chart->g_dy - snap_point_radius
@@ -745,7 +503,7 @@ std::string Ensemble::Build( void )
   top_g->Attr()->FillColor()->Set( BackgroundColor() );
 
   max_area_pad = 0;
-  for ( auto& elem : element_list ) {
+  for ( auto& elem : grid.element_list ) {
     elem.chart->Build();
     U area_pad = elem.chart->GetAreaPadding();
     max_area_pad = std::max( max_area_pad, area_pad );
@@ -753,11 +511,11 @@ std::string Ensemble::Build( void )
 
   ComputeGrid();
 
-  for ( auto& elem : element_list ) {
-    U gx1 = space_list_x[ elem.grid_x1 ].e1.coor;
-    U gx2 = space_list_x[ elem.grid_x2 ].e2.coor;
-    U gy1 = space_list_y[ elem.grid_y1 ].e1.coor;
-    U gy2 = space_list_y[ elem.grid_y2 ].e2.coor;
+  for ( auto& elem : grid.element_list ) {
+    U gx1 = grid.space_list_x[ elem.grid_x1 ].e1.coor;
+    U gx2 = grid.space_list_x[ elem.grid_x2 ].e2.coor;
+    U gy1 = grid.space_list_y[ elem.grid_y1 ].e1.coor;
+    U gy2 = grid.space_list_y[ elem.grid_y2 ].e2.coor;
 
     U mx = (gx1 + gx2) / 2 - (elem.area_bb.min.x + elem.area_bb.max.x) / 2;
     U my = (gy1 + gy2) / 2 - (elem.area_bb.min.y + elem.area_bb.max.y) / 2;
@@ -788,11 +546,11 @@ std::string Ensemble::Build( void )
     g->Attr()->FillColor()->Set( ColorName::yellow );
     g->Attr()->FillColor()->SetOpacity( 0.2 );
 
-    for ( auto& s : space_list_x ) {
+    for ( auto& s : grid.space_list_x ) {
       g->Add( new Rect( s.e1.coor, bb.min.y, s.e2.coor, bb.max.y ) );
     }
 
-    for ( auto& s : space_list_y ) {
+    for ( auto& s : grid.space_list_y ) {
       g->Add( new Rect( bb.min.x, s.e1.coor, bb.max.x, s.e2.coor ) );
     }
   }

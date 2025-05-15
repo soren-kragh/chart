@@ -31,6 +31,19 @@ Grid::~Grid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Grid::Init( void )
+{
+  for ( auto& elem : element_list ) {
+    max_x = std::max( max_x, elem.grid_x2 );
+    max_y = std::max( max_y, elem.grid_y2 );
+  }
+  space_t space;
+  space_list_x.resize( max_x + 1, space );
+  space_list_y.resize( max_y + 1, space );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Grid::SolveSpace( std::vector< space_t >& space_list )
 {
   bool is_x = &space_list == &space_list_x;
