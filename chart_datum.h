@@ -19,7 +19,6 @@ namespace Chart {
 
 class Datum
 {
-
 public:
 
   Datum() {}

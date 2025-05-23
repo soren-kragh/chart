@@ -21,10 +21,6 @@ namespace Chart {
 
 class Ensemble
 {
-  friend class Main;
-  friend class Legend;
-  friend class HTML;
-
 public:
 
   Ensemble( void );
@@ -87,8 +83,6 @@ public:
   void SetFootnoteSize( float size ) { footnote_size = size; }
 
   std::string Build( void );
-
-private:
 
   SVG::Canvas* canvas;
   SVG::Group* top_g;

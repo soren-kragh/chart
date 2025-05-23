@@ -25,7 +25,6 @@ class Series;
 
 class HTML
 {
-
 public:
 
   HTML( Ensemble* ensemble ) : ensemble( ensemble ) {}
@@ -57,8 +56,6 @@ public:
   );
 
   std::string GenHTML( SVG::Canvas* canvas );
-
-private:
 
   Ensemble* ensemble = nullptr;
   std::vector< Main* > main_list;

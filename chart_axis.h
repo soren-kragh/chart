@@ -21,10 +21,6 @@ namespace Chart {
 
 class Axis
 {
-  friend class Main;
-  friend class Series;
-  friend class Tag;
-
 public:
 
   Axis( bool is_x_axis, Label* label_db );
@@ -74,8 +70,6 @@ public:
 
   // Label size scaling factor.
   void SetLabelSize( float size ) { label_size = size; }
-
-private:
 
   // Should axis be shown.
   bool show;

@@ -22,15 +22,10 @@ class Series;
 
 class Tag
 {
-  friend class Axis;
-  friend class Series;
-
 public:
 
   Tag( void );
   ~Tag( void );
-
-private:
 
   std::vector< SVG::BoundaryBox > recorded_tags;
 

@@ -25,12 +25,6 @@ class Axis;
 
 class Series
 {
-  friend class Main;
-  friend class Axis;
-  friend class Tag;
-  friend class Legend;
-  friend class HTML;
-
 public:
 
   Series( Main* main, SeriesType type );
@@ -106,8 +100,6 @@ public:
   );
 
   uint32_t Size( void ) { return datum_list.size(); }
-
-private:
 
   Main* main = nullptr;
 

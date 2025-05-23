@@ -20,17 +20,10 @@ namespace Chart {
 
 class Label
 {
-  friend class Ensemble;
-  friend class Main;
-  friend class Axis;
-  friend class Legend;
-
 public:
 
   Label( void );
   ~Label( void );
-
-private:
 
   struct Entry {
     SVG::Object* link;

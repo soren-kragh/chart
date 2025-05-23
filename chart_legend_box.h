@@ -19,10 +19,7 @@ namespace Chart {
 
 class LegendBox
 {
-  friend class Main;
-  friend class Series;
-
-private:
+public:
 
   SVG::BoundaryBox bb;
 

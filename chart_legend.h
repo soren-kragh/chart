@@ -22,16 +22,10 @@ namespace Chart {
 
 class Legend
 {
-  friend class Ensemble;
-  friend class Main;
-  friend class HTML;
-
 public:
 
   Legend( Ensemble* ensemble );
   ~Legend( void );
-
-private:
 
   Ensemble* ensemble;
 

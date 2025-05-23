@@ -30,9 +30,6 @@ class Ensemble;
 
 class Main
 {
-  friend class HTML;
-  friend class Ensemble;
-
 public:
 
   Main( Ensemble* ensemble, SVG::Group* svg_g );
@@ -97,8 +94,6 @@ public:
   void AddCategory( const std::string& category );
 
   void Build( void );
-
-private:
 
   Ensemble* ensemble = nullptr;
   SVG::Group* svg_g = nullptr;
