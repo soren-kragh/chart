@@ -11,21 +11,28 @@
 //  permit persons to whom the Software is furnished to do so.
 //
 
+#include <chart_ensemble.h>
 #include <chart_html.h>
-#include <chart_main.h>
 
 using namespace SVG;
 using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void HTML::NewChart( Main* main )
+{
+  main_list.push_back( main );
+}
+
+//------------------------------------------------------------------------------
+
 void HTML::DefAxisX(
-  int n, Axis* axis, double val1, double val2,
+  Main* main, int n, Axis* axis, double val1, double val2,
   NumberFormat number_format,
   bool number_sign, bool logarithmic, bool is_cat
 )
 {
-  x_axis[ n ] = {
+  main->html.x_axis[ n ] = {
     .axis          = axis,
     .is_cat        = is_cat,
     .number_format = number_format,
@@ -37,12 +44,12 @@ void HTML::DefAxisX(
 }
 
 void HTML::DefAxisY(
-  int n, Axis* axis, double val1, double val2,
+  Main* main, int n, Axis* axis, double val1, double val2,
   NumberFormat number_format,
   bool number_sign, bool logarithmic, bool is_cat
 )
 {
-  y_axis[ n ] = {
+  main->html.y_axis[ n ] = {
     .axis          = axis,
     .is_cat        = is_cat,
     .number_format = number_format,
@@ -53,33 +60,43 @@ void HTML::DefAxisY(
   };
 }
 
-////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 
 void HTML::LegendPos( Series* series, const SVG::BoundaryBox& bb )
 {
   series_legend_map[ series ] = bb;
 }
 
-void HTML::MoveLegends( SVG::U dx, SVG::U dy )
+void HTML::MoveLegend( Series* series, SVG::U dx, SVG::U dy )
 {
-  for ( auto series : main->series_list ) {
-    auto it = series_legend_map.find( series );
-    if ( it == series_legend_map.end() ) continue;
-    it->second.min.x += dx;
-    it->second.min.y += dy;
-    it->second.max.x += dx;
-    it->second.max.y += dy;
+  for ( Series* s = series; s != nullptr; s = s->same_legend_series ) {
+    auto it = series_legend_map.find( s );
+    if ( it != series_legend_map.end() ) {
+      it->second.min.x += dx;
+      it->second.min.y += dy;
+      it->second.max.x += dx;
+      it->second.max.y += dy;
+    }
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+void HTML::MoveLegends( Main* main, SVG::U dx, SVG::U dy )
+{
+  for ( auto series : main->legend_obj->series_list ) {
+    MoveLegend( series, dx, dy );
+  }
+}
+
+//------------------------------------------------------------------------------
 
 void HTML::AddSnapPoint(
   Series* series,
   SVG::Point p, std::string_view tag_x, std::string_view tag_y
 )
 {
-  snap_points.push_back({ series->id, 0, p, tag_x, tag_y });
+  series->main->html.snap_points.push_back(
+    { series->id, 0, p, tag_x, tag_y }
+  );
   series->has_snap = true;
 }
 
@@ -88,7 +105,9 @@ void HTML::AddSnapPoint(
   SVG::Point p, uint32_t cat_idx, std::string_view tag_y
 )
 {
-  snap_points.push_back({ series->id, cat_idx, p, "", tag_y });
+  series->main->html.snap_points.push_back(
+    { series->id, cat_idx, p, "", tag_y }
+  );
   series->has_snap = true;
 }
 
@@ -114,74 +133,26 @@ std::string quoteJS( std::string_view s ) {
 
 //------------------------------------------------------------------------------
 
-std::string HTML::GenHTML( SVG::Canvas* canvas )
+void HTML::GenChartData( Main* main, std::ostringstream& oss )
 {
+  BoundaryBox chart_bb = main->GetGroup()->GetBB();
+
   BoundaryBox area_bb;
   // Standard SVG coordinates (Y direction down) given here.
-  area_bb.min.x = 0;
-  area_bb.min.y = -main->chart_h;
-  area_bb.max.x = main->chart_w;
-  area_bb.max.y = 0;
-
-  BoundaryBox chart_bb = canvas->TopGroup()->GetBB();
-  U width  = chart_bb.max.x - chart_bb.min.x;
-  U height = chart_bb.max.y - chart_bb.min.y;
+  area_bb.min.x = main->g_dx;
+  area_bb.min.y = -(main->g_dy + main->chart_h);
+  area_bb.max.x = main->g_dx + main->chart_w;
+  area_bb.max.y = -(main->g_dy);
 
   Color bg_color;
   if ( !main->ChartAreaColor()->IsClear() ) {
     bg_color.Set( main->ChartAreaColor() );
   } else {
-    bg_color.Set( main->BackgroundColor() );
+    bg_color.Set( main->ensemble->BackgroundColor() );
   }
   if ( bg_color.IsClear() ) bg_color.Set( ColorName::white );
 
-  std::ostringstream oss;
-  oss << std::boolalpha;
-
-  #include <chart_html_part1.h>
-
-  oss << "<div style=\"";
-  oss << "width:" << width.SVG( false ) << "px;";
-  oss << "height:" << height.SVG( false ) << "px;";
-  oss << "position:relative;margin:0 auto;\">\n";
-
-  oss << canvas->GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgChart\"" );
-
-  {
-    Canvas cursor_canvas;
-    Group* g = cursor_canvas.TopGroup();
-    g->Add( new Rect( chart_bb.min, chart_bb.max ) );
-    g->Attr()->SetLineWidth( 0 );
-    g->Attr()->LineColor()->Clear();
-    g->Attr()->FillColor()->Clear();
-    oss << cursor_canvas.GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgCursor\"" );
-  }
-
-  {
-    Canvas snap_canvas;
-    Group* g = snap_canvas.TopGroup();
-    g->Add( new Rect( chart_bb.min, chart_bb.max ) );
-    g->Attr()->SetLineWidth( 0 );
-    g->Attr()->LineColor()->Clear();
-    g->Attr()->FillColor()->Clear();
-    g = g->AddNewGroup();
-    uint32_t id = 0;
-    for ( const auto& sp : snap_points ) {
-      std::ostringstream oss;
-      oss << "id=\"" << id << '"';
-      g->Add( new Circle( sp.p, snap_point_radius ) );
-      g->Last()->Attr()->AddCustom( oss.str() );
-      ++id;
-    }
-    g->Attr()->AddCustom( "fill=\"transparent\" style=\"pointer-events: all;\" id=\"snapPoints\"" );
-    oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
-  }
-
-  oss << "</div>\n";
-
-  oss << "\n<script>\n\n";
-
-  oss << "const chart = {" << '\n';
+  oss << "{\n";
 
   bool hide_mouse_cursor = true;
   {
@@ -235,7 +206,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   oss << "y2:" << chart_bb.max.y.SVG( false ) << "},\n";
 
   oss << "axisX : [";
-  for ( auto a : x_axis ) {
+  for ( auto a : main->html.x_axis ) {
     oss << "{";
     oss << "show:" << (a.axis != nullptr) << ',';
     if ( a.axis ) {
@@ -259,7 +230,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   oss << "],\n";
 
   oss << "axisY : [";
-  for ( auto a : y_axis ) {
+  for ( auto a : main->html.y_axis ) {
     oss << "{";
     oss << "show:" << (a.axis != nullptr) << ',';
     if ( a.axis ) {
@@ -282,9 +253,9 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   }
   oss << "],\n";
 
-  oss << "axisSwap : " << axis_swap << ",\n";
+  oss << "axisSwap : " << main->html.axis_swap << ",\n";
   oss << "hideMouseCursor : " << hide_mouse_cursor << ",\n";
-  oss << "inLine : " << all_inline << ",\n";
+  oss << "inLine : " << main->html.all_inline << ",\n";
 
   if ( !main->category_list.empty() ) {
     oss << "categories : [\n";
@@ -316,6 +287,8 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     oss << "{";
     if ( series_legend_map.count( series ) > 0 ) {
       BoundaryBox bb = series_legend_map[ series ];
+      bb.min.x += main->g_dx; bb.min.y += main->g_dy;
+      bb.max.x += main->g_dx; bb.max.y += main->g_dy;
       std::swap( bb.min.y, bb.max.y );
       bb.min.y = -bb.min.y;
       bb.max.y = -bb.max.y;
@@ -328,10 +301,10 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     int idx_x = -1;
     int idx_y = -1;
     for ( int i = 0; i < 2; i++ ) {
-     if ( series->axis_x == x_axis[ i ].axis ) idx_x = i;
-     if ( series->axis_y == x_axis[ i ].axis ) idx_x = i;
-     if ( series->axis_x == y_axis[ i ].axis ) idx_y = i;
-     if ( series->axis_y == y_axis[ i ].axis ) idx_y = i;
+     if ( series->axis_x == main->html.x_axis[ i ].axis ) idx_x = i;
+     if ( series->axis_y == main->html.x_axis[ i ].axis ) idx_x = i;
+     if ( series->axis_x == main->html.y_axis[ i ].axis ) idx_y = i;
+     if ( series->axis_y == main->html.y_axis[ i ].axis ) idx_y = i;
     }
     if ( idx_x >= 0 ) {
       oss << "axisX:" << idx_x << ',';
@@ -381,7 +354,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   oss << "],\n";
 
   oss << "snapPoints : [\n";
-  for ( const auto& sp : snap_points ) {
+  for ( const auto& sp : main->html.snap_points ) {
     oss << "{s:" << sp.series_id << ',';
     if ( sp.tag_x.empty() ) {
       oss << "x:" << sp.cat_idx << ',';
@@ -392,7 +365,89 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   }
   oss << "],\n";
 
-  oss << "};" << '\n';
+  oss << "},\n";
+
+  return;
+}
+
+//------------------------------------------------------------------------------
+
+std::string HTML::GenHTML( SVG::Canvas* canvas )
+{
+  std::ostringstream oss;
+  oss << std::boolalpha;
+
+  #include <chart_html_part1.h>
+
+  BoundaryBox ensemble_bb = canvas->TopGroup()->GetBB();
+
+  {
+    U ensemble_w = ensemble_bb.max.x - ensemble_bb.min.x;
+    U ensemble_h = ensemble_bb.max.y - ensemble_bb.min.y;
+    oss << "<div style=\"";
+    oss << "width:" << ensemble_w.SVG( false ) << "px;";
+    oss << "height:" << ensemble_h.SVG( false ) << "px;";
+    oss << "position:relative;margin:0 auto;\">\n";
+  }
+
+  oss << canvas->GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgChart\"" );
+
+  {
+    Canvas cursor_canvas;
+    Group* g = cursor_canvas.TopGroup();
+    g->Add( new Rect( ensemble_bb.min, ensemble_bb.max ) );
+    g->Attr()->SetLineWidth( 0 );
+    g->Attr()->LineColor()->Clear();
+    g->Attr()->FillColor()->Clear();
+    oss << cursor_canvas.GenSVG( 0, "style=\"pointer-events: none;\" id=\"svgCursor\"" );
+  }
+
+  {
+    Canvas snap_canvas;
+    Group* g = snap_canvas.TopGroup();
+    g->Add( new Rect( ensemble_bb.min, ensemble_bb.max ) );
+    g->Attr()->SetLineWidth( 0 );
+    g->Attr()->LineColor()->Clear();
+    g->Attr()->FillColor()->Clear();
+
+    uint32_t main_id = 0;
+    for ( auto main : main_list ) {
+      Group* snap_g = g->AddNewGroup();
+      uint32_t snap_id = 0;
+      for ( const auto& sp : main->html.snap_points ) {
+        std::ostringstream oss;
+        oss << "id=\"" << snap_id << '"';
+        snap_g->Add(
+          new Circle(
+            sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
+          )
+        );
+        snap_g->Last()->Attr()->AddCustom( oss.str() );
+        ++snap_id;
+      }
+      {
+        std::ostringstream oss;
+        oss << "fill=\"transparent\" style=\"pointer-events: all;\"";
+        oss << " id=\"snapPoints" << main_id << '"';
+        snap_g->Attr()->AddCustom( oss.str() );
+      }
+      ++main_id;
+    }
+
+    oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
+  }
+
+  oss << "</div>\n";
+
+  oss << "\n<script>\n\n";
+
+  oss << "let chart;\n\n";
+
+  oss << "const chart_list = [" << '\n';
+  for ( auto main : main_list ) {
+    GenChartData( main, oss );
+  }
+  oss << "];" << '\n';
 
   #include <chart_html_part2.h>
 

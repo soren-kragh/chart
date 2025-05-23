@@ -30,7 +30,7 @@ namespace Chart {
   const SVG::U box_spacing = 8;
 
   // Snap attraction radius in HTML.
-  const SVG::U snap_point_radius = 20;
+  const SVG::U snap_point_radius = 15;
 
   // Spacing from series to tag.
   const SVG::U tag_spacing = box_spacing / 2;
@@ -86,5 +86,9 @@ namespace Chart {
   void MakeColorVisible(
     SVG::Color* color, SVG::Color* bg_color, float min_visibility = 0.3
   );
+
+  // Detect if the given string most likely contains only normal width UTF-8
+  // characters.
+  bool NormalWidthUTF8( const std::string& s );
 
 }

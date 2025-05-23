@@ -755,85 +755,104 @@ svg_snap.addEventListener("mousemove", (event) => {
   const mouseX = svgPoint.x;
   const mouseY = svgPoint.y;
 
-  const elems = document.elementsFromPoint(event.clientX, event.clientY);
-  const snapCandidates = elems.filter(el => el.parentNode.id === 'snapPoints');
-  const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
-  const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
-  const inArea = inAreaX && inAreaY;
-  const inChartX = mouseX >= chart.chart.x1 && mouseX <= chart.chart.x2;
-  const inChartY = mouseY >= chart.chart.y1 && mouseY <= chart.chart.y2;
-
-  const minCatWidth = 24;
-  let inCat = false;
-  let catAxis;
-  if (chart.axisX[0].isCategory) {
-    let y = Math.max( chart.area.y1, chart.chart.y1 + minCatWidth );
-    inCat = mouseY >= chart.chart.y1 && mouseY <= y && inChartX;
-    catAxis = chart.axisX[0];
-  }
-  if (chart.axisX[1].isCategory) {
-    let y = Math.min( chart.area.y2, chart.chart.y2 - minCatWidth );
-    inCat = mouseY >= y && mouseY <= chart.chart.y2 && inChartX;
-    catAxis = chart.axisX[1];
-  }
-  if (chart.axisY[0].isCategory) {
-    let x = Math.max( chart.area.x1, chart.chart.x1 + minCatWidth );
-    inCat = mouseX >= chart.chart.x1 && mouseX <= x && inChartY;
-    catAxis = chart.axisY[0];
-  }
-  if (chart.axisY[1].isCategory) {
-    let x = Math.min( chart.area.x2, chart.chart.x2 - minCatWidth );
-    inCat = mouseX >= x && mouseX <= chart.chart.x2 && inChartY;
-    catAxis = chart.axisY[1];
+  let chart_idx = undefined;
+  chart = undefined;
+  for (let i = 0; i < chart_list.length; i++) {
+    const c = chart_list[i];
+    if (
+      mouseX >= c.chart.x1 && mouseX <= c.chart.x2 &&
+      mouseY >= c.chart.y1 && mouseY <= c.chart.y2
+    ) {
+      chart_idx = i;
+      chart = c;
+      break;
+    }
   }
 
-  if (snapCandidates.length > 0 || inArea || inCat) {
-    let x = mouseX;
-    let y = mouseY;
-    let minDist = Infinity;
-    let snapPoint;
-    let atPoint = false;
+  if (chart != undefined) {
+    const elems = document.elementsFromPoint(event.clientX, event.clientY);
+    const snapCandidates =
+      elems.filter(el => el.parentNode.id === `snapPoints${chart_idx}`);
+    const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
+    const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
+    const inArea = inAreaX && inAreaY;
 
-    if (snapCandidates.length > 0 && !inCat) {
-      snapCandidates.forEach(circle => {
-        const cx = parseFloat(circle.getAttribute("cx"));
-        const cy = parseFloat(circle.getAttribute("cy"));
-        const dx = mouseX - cx;
-        const dy = mouseY - cy;
-        const dist = dx * dx + dy * dy;
-        if (dist < minDist) {
-          minDist = dist;
-          snapPoint = chart.snapPoints[ Number(circle.getAttribute("id")) ];
-          x = cx;
-          y = cy;
-          atPoint = true;
-        }
-      });
-      let anchor = {anchorX: -1, anchorY: -1};
-      if (x > (chart.area.x2 + chart.area.x1)/2) anchor.anchorX = 1;
-      if (y > (chart.area.y2 + chart.area.y1)/2) anchor.anchorY = 1;
-      createInfoBox(snapPoint, x, y, anchor);
+    const minCatWidth = 24;
+    let inCat = false;
+    let catAxis;
+    if (chart.axisX[0].isCategory) {
+      let y = Math.max( chart.area.y1, chart.chart.y1 + minCatWidth );
+      inCat = mouseY >= chart.chart.y1 && mouseY <= y;
+      catAxis = chart.axisX[0];
+    }
+    if (chart.axisX[1].isCategory) {
+      let y = Math.min( chart.area.y2, chart.chart.y2 - minCatWidth );
+      inCat = mouseY >= y && mouseY <= chart.chart.y2;
+      catAxis = chart.axisX[1];
+    }
+    if (chart.axisY[0].isCategory) {
+      let x = Math.max( chart.area.x1, chart.chart.x1 + minCatWidth );
+      inCat = mouseX >= chart.chart.x1 && mouseX <= x;
+      catAxis = chart.axisY[0];
+    }
+    if (chart.axisY[1].isCategory) {
+      let x = Math.min( chart.area.x2, chart.chart.x2 - minCatWidth );
+      inCat = mouseX >= x && mouseX <= chart.chart.x2;
+      catAxis = chart.axisY[1];
     }
 
-    if (inCat) {
-      createCategoryBoxes(x, y, catAxis);
-    } else {
-      createCrosshair(x, y, atPoint);
-      let showX = [true, true];
-      let showY = [true, true];
-      if (atPoint) {
-        showX = [false, false];
-        showY = [false, false];
-        let series = chart.seriesList[snapPoint.s];
-        if (series?.axisX != undefined) showX[series.axisX] = true;
-        if (series?.axisY != undefined) showY[series.axisY] = true;
+    if (snapCandidates.length > 0 || inArea || inCat) {
+      let x = mouseX;
+      let y = mouseY;
+      let minDist = Infinity;
+      let snapPoint;
+      let atPoint = false;
+
+      if (snapCandidates.length > 0 && !inCat) {
+        snapCandidates.forEach(circle => {
+          const cx = parseFloat(circle.getAttribute("cx"));
+          const cy = parseFloat(circle.getAttribute("cy"));
+          const dx = mouseX - cx;
+          const dy = mouseY - cy;
+          const dist = dx * dx + dy * dy;
+          if (dist < minDist) {
+            minDist = dist;
+            snapPoint = chart.snapPoints[ Number(circle.getAttribute("id")) ];
+            x = cx;
+            y = cy;
+            atPoint = true;
+          }
+        });
+        let anchor = {anchorX: -1, anchorY: -1};
+        if (x > (chart.area.x2 + chart.area.x1)/2) anchor.anchorX = 1;
+        if (y > (chart.area.y2 + chart.area.y1)/2) anchor.anchorY = 1;
+        createInfoBox(snapPoint, x, y, anchor);
       }
-      if (showX[0]) createAxisBox(x, y, chart.axisX[0]);
-      if (showX[1]) createAxisBox(x, y, chart.axisX[1]);
-      if (showY[0]) createAxisBox(x, y, chart.axisY[0]);
-      if (showY[1]) createAxisBox(x, y, chart.axisY[1]);
+
+      if (inCat) {
+        createCategoryBoxes(x, y, catAxis);
+      } else {
+        createCrosshair(x, y, atPoint);
+        let showX = [true, true];
+        let showY = [true, true];
+        if (atPoint) {
+          showX = [false, false];
+          showY = [false, false];
+          let series = chart.seriesList[snapPoint.s];
+          if (series?.axisX != undefined) showX[series.axisX] = true;
+          if (series?.axisY != undefined) showY[series.axisY] = true;
+        }
+        if (showX[0]) createAxisBox(x, y, chart.axisX[0]);
+        if (showX[1]) createAxisBox(x, y, chart.axisX[1]);
+        if (showY[0]) createAxisBox(x, y, chart.axisY[0]);
+        if (showY[1]) createAxisBox(x, y, chart.axisY[1]);
+      }
+    } else {
+      chart = undefined;
     }
-  } else {
+  }
+
+  if (chart == undefined) {
     outOfArea();
   }
 });
@@ -846,31 +865,35 @@ svg_snap.addEventListener("mouseleave", () => {
 // Main.
 
 {
-  chart.axisX[0].id = "axisX_0";
-  chart.axisX[1].id = "axisX_1";
-  chart.axisY[0].id = "axisY_0";
-  chart.axisY[1].id = "axisY_1";
-  chart.axisX.forEach(axis => {
-    axis.coor1 = chart.area.x1;
-    axis.coor2 = chart.area.x2;
-    determineDecimals( axis );
-  });
-  chart.axisY.forEach(axis => {
-    axis.coor1 = chart.area.y1;
-    axis.coor2 = chart.area.y2;
-    determineDecimals( axis );
-  });
+  chart_list.forEach(c => {
+    chart = c;
 
-  if (chart.categories) {
-    chart.catList = Array(chart.categories.length).fill().map(() => []);
-    let id = 0;
-    chart.snapPoints.forEach(sp => {
-      if (typeof sp.x === "number") {
-        chart.catList[sp.x].push({serId: sp.s, id});
-      }
-      id++;
+    chart.axisX[0].id = "axisX_0";
+    chart.axisX[1].id = "axisX_1";
+    chart.axisY[0].id = "axisY_0";
+    chart.axisY[1].id = "axisY_1";
+    chart.axisX.forEach(axis => {
+      axis.coor1 = chart.area.x1;
+      axis.coor2 = chart.area.x2;
+      determineDecimals( axis );
     });
-  }
+    chart.axisY.forEach(axis => {
+      axis.coor1 = chart.area.y1;
+      axis.coor2 = chart.area.y2;
+      determineDecimals( axis );
+    });
+
+    if (chart.categories) {
+      chart.catList = Array(chart.categories.length).fill().map(() => []);
+      let id = 0;
+      chart.snapPoints.forEach(sp => {
+        if (typeof sp.x === "number") {
+          chart.catList[sp.x].push({serId: sp.s, id});
+        }
+        id++;
+      });
+    }
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////

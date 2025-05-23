@@ -21,38 +21,38 @@
 #include <chart_html.h>
 #include <chart_series.h>
 #include <chart_axis.h>
+#include <chart_legend.h>
 #include <chart_legend_box.h>
 
 namespace Chart {
 
+class Ensemble;
+
 class Main
 {
   friend class HTML;
+  friend class Ensemble;
 
 public:
 
-  Main( void );
+  Main( Ensemble* ensemble, SVG::Group* svg_g );
   ~Main( void );
 
-  void EnableHTML( bool enable = true ) { enable_html = enable; }
+  SVG::Group* GetGroup( void ) { return svg_g; }
 
-  void SetBorderWidth( SVG::U width );
-  void SetMargin( SVG::U margin );
+  // Used to move the completed chart (i.e. after Build()) to its
+  // final position in the grid,
+  void Move( SVG::U dx, SVG::U dy );
+
   void SetChartArea( SVG::U width, SVG::U height );
   void SetChartBox( bool chart_box = true );
 
-  SVG::Color* BorderColor( void ) { return &border_color; }
-  SVG::Color* BackgroundColor( void ) { return &background_color; }
   SVG::Color* ChartAreaColor( void ) { return &chart_area_color; }
   SVG::Color* AxisColor( void ) { return &axis_color; }
   SVG::Color* TextColor( void ) { return &text_color; }
 
-  // Specify alternative background color of title and legend frames.
+  // Specify alternative background color of framed title and legend frames.
   SVG::Color* FrameColor( void ) { return &frame_color; }
-
-  void SetLetterSpacing(
-    float width_adj, float height_adj = 1.0, float baseline_adj = 1.0
-  );
 
   void SetTitle( const std::string& txt );
   void SetSubTitle( const std::string& txt );
@@ -65,17 +65,6 @@ public:
   // automatically.
   void SetTitleFrame( bool enable = true );
 
-  void AddFootnote( std::string& txt );
-
-  // Applies to the most recently added footnote.
-  void SetFootnotePos( Pos pos );
-
-  // A line above the footnotes.
-  void SetFootnoteLine( bool footnote_line = true );
-
-  // Footnote size scaling factor.
-  void SetFootnoteSize( float size ) { footnote_size = size; }
-
   void SetLegendHeading( const std::string& txt );
 
   // Force the legend frame to be drawn or not instead of it being determined
@@ -87,12 +76,8 @@ public:
   // specify a location outside the chart area.
   void SetLegendPos( Pos pos );
 
-  // Specify if line style legends are shown with an outline around the legend
-  // text, or with a small line segment in front of the legend text.
-  void SetLegendOutline( bool outline );
-
   // Legend text size scaling factor.
-  void SetLegendSize( float size ) { legend_size = size; }
+  void SetLegendSize( float size );
 
   // Specify the relative width of bars (0.0 to 1.0) and the relative width (0.0
   // to 1.0) of all bars belonging to the same X-value.
@@ -111,37 +96,23 @@ public:
   // Add categories for string based X-values.
   void AddCategory( const std::string& category );
 
-  std::string Build( void );
+  void Build( void );
 
 private:
 
-  typedef struct {
-    SVG::U ch;  // Character height.
-    SVG::U ow;  // Max outline width.
-    SVG::U cr;  // Outline corner radius.
-    SVG::U mw;  // Marker width.
-    SVG::U mh;  // Marker height.
-    SVG::U ss;  // Symbol size "radius" (including markers).
-    SVG::U lx;  // Left extra X caused by symbol left overhang.
-    SVG::U rx;  // Right extra X caused by symbol left overhang.
-    SVG::U tx;  // Text indentation relative to center of symbol/marker.
-    SVG::U dx;  // Delta between individual legends in X direction.
-    SVG::U dy;  // Delta between individual legends in Y direction.
-    SVG::U sx;  // Size in X direction.
-    SVG::U sy;  // Size in Y direction.
-    SVG::U mx;  // Legend box margin in X direction.
-    SVG::U my;  // Legend box margin in Y direction.
-    SVG::U hx;  // Heading X width.
-    SVG::U hy;  // Heading Y width.
-  } LegendDims;
+  Ensemble* ensemble = nullptr;
+  SVG::Group* svg_g = nullptr;
+  SVG::U g_dx = 0;
+  SVG::U g_dy = 0;
 
-  uint32_t LegendCnt( void );
-  void CalcLegendDims( SVG::Group* g, LegendDims& legend_dims );
+  SVG::U chart_w   = 1000;
+  SVG::U chart_h   = 600;
+  bool   chart_box = false;
+
   void CalcLegendBoxes(
     SVG::Group* g, std::vector< LegendBox >& lb_list,
     const std::vector< SVG::Object* >& avoid_objects
   );
-  void BuildLegends( SVG::Group* g, int nx, bool framed );
   void PlaceLegends(
     std::vector< SVG::Object* >& avoid_objects,
     const std::vector< LegendBox >& lb_list,
@@ -164,38 +135,21 @@ private:
     SVG::Group* tag_g
   );
 
-  void AddTitle(
-    SVG::Group* chart_g,
+  void BuildTitle(
     std::vector< SVG::Object* >& avoid_objects
   );
 
-  void AddFootnotes(
-    SVG::Group* chart_g
-  );
+  // Get the padding around the core chart area required to account for markers
+  // and/or lines which due to their width may spill out of of the chart area.
+  SVG::U GetAreaPadding( void );
 
-  // Create an invisible rectangle around the chart area with extra margin to
-  // account for markers and/or lines which due to their width may spill out of
-  // of the chart area. Doing this ensures consistent chart dimensions
-  // independent of the data values close to the edge of the chart area.
-  void AddChartMargin(
-    SVG::Group* chart_g, bool do_area_margin
-  );
-
-  // Transfer various information to the HTML object (html_db).
+  // Transfer various information to the HTML object (ensemble->html_db).
   void PrepareHTML( void );
 
-  bool enable_html = false;
-
-  SVG::Color border_color;
-  SVG::Color background_color;
   SVG::Color chart_area_color;
   SVG::Color axis_color;
   SVG::Color text_color;
   SVG::Color frame_color;
-
-  float width_adj;
-  float height_adj;
-  float baseline_adj;
 
   std::string title;
   std::string sub_title;
@@ -210,26 +164,9 @@ private:
   uint32_t bar_tot = 0;
   uint32_t lol_tot = 0;
 
-  struct footnote_t {
-    std::string txt;
-    Pos pos;
-  };
-  std::vector< footnote_t > footnotes;
-  bool footnote_line = false;
-  float footnote_size = 1.0;
-
-  std::string legend_heading;
-  bool        legend_frame;
-  bool        legend_frame_specified;
-  Pos         legend_pos;
-  bool        legend_outline;
-  float       legend_size;
-
-  SVG::U border_width = 0;
-  SVG::U margin       = 5;
-  SVG::U chart_w      = 1000;
-  SVG::U chart_h      = 600;
-  bool   chart_box    = false;
+  Legend* legend_obj;
+  bool    legend_frame;
+  bool    legend_frame_specified;
 
   float bar_one_width = 1.00;
   float bar_all_width = 0.85;
@@ -237,7 +174,6 @@ private:
 
   Label* label_db;
   Tag* tag_db;
-  HTML* html_db;
 
   std::vector< Series* > series_list;
 
@@ -245,6 +181,41 @@ private:
 
   Axis* axis_x;
   Axis* axis_y[ 2 ];
+
+  // Used by HTML class.
+  struct html_t {
+    struct snap_point_t {
+      uint32_t series_id;
+      uint32_t cat_idx;
+      SVG::Point p;
+      std::string_view tag_x;
+      std::string_view tag_y;
+    };
+
+    std::vector< snap_point_t > snap_points;
+
+    // Informs if all snap points are in line; for multiple bars per category
+    // this will not be the case.
+    bool all_inline = true;
+
+    // Specify if the chart X-axis is vertical.
+    bool axis_swap = false;
+
+    struct axis_t {
+      Axis*        axis = nullptr;
+      bool         is_cat;
+      NumberFormat number_format;
+      bool         number_sign;
+      bool         logarithmic;
+      double       val1;
+      double       val2;
+    };
+
+    axis_t x_axis[ 2 ];
+    axis_t y_axis[ 2 ];
+  };
+  html_t html;
+
 };
 
 }

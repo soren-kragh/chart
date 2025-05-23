@@ -28,11 +28,12 @@ class Series
   friend class Main;
   friend class Axis;
   friend class Tag;
+  friend class Legend;
   friend class HTML;
 
 public:
 
-  Series( SeriesType type );
+  Series( Main* main, SeriesType type );
   ~Series( void );
 
   void SetName( const std::string& name );
@@ -42,6 +43,13 @@ public:
   {
     this-> anonymous_snap = anonymous_snap;
   }
+
+  // Indicate if legend should be shared with other charts.
+  void SetSharedLegend( bool shared = true ) { shared_legend = shared; }
+
+  // Specify if line style legends are shown with an outline around the legend
+  // text, or with a small line segment in front of the legend text.
+  void SetLegendOutline( bool outline ) { legend_outline = outline; }
 
   // Select primary (0) or secondary (1) Y-axis; default is primary.
   void SetAxisY( int axis_y_n );
@@ -100,6 +108,8 @@ public:
   uint32_t Size( void ) { return datum_list.size(); }
 
 private:
+
+  Main* main = nullptr;
 
   void ApplyFillStyle( SVG::Object* obj );
   void ApplyLineStyle( SVG::Object* obj );
@@ -190,6 +200,9 @@ private:
   Axis* axis_y;
   int axis_y_n;
 
+  bool shared_legend = false;
+  bool legend_outline = false;
+
   SeriesType type;
   std::string name;
   bool anonymous_snap = false;
@@ -214,6 +227,9 @@ private:
   bool has_snap = false;
   uint32_t line_color_same_cnt = 0;
   uint32_t fill_color_same_cnt = 0;
+
+  // Used by Chart::Legend
+  Series* same_legend_series = nullptr;
 
   std::vector< SVG::Color > color_list;
   SVG::Color line_color;
@@ -257,6 +273,9 @@ private:
 
   // Compute derived marker_* variables and other visual properties.
   void DetermineVisualProperties( void );
+
+  // Returns true if the two given series have the same legend.
+  static bool SameLegend( Series* s1, Series* s2 );
 
   // Build marker based on marker_* variables.
   void BuildMarker( SVG::Group* g, const MarkerDims& m, SVG::Point p );

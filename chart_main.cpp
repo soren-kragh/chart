@@ -11,6 +11,7 @@
 //  permit persons to whom the Software is furnished to do so.
 //
 
+#include <chart_ensemble.h>
 #include <chart_main.h>
 
 using namespace SVG;
@@ -18,17 +19,19 @@ using namespace Chart;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Main::Main( void )
+Main::Main( Ensemble* ensemble, SVG::Group* svg_g )
 {
-  border_color.Set( ColorName::black );
-  background_color.Set( ColorName::white );
+  label_db    = new Label();
+  legend_obj  = new Legend( ensemble );
+  tag_db      = new Tag();
+  axis_x      = new Axis( true , label_db );
+  axis_y[ 0 ] = new Axis( false, label_db );
+  axis_y[ 1 ] = new Axis( false, label_db );
+
+  this->ensemble = ensemble;
+  this->svg_g = svg_g;
   chart_area_color.Clear();
-  axis_color.Set( ColorName::black );
-  text_color.Set( ColorName::black );
   frame_color.Undef();
-  width_adj    = 1.0;
-  height_adj   = 1.0;
-  baseline_adj = 1.0;
   title_pos_x  = Pos::Center;
   title_pos_y  = Pos::Top;
   title_inside = false;
@@ -37,15 +40,6 @@ Main::Main( void )
   title_frame_specified  = false;
   legend_frame           = false;
   legend_frame_specified = false;
-  SetLegendPos( Pos::Auto );
-  SetLegendOutline( true );
-  legend_size = 1.0;
-  label_db = new Label();
-  tag_db = new Tag();
-  html_db = new HTML( this );
-  axis_x      = new Axis( true , label_db );
-  axis_y[ 0 ] = new Axis( false, label_db );
-  axis_y[ 1 ] = new Axis( false, label_db );
 }
 
 Main::~Main( void )
@@ -57,40 +51,30 @@ Main::~Main( void )
   delete axis_y[ 0 ];
   delete axis_y[ 1 ];
   delete label_db;
+  delete legend_obj;
   delete tag_db;
-  delete html_db;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void Main::SetBorderWidth( SVG::U width )
+void Main::Move( SVG::U dx, SVG::U dy )
 {
-  border_width = width;
+  svg_g->Move( dx, dy );
+  g_dx = dx;
+  g_dy = dy;
 }
 
-void Main::SetMargin( SVG::U margin )
-{
-  this->margin = margin;
-}
+///////////////////////////////////////////////////////////////////////////////
 
 void Main::SetChartArea( SVG::U width, SVG::U height )
 {
-  chart_w = std::max( U( 100 ), width );
-  chart_h = std::max( U( 100 ), height );
+  chart_w = std::max( U( 10 ), width );
+  chart_h = std::max( U( 10 ), height );
 }
 
 void Main::SetChartBox( bool chart_box )
 {
   this->chart_box = chart_box;
-}
-
-void Main::SetLetterSpacing(
-  float width_adj, float height_adj, float baseline_adj
-)
-{
-  this->width_adj    = width_adj;
-  this->height_adj   = height_adj;
-  this->baseline_adj = baseline_adj;
 }
 
 void Main::SetTitle( const std::string& txt )
@@ -127,26 +111,9 @@ void Main::SetTitleFrame( bool enable )
   title_frame_specified = true;
 }
 
-void Main::AddFootnote(std::string& txt)
-{
-  footnotes.emplace_back( footnote_t{ txt, Pos::Left } );
-}
-
-void Main::SetFootnotePos( Pos pos )
-{
-  if ( !footnotes.empty() ) {
-    footnotes.back().pos = pos;
-  }
-}
-
-void Main::SetFootnoteLine( bool footnote_line )
-{
-  this->footnote_line = footnote_line;
-}
-
 void Main::SetLegendHeading( const std::string& txt )
 {
-  legend_heading = txt;
+  legend_obj->heading = txt;
 }
 
 void Main::SetLegendFrame( bool enable )
@@ -157,12 +124,12 @@ void Main::SetLegendFrame( bool enable )
 
 void Main::SetLegendPos( Pos pos )
 {
-  legend_pos = pos;
+  legend_obj->pos = pos;
 }
 
-void Main::SetLegendOutline( bool outline )
+void Main::SetLegendSize( float size )
 {
-  legend_outline = outline;
+  legend_obj->size = size;
 }
 
 void Main::SetBarWidth( float one_width, float all_width )
@@ -178,7 +145,7 @@ void Main::SetBarMargin( float margin )
 
 Series* Main::AddSeries( SeriesType type )
 {
-  Series* series = new Series( type );
+  Series* series = new Series( this, type );
   int style = series_list.size() % 80;
   series->SetStyle( style );
   series_list.push_back( series );
@@ -192,213 +159,18 @@ void Main::AddCategory( const std::string& category )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint32_t Main::LegendCnt( void )
-{
-  uint32_t n = 0;
-  for ( auto series : series_list ) {
-    if ( !series->name.empty() ) n++;
-  }
-  return n;
-}
-
-//-----------------------------------------------------------------------------
-
-void Main::CalcLegendDims( Group* g, LegendDims& legend_dims )
-{
-  bool framed = legend_frame_specified ? legend_frame : true;
-
-  legend_dims.ch = 0;
-  legend_dims.ow = 0;
-  legend_dims.cr = 0;
-  legend_dims.mw = 0;
-  legend_dims.mh = 0;
-  legend_dims.ss = 0;
-  legend_dims.lx = 0;
-  legend_dims.rx = 0;
-  legend_dims.tx = 0;
-  legend_dims.dx = 8;
-  legend_dims.dy = 4;
-  legend_dims.sx = 0;
-  legend_dims.sy = 0;
-  legend_dims.mx = framed ? (2 * box_spacing) : (1 * box_spacing);
-  legend_dims.my = framed ? (2 * box_spacing) : (1 * box_spacing);
-  legend_dims.hx = 0;
-  legend_dims.hy = 0;
-
-  g->Add( new Text( "X" ) );
-  BoundaryBox bb = g->Last()->GetBB();
-  g->DeleteFront();
-  U char_w = bb.max.x - bb.min.x;
-  U char_h = bb.max.y - bb.min.y;
-
-  if ( !legend_heading.empty() ) {
-    label_db->Create( g, legend_heading, char_h * 1.2 );
-    BoundaryBox bb = g->Last()->GetBB();
-    g->DeleteFront();
-    legend_dims.hx = bb.max.x - bb.min.x;
-    legend_dims.hy = bb.max.y - bb.min.y + char_h / 2;
-  }
-
-  U ox = char_h / 3;    // Text to outline X spacing.
-  U oy = char_h / 5;    // Text to outline Y spacing.
-
-  for ( auto series : series_list ) {
-    if ( series->name.empty() ) continue;
-    bool has_outline =
-      legend_outline &&
-      series->has_line &&
-      series->type != SeriesType::Bar &&
-      series->type != SeriesType::StackedBar &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea;
-    if ( has_outline ) {
-      legend_dims.ow = std::max( legend_dims.ow, series->line_width );
-    }
-  }
-
-  // No outline if it is too fat.
-  if ( legend_dims.ow > char_h * 0.8 ) {
-    legend_outline = false;
-    legend_dims.ow = 0;
-  }
-  U how = legend_dims.ow / 2;
-
-  for ( auto series : series_list ) {
-    if ( series->name.empty() ) continue;
-    if (
-      series->marker_show &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea &&
-      series->marker_shape != MarkerShape::LineX &&
-      series->marker_shape != MarkerShape::LineY
-    ) {
-      Series::MarkerDims md = series->marker_out;
-      legend_dims.mw = std::max( +legend_dims.mw, md.x2 - md.x1 );
-      legend_dims.mh = std::max( +legend_dims.mh, md.y2 - md.y1 );
-    }
-  }
-
-  legend_dims.ss = std::max( legend_dims.mw, legend_dims.mh ) / 2;
-
-  U line_symbol_width = legend_outline ? 0 : (2.8 * char_w);
-
-  for ( auto series : series_list ) {
-    if ( series->name.empty() ) continue;
-    if (
-      series->type == SeriesType::Bar ||
-      series->type == SeriesType::StackedBar ||
-      series->type == SeriesType::Area ||
-      series->type == SeriesType::StackedArea
-    ) {
-      if ( series->has_fill || series->has_line ) {
-        legend_dims.ss = std::max( +legend_dims.ss, (char_h + 8) / 2 );
-      }
-      if ( series->has_line ) {
-        legend_dims.ss = std::max( +legend_dims.ss, 2 * series->line_width );
-        legend_dims.ss =
-          std::max(
-            +legend_dims.ss, (series->line_dash + series->line_hole) * 0.75
-          );
-      }
-    }
-    if (
-      series->has_line && !legend_outline &&
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Lollipop
-      )
-    ) {
-      legend_dims.ss = std::max( +legend_dims.ss, series->line_width / 2 );
-      line_symbol_width =
-        std::max(
-          +line_symbol_width, 3 * series->line_dash + 2 * series->line_hole
-        );
-      line_symbol_width = std::max( +line_symbol_width, 3 * series->line_width );
-      line_symbol_width = std::max( +line_symbol_width, 3 * legend_dims.mw );
-    }
-  }
-
-  legend_dims.ch = char_h;
-  legend_dims.lx = std::max( +legend_dims.lx, legend_dims.ss - how );
-  legend_dims.lx = std::max( +legend_dims.lx, line_symbol_width / 2 - how );
-  legend_dims.dx += legend_dims.lx;
-  legend_dims.tx = how + legend_dims.lx + ox;
-
-  if ( how > 0 ) {
-    legend_dims.cr = how + char_h / 4;
-  }
-
-  for ( auto series : series_list ) {
-    if ( series->name.empty() ) continue;
-
-    uint32_t max_lines = 1;
-    uint32_t max_chars = 1;
-    {
-      uint32_t cur_chars = 0;
-      auto it = series->name.cbegin();
-      while ( it != series->name.cend() ) {
-        auto c = *it;
-        if ( Text::UTF8_CharAdv( series->name, it ) ) {
-          if ( c == '\n' ) {
-            max_lines++;
-            max_chars = std::max( max_chars, cur_chars );
-            cur_chars = 0;
-          } else {
-            cur_chars++;
-          }
-        }
-      }
-      max_chars = std::max( max_chars, cur_chars );
-    }
-    U text_w = char_w * max_chars;
-    U text_h = char_h * max_lines;
-
-    bool has_outline =
-      legend_outline &&
-      series->has_line &&
-      series->type != SeriesType::Bar &&
-      series->type != SeriesType::StackedBar &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea;
-
-    if ( has_outline ) legend_dims.rx = legend_dims.lx;
-
-    legend_dims.sx =
-      std::max(
-        +legend_dims.sx,
-        2 * how + legend_dims.lx + ox + text_w + ox +
-        (has_outline ? (2 * how) : 0)
-      );
-
-    legend_dims.sy =
-      std::max(
-        +legend_dims.sy,
-        text_h +
-        (has_outline ? (2 * (oy + series->line_width / 2 + how)) : 0)
-      );
-    legend_dims.sy =
-      std::max(
-        +legend_dims.sy,
-        has_outline
-        ? (legend_dims.mh + 2*(legend_dims.cr + how))
-        : (2 * legend_dims.ss)
-      );
-  }
-
-  return;
-}
-
-//-----------------------------------------------------------------------------
-
 // Determine potential placement of series legends in chart interior.
 void Main::CalcLegendBoxes(
   Group* g, std::vector< LegendBox >& lb_list,
   const std::vector< SVG::Object* >& avoid_objects
 )
 {
-  LegendDims legend_dims;
-  CalcLegendDims( g, legend_dims );
-  uint32_t lc = LegendCnt();
+  Legend::LegendDims legend_dims;
+  legend_obj->CalcLegendDims(
+    legend_frame_specified ? legend_frame : true,
+    g, legend_dims
+  );
+  uint32_t lc = legend_obj->Cnt();
 
   auto add_lbs = [&](
     AnchorX anchor_x, AnchorY anchor_y, bool can_move = true
@@ -551,196 +323,22 @@ void Main::CalcLegendBoxes(
 
 //-----------------------------------------------------------------------------
 
-void Main::BuildLegends( Group* g, int nx, bool framed )
-{
-  g->Attr()->SetTextAnchor( AnchorX::Min, AnchorY::Max );
-  LegendDims legend_dims;
-  CalcLegendDims( g, legend_dims );
-  int ny = (LegendCnt() + nx - 1) / nx;
-
-  {
-    U mx = framed ? legend_dims.mx : U( 0 );
-    U my = framed ? legend_dims.my : U( 0 );
-    U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-    U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-    w += legend_dims.lx + legend_dims.rx;
-    U ey = legend_dims.hy;
-    U ex = std::max( 0.0, legend_dims.hx - w );
-    Point r1{
-      -mx / 2 - legend_dims.lx - ex / 2,
-      +my / 2 + ey
-    };
-    Point r2{
-      r1.x + w + ex + mx,
-      r1.y - h - ey - my
-    };
-    g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
-    if ( framed ) {
-      g->Last()->Attr()->LineColor()->Set( &axis_color );
-      g->Last()->Attr()->SetLineWidth( 1 );
-      if ( FrameColor()->IsDefined() ) {
-        g->Last()->Attr()->FillColor()->Set( FrameColor() );
-      }
-    } else {
-      g->Last()->Attr()->FillColor()->Clear();
-      g->Last()->Attr()->LineColor()->Clear();
-      g->Last()->Attr()->SetLineWidth( 0 );
-    }
-    if ( !legend_heading.empty() ) {
-      Object* obj = label_db->Create( g, legend_heading, legend_dims.ch * 1.2 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
-    }
-  }
-
-  int n = 0;
-  for ( auto series : series_list ) {
-    if ( series->name.empty() ) continue;
-    U px = (n % nx) * +(legend_dims.sx + legend_dims.dx);
-    U py = (n / nx) * -(legend_dims.sy + legend_dims.dy);
-    Point marker_p{ px + legend_dims.ow/2, py - legend_dims.sy/2 };
-
-    if ( enable_html ) {
-      BoundaryBox bb;
-      bb.min.x = px - legend_dims.lx;
-      bb.min.y = py - legend_dims.sy;
-      bb.max.x = px + legend_dims.rx + legend_dims.sx;
-      bb.max.y = py;
-      html_db->LegendPos( series, bb );
-    }
-
-    U line_w = series->line_width;
-    if ( !series->has_line ) line_w = 0;
-
-    bool has_outline =
-      legend_outline &&
-      series->has_line &&
-      series->type != SeriesType::Bar &&
-      series->type != SeriesType::StackedBar &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea;
-
-    if ( has_outline ) {
-      g->Add(
-        new Rect(
-          px + legend_dims.ow/2,
-          py - legend_dims.ow/2,
-          px - legend_dims.ow/2 + legend_dims.sx,
-          py + legend_dims.ow/2 - legend_dims.sy,
-          legend_dims.cr
-        )
-      );
-      series->ApplyLineStyle( g->Last() );
-    }
-
-    if (
-      series->has_line && !legend_outline &&
-      ( series->type == SeriesType::XY ||
-        series->type == SeriesType::Line ||
-        series->type == SeriesType::Lollipop
-      )
-    ) {
-      g->Add(
-        new Line(
-          marker_p.x - legend_dims.ow/2 - legend_dims.lx, marker_p.y,
-          marker_p.x + legend_dims.ow/2 + legend_dims.lx, marker_p.y
-        )
-      );
-      series->ApplyLineStyle( g->Last() );
-    }
-
-    if (
-      series->marker_show &&
-      series->type != SeriesType::Area &&
-      series->type != SeriesType::StackedArea &&
-      series->marker_shape != MarkerShape::LineX &&
-      series->marker_shape != MarkerShape::LineY
-    ) {
-      marker_p.y -= (series->marker_out.y1 + series->marker_out.y2) / 2;
-      if ( series->marker_show_out ) {
-        series->BuildMarker( g, series->marker_out, marker_p );
-        series->ApplyMarkStyle( g->Last() );
-      }
-      if ( series->marker_show_int ) {
-        series->BuildMarker( g, series->marker_int, marker_p );
-        series->ApplyHoleStyle( g->Last() );
-      }
-    }
-
-    if (
-      series->type == SeriesType::Bar ||
-      series->type == SeriesType::StackedBar ||
-      series->type == SeriesType::Area ||
-      series->type == SeriesType::StackedArea
-    ) {
-      bool has_interior = legend_dims.ss > line_w + 1;
-      Point p1{ marker_p.x - legend_dims.ss, marker_p.y - legend_dims.ss };
-      Point p2{ marker_p.x + legend_dims.ss, marker_p.y + legend_dims.ss };
-      {
-        Point c1{ p1 };
-        Point c2{ p2 };
-        U db = std::min( 1.0, line_w / 2 );
-        c1.x += db; c2.x -= db;
-        c1.y += db; c2.y -= db;
-        g->Add( new Rect( c1, c2 ) );
-      }
-      if ( has_interior ) {
-        series->ApplyFillStyle( g->Last() );
-        if ( line_w > 0 ) {
-          p1.x += line_w / 2;
-          p1.y += line_w / 2;
-          p2.x -= line_w / 2;
-          p2.y -= line_w / 2;
-          g->Add( new Rect( p1, p2 ) );
-          series->ApplyLineStyle( g->Last() );
-          g->Last()->Attr()->SetLineJoin( LineJoin::Sharp );
-        }
-      } else {
-        series->ApplyMarkStyle( g->Last() );
-      }
-    }
-
-    int lines = 1;
-    for ( char c : series->name ) if ( c == '\n' ) lines++;
-    px += legend_dims.ow / 2 + legend_dims.tx;
-    py -= (legend_dims.sy - lines * legend_dims.ch) / 2;
-    std::string s;
-    auto cit = series->name.cbegin();
-    while ( cit != series->name.cend() ) {
-      auto oit = cit;
-      if ( Text::UTF8_CharAdv( series->name, cit ) ) {
-        if ( *oit != '\n' ) s.append( oit, cit );
-        if ( *oit == '\n' || cit == series->name.cend() ) {
-          if ( !s.empty() ) {
-            g->Add( new Text( px, py, s ) );
-          }
-          py -= legend_dims.ch;
-          s = "";
-        }
-      }
-    }
-
-    n++;
-  }
-}
-
-//-----------------------------------------------------------------------------
-
 void Main::PlaceLegends(
   std::vector< SVG::Object* >& avoid_objects,
   const std::vector< LegendBox >& lb_list,
   Group* legend_g
 )
 {
-  if ( LegendCnt() == 0 ) return;
+  if ( legend_obj->Cnt() == 0 ) return;
 
   BoundaryBox build_bb;
   BoundaryBox moved_bb;
 
-  AnchorX title_anchor_x = AnchorX::Mid;
-  if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
-  if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
+  if ( legend_obj->pos == Pos::Auto ) {
+    AnchorX title_anchor_x = AnchorX::Mid;
+    if ( title_pos_x == Pos::Left ) title_anchor_x = AnchorX::Min;
+    if ( title_pos_x == Pos::Right ) title_anchor_x = AnchorX::Max;
 
-  if ( legend_pos == Pos::Auto ) {
     LegendBox best_lb;
     bool best_lb_defined = false;
     for ( const LegendBox& lb : lb_list ) {
@@ -768,9 +366,10 @@ void Main::PlaceLegends(
       }
     }
     if ( best_lb_defined ) {
-      BuildLegends(
-        legend_g->AddNewGroup(), best_lb.nx,
-        legend_frame_specified ? legend_frame : true
+      legend_obj->BuildLegends(
+        legend_frame_specified ? legend_frame : true,
+        AxisColor(), FrameColor(),
+        legend_g->AddNewGroup(), best_lb.nx
       );
       build_bb = legend_g->Last()->GetBB();
       legend_g->Last()->MoveTo(
@@ -779,28 +378,32 @@ void Main::PlaceLegends(
         (best_lb.bb.min.y + best_lb.bb.max.y) / 2
       );
       moved_bb = legend_g->Last()->GetBB();
-      html_db->MoveLegends(
+      ensemble->html_db->MoveLegends(
+        this,
         moved_bb.min.x - build_bb.min.x,
         moved_bb.min.y - build_bb.min.y
       );
       return;
     } else {
-      legend_pos = Pos::Bottom;
+      legend_obj->pos = Pos::Bottom;
     }
   }
 
-  LegendDims legend_dims;
-  CalcLegendDims( legend_g, legend_dims );
+  bool framed =
+    legend_frame_specified ? legend_frame : !legend_obj->heading.empty();
 
-  if ( legend_pos == Pos::Left || legend_pos == Pos::Right ) {
+  Legend::LegendDims legend_dims;
+  legend_obj->CalcLegendDims( framed, legend_g, legend_dims );
 
-    U mx = legend_dims.mx;
-    U my = 10;
+  if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
+
+    U mx = framed ? +box_spacing : 20;
+    U my = box_spacing;
 
     U avail_h = chart_h;
     uint32_t nx = 1;
     while ( 1 ) {
-      uint32_t ny = (LegendCnt() + nx - 1) / nx;
+      uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
       U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
       if ( need_h > avail_h && ny > 1 ) {
         nx++;
@@ -808,9 +411,9 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegends(
-      legend_g->AddNewGroup(), nx,
-      legend_frame_specified ? legend_frame : !legend_heading.empty()
+    legend_obj->BuildLegends(
+      framed, AxisColor(), FrameColor(),
+      legend_g->AddNewGroup(), nx
     );
     Object* legend = legend_g->Last();
     build_bb = legend->GetBB();
@@ -818,7 +421,7 @@ void Main::PlaceLegends(
     U x = 0 - mx;
     Dir dir = Dir::Left;
     AnchorX anchor_x = AnchorX::Max;
-    if ( legend_pos == Pos::Right ) {
+    if ( legend_obj->pos == Pos::Right ) {
       x = chart_w + mx;
       dir = Dir::Right;
       anchor_x = AnchorX::Min;
@@ -836,7 +439,10 @@ void Main::PlaceLegends(
       BoundaryBox bb = legend->GetBB();
       if (
         !best_found ||
-        ((legend_pos == Pos::Right) ? (bb.min.x < best_x) : (bb.min.x > best_x))
+        ( (legend_obj->pos == Pos::Right)
+          ? (bb.min.x + epsilon < best_x)
+          : (bb.min.x - epsilon > best_x)
+        )
       ) {
         best_anchor_y = anchor_y;
         best_x = bb.min.x;
@@ -847,7 +453,8 @@ void Main::PlaceLegends(
     legend->MoveTo( anchor_x, best_anchor_y, x, best_y );
     MoveObj( dir, legend, avoid_objects, mx, my );
     moved_bb = legend->GetBB();
-    html_db->MoveLegends(
+    ensemble->html_db->MoveLegends(
+      this,
       moved_bb.min.x - build_bb.min.x,
       moved_bb.min.y - build_bb.min.y
     );
@@ -856,13 +463,13 @@ void Main::PlaceLegends(
   } else {
 
     U mx = 40;
-    U my = legend_dims.my / 2;
+    U my = box_spacing;
 
     U avail_w = chart_w;
-    uint32_t nx = LegendCnt();
+    uint32_t nx = legend_obj->Cnt();
     uint32_t ny = 1;
     while ( 1 ) {
-      nx = (LegendCnt() + ny - 1) / ny;
+      nx = (legend_obj->Cnt() + ny - 1) / ny;
       U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
       if ( need_w > avail_w && nx > 1 ) {
         ny++;
@@ -870,9 +477,9 @@ void Main::PlaceLegends(
       }
       break;
     }
-    BuildLegends(
-      legend_g->AddNewGroup(), nx,
-      legend_frame_specified ? legend_frame : !legend_heading.empty()
+    legend_obj->BuildLegends(
+      framed, AxisColor(), FrameColor(),
+      legend_g->AddNewGroup(), nx
     );
     Object* legend = legend_g->Last();
     build_bb = legend->GetBB();
@@ -880,7 +487,7 @@ void Main::PlaceLegends(
     U y = 0 - my;
     Dir dir = Dir::Down;
     AnchorY anchor_y = AnchorY::Max;
-    if ( legend_pos == Pos::Top ) {
+    if ( legend_obj->pos == Pos::Top ) {
       y = chart_h + my;
       dir = Dir::Up;
       anchor_y = AnchorY::Min;
@@ -898,7 +505,10 @@ void Main::PlaceLegends(
       BoundaryBox bb = legend->GetBB();
       if (
         !best_found ||
-        ((legend_pos == Pos::Top) ? (bb.min.y < best_y) : (bb.min.y > best_y))
+        ( (legend_obj->pos == Pos::Top)
+          ? (bb.min.y + epsilon < best_y)
+          : (bb.min.y - epsilon > best_y)
+        )
       ) {
         best_anchor_x = anchor_x;
         best_x = x;
@@ -909,7 +519,8 @@ void Main::PlaceLegends(
     legend->MoveTo( best_anchor_x, anchor_y, best_x, y );
     MoveObj( dir, legend, avoid_objects, mx, my );
     moved_bb = legend->GetBB();
-    html_db->MoveLegends(
+    ensemble->html_db->MoveLegends(
+      this,
       moved_bb.min.x - build_bb.min.x,
       moved_bb.min.y - build_bb.min.y
     );
@@ -948,6 +559,12 @@ int Main::CatStrideEmpty( void )
 
 void Main::AxisPrepare( SVG::Group* tag_g )
 {
+  for ( auto a : { axis_x, axis_y[ 0 ], axis_y[ 1 ] } ) {
+    if ( !a->GridColor()->IsDefined() ) {
+      a->GridColor()->Set( ensemble->ForegroundColor() );
+    }
+  }
+
   axis_x->length      = (axis_x->angle == 0) ? chart_w : chart_h;
   axis_x->orth_length = (axis_x->angle == 0) ? chart_h : chart_w;
   axis_x->chart_box   = chart_box;
@@ -1390,7 +1007,7 @@ void Main::SeriesPrepare(
   if ( !ChartAreaColor()->IsClear() ) {
     tag_bg_color.Set( ChartAreaColor() );
   } else {
-    tag_bg_color.Set( BackgroundColor() );
+    tag_bg_color.Set( ensemble->BackgroundColor() );
   }
   if ( tag_bg_color.IsClear() ) tag_bg_color.Set( ColorName::white );
 
@@ -1412,8 +1029,10 @@ void Main::SeriesPrepare(
     series->axis_y = axis_y[ series->axis_y_n ];
     series->lb_list = lb_list;
     series->tag_db = tag_db;
-    if ( enable_html && (!series->name.empty() || series->anonymous_snap) ) {
-      series->html_db = html_db;
+    if ( ensemble->enable_html ) {
+      if ( !series->name.empty() || series->anonymous_snap ) {
+        series->html_db = ensemble->html_db;
+      }
     }
 
     if ( series->type == SeriesType::Lollipop ) {
@@ -1429,7 +1048,7 @@ void Main::SeriesPrepare(
     }
 
     if ( !series->tag_text_color.IsDefined() ) {
-      series->tag_text_color.Set( &text_color );
+      series->tag_text_color.Set( TextColor() );
     }
 
     if ( !series->tag_fill_color.IsDefined() ) {
@@ -1459,10 +1078,18 @@ void Main::SeriesPrepare(
     }
 
     series->DetermineVisualProperties();
+
+    if ( !series->name.empty() ) {
+      if ( series->shared_legend ) {
+        ensemble->legend_obj->Add( series );
+      } else {
+        legend_obj->Add( series );
+      }
+    }
   }
   bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
 
-  html_db->SetAllInline( bar_tot <= 1 && lol_tot <= 1 );
+  html.all_inline = bar_tot <= 1 && lol_tot <= 1;
 
   return;
 }
@@ -1569,12 +1196,13 @@ void Main::BuildSeries(
 
 //------------------------------------------------------------------------------
 
-void Main::AddTitle(
-  SVG::Group* chart_g,
+void Main::BuildTitle(
   std::vector< SVG::Object* >& avoid_objects
 )
 {
   if ( title.empty() && sub_title.empty() && sub_sub_title.empty() ) return;
+
+  U spacing = 4 * title_size;
 
   bool framed = title_frame_specified ? title_frame : title_inside;
 
@@ -1583,7 +1211,7 @@ void Main::AddTitle(
   BoundaryBox bb;
   std::vector< SVG::Object* > title_objs;
 
-  Group* text_g = chart_g->AddNewGroup();
+  Group* text_g = svg_g->AddNewGroup();
 
   U x = chart_w / 2;
   AnchorX a = AnchorX::Mid;
@@ -1597,25 +1225,24 @@ void Main::AddTitle(
   }
   U y = chart_h + space_y;
   if ( !sub_sub_title.empty() ) {
-    Object* obj = label_db->Create( text_g, sub_sub_title, 14 * title_size );
+    Object* obj = Label::CreateLabel( text_g, sub_sub_title, 14 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
-    y += bb.max.y - bb.min.y + 3;
+    y += bb.max.y - bb.min.y + spacing;
   }
   if ( !sub_title.empty() ) {
-    Object* obj = label_db->Create( text_g, sub_title, 20 * title_size );
+    Object* obj = Label::CreateLabel( text_g, sub_title, 20 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
-    y += bb.max.y - bb.min.y + 3;
+    y += bb.max.y - bb.min.y + spacing;
   }
   if ( !title.empty() ) {
-    Object* obj = label_db->Create( text_g, title, 36 * title_size );
+    Object* obj = Label::CreateLabel( text_g, title, 36 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     title_objs.push_back( obj );
     bb = obj->GetBB();
-    y += bb.max.y - bb.min.y;
   }
   MoveObjs( Dir::Up, title_objs, avoid_objects, space_x, space_y );
 
@@ -1628,7 +1255,7 @@ void Main::AddTitle(
         box_spacing
       )
     );
-    text_g->Last()->Attr()->LineColor()->Set( &axis_color );
+    text_g->Last()->Attr()->LineColor()->Set( AxisColor() );
     text_g->Last()->Attr()->SetLineWidth( 1 );
     if ( FrameColor()->IsDefined() ) {
       text_g->Last()->Attr()->FillColor()->Set( FrameColor() );
@@ -1736,109 +1363,26 @@ void Main::AddTitle(
 
 //------------------------------------------------------------------------------
 
-void Main::AddFootnotes(
-  SVG::Group* chart_g
-)
+SVG::U Main::GetAreaPadding( void )
 {
-  U dx = 16;
-  U dy = 16;
-
-  BoundaryBox bb = chart_g->GetBB();
-  if ( footnote_line ) {
-    dy = dy / 2;
-    chart_g->Add( new Line(
-      bb.min.x + dx, bb.min.y - dy, bb.max.x - dx, bb.min.y - dy
-    ) );
-    chart_g->Last()->Attr()->LineColor()->Set( &text_color );
-    chart_g->Last()->Attr()->SetLineWidth( 1 );
-  }
-
-  for ( const auto& footnote : footnotes ) {
-    if ( footnote.txt.empty() ) continue;
-
-    bb = chart_g->GetBB();
-    U x = bb.min.x + dx;
-    U y = bb.min.y - dy;
-    AnchorX a = AnchorX::Min;
-    label_db->Create( chart_g, footnote.txt, 14 * footnote_size );
-    if ( footnote.pos == Pos::Center ) {
-      x = chart_w / 2;
-      a = AnchorX::Mid;
+  U delta = 0;
+  for ( auto series : series_list ) {
+    if (
+      series->has_line &&
+      series->type != SeriesType::Bar &&
+      series->type != SeriesType::StackedBar
+    ) {
+      delta = std::max( +delta, series->line_width / 2 );
     }
-    if ( footnote.pos == Pos::Right ) {
-      x = bb.max.x - dx;
-      a = AnchorX::Max;
-    }
-    chart_g->Last()->MoveTo( a, AnchorY::Max, x, y );
-
-    dy = 2;
-  }
-
-  return;
-}
-
-//------------------------------------------------------------------------------
-
-void Main::AddChartMargin(
-  SVG::Group* chart_g, bool do_area_margin
-)
-{
-  BoundaryBox bb = chart_g->GetBB();
-
-  if ( do_area_margin ) {
-    U delta = enable_html ? +snap_point_radius : 0;
-    for ( auto series : series_list ) {
-      if (
-        series->has_line &&
-        series->type != SeriesType::Bar &&
-        series->type != SeriesType::StackedBar
-      ) {
-        delta = std::max( +delta, series->line_width / 2 );
-      }
-      if ( series->marker_show ) {
-        delta = std::max( +delta, -series->marker_out.x1 );
-        delta = std::max( +delta, -series->marker_out.y1 );
-        delta = std::max( +delta, +series->marker_out.x2 );
-        delta = std::max( +delta, +series->marker_out.y2 );
-      }
-    }
-
-    bb.Update( -delta, -delta );
-    bb.Update( chart_w + delta, chart_h + delta );
-
-    chart_g->Add( new Rect( bb.min, bb.max ) );
-    chart_g->Last()->Attr()->FillColor()->Clear();
-    chart_g->Last()->Attr()->LineColor()->Clear();
-    chart_g->Last()->Attr()->SetLineWidth( 0 );
-  } else {
-    bb.min.x -= margin + border_width;
-    bb.max.x += margin + border_width;
-    bb.min.y -= margin + border_width;
-    bb.max.y += margin + border_width;
-
-    chart_g->Add( new Rect( bb.min, bb.max ) );
-    chart_g->Last()->Attr()->FillColor()->Clear();
-    chart_g->Last()->Attr()->LineColor()->Clear();
-    chart_g->Last()->Attr()->SetLineWidth( 0 );
-    chart_g->FrontToBack();
-
-    bb.min.x += border_width / 2;
-    bb.max.x -= border_width / 2;
-    bb.min.y += border_width / 2;
-    bb.max.y -= border_width / 2;
-
-    chart_g->Add( new Rect( bb.min, bb.max ) );
-    chart_g->Last()->Attr()->SetLineWidth( border_width );
-    if ( border_width > 0 ) {
-      chart_g->Last()->Attr()->LineColor()->Set( &border_color );
-    } else {
-      chart_g->Last()->Attr()->LineColor()->Clear();
+    if ( series->marker_show ) {
+      delta = std::max( +delta, -series->marker_out.x1 );
+      delta = std::max( +delta, -series->marker_out.y1 );
+      delta = std::max( +delta, +series->marker_out.x2 );
+      delta = std::max( +delta, +series->marker_out.y2 );
     }
   }
 
-  chart_g->FrontToBack();
-
-  return;
+  return delta;
 }
 
 //------------------------------------------------------------------------------
@@ -1848,15 +1392,15 @@ void Main::PrepareHTML( void )
   if ( axis_x->angle == 0 ) {
 
     if ( axis_x->category_axis ) {
-      html_db->DefAxisX(
-        axis_x->cat_coor_is_max ? 0 : 1, axis_x,
+      ensemble->html_db->DefAxisX(
+        this, axis_x->cat_coor_is_max ? 0 : 1, axis_x,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->reverse ? axis_x->min : axis_x->max,
         NumberFormat::Fixed, false, false, true
       );
     } else {
-      html_db->DefAxisX(
-        axis_x->orth_coor_is_max ? 0 : 1, axis_x,
+      ensemble->html_db->DefAxisX(
+        this, axis_x->orth_coor_is_max ? 0 : 1, axis_x,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->number_format, axis_x->number_sign, axis_x->log_scale
@@ -1865,8 +1409,8 @@ void Main::PrepareHTML( void )
 
     for ( auto a : axis_y ) {
       if ( a->show ) {
-        html_db->DefAxisY(
-          a->orth_coor_is_max ? 1 : 0, a,
+        ensemble->html_db->DefAxisY(
+          this, a->orth_coor_is_max ? 1 : 0, a,
           a->reverse ? a->min : a->max,
           a->reverse ? a->max : a->min,
           a->number_format, a->number_sign, a->log_scale
@@ -1877,15 +1421,15 @@ void Main::PrepareHTML( void )
   } else {
 
     if ( axis_x->category_axis ) {
-      html_db->DefAxisY(
-        axis_x->cat_coor_is_max ? 1 : 0, axis_x,
+      ensemble->html_db->DefAxisY(
+        this, axis_x->cat_coor_is_max ? 1 : 0, axis_x,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->reverse ? axis_x->max : axis_x->min,
         NumberFormat::Fixed, false, false, true
       );
     } else {
-      html_db->DefAxisY(
-        axis_x->orth_coor_is_max ? 1 : 0, axis_x,
+      ensemble->html_db->DefAxisY(
+        this, axis_x->orth_coor_is_max ? 1 : 0, axis_x,
         axis_x->reverse ? axis_x->min : axis_x->max,
         axis_x->reverse ? axis_x->max : axis_x->min,
         axis_x->number_format, axis_x->number_sign, axis_x->log_scale
@@ -1894,8 +1438,8 @@ void Main::PrepareHTML( void )
 
     for ( auto a : axis_y ) {
       if ( a->show ) {
-        html_db->DefAxisX(
-          a->orth_coor_is_max ? 0 : 1, a,
+        ensemble->html_db->DefAxisX(
+          this, a->orth_coor_is_max ? 0 : 1, a,
           a->reverse ? a->max : a->min,
           a->reverse ? a->min : a->max,
           a->number_format, a->number_sign, a->log_scale
@@ -1903,7 +1447,7 @@ void Main::PrepareHTML( void )
       }
     }
 
-    html_db->SwapAxis();
+    html.axis_swap = true;
 
   }
 
@@ -1912,41 +1456,39 @@ void Main::PrepareHTML( void )
 
 //------------------------------------------------------------------------------
 
-std::string Main::Build( void )
+void Main::Build( void )
 {
-  Canvas* canvas = new Canvas();
-
-  Group* chart_g = canvas->TopGroup()->AddNewGroup();
-  chart_g->Attr()->TextFont()->SetFamily(
-    "Noto Mono,Lucida Console,Courier New,monospace"
-  );
-  chart_g->Attr()->TextFont()
-    ->SetWidthFactor( width_adj )
-    ->SetHeightFactor( height_adj )
-    ->SetBaselineFactor( baseline_adj );
-  chart_g->Attr()->FillColor()->Set( &background_color );
-  chart_g->Attr()->TextColor()->Set( &text_color );
-  chart_g->Attr()->LineColor()->Clear();
-  chart_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
-  if ( !chart_area_color.IsClear() ) {
-    chart_g->Last()->Attr()->FillColor()->Set( &chart_area_color );
+  if ( !AxisColor()->IsDefined() ) {
+    AxisColor()->Set( ensemble->ForegroundColor() );
+  }
+  if ( !TextColor()->IsDefined() ) {
+    TextColor()->Set( ensemble->ForegroundColor() );
   }
 
-  Group* grid_minor_g          = chart_g->AddNewGroup();
-  Group* grid_major_g          = chart_g->AddNewGroup();
-  Group* grid_zero_g           = chart_g->AddNewGroup();
-  Group* label_bg_g            = chart_g->AddNewGroup();
-  Group* chartbox_below_axes_g = chart_g->AddNewGroup();
-  Group* axes_line_g           = chart_g->AddNewGroup();
-  Group* chartbox_above_axes_g = chart_g->AddNewGroup();
-  Group* axes_num_g            = chart_g->AddNewGroup();
-  Group* axes_label_g          = chart_g->AddNewGroup();
-  Group* tag_g                 = chart_g->AddNewGroup();
-  Group* legend_g              = chart_g->AddNewGroup();
+  svg_g->Attr()->TextColor()->Set( TextColor() );
+  svg_g->Attr()->LineColor()->Clear();
+  svg_g->Add( new Rect( 0, 0, chart_w, chart_h ) );
+  if ( ChartAreaColor()->IsClear() ) {
+    svg_g->Last()->Attr()->FillColor()->Clear();
+  } else {
+    svg_g->Last()->Attr()->FillColor()->Set( ChartAreaColor() );
+  }
 
-  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( &axis_color );
+  Group* grid_minor_g          = svg_g->AddNewGroup();
+  Group* grid_major_g          = svg_g->AddNewGroup();
+  Group* grid_zero_g           = svg_g->AddNewGroup();
+  Group* label_bg_g            = svg_g->AddNewGroup();
+  Group* chartbox_below_axes_g = svg_g->AddNewGroup();
+  Group* axes_line_g           = svg_g->AddNewGroup();
+  Group* chartbox_above_axes_g = svg_g->AddNewGroup();
+  Group* axes_num_g            = svg_g->AddNewGroup();
+  Group* axes_label_g          = svg_g->AddNewGroup();
+  Group* tag_g                 = svg_g->AddNewGroup();
+  Group* legend_g              = svg_g->AddNewGroup();
+
+  axes_line_g->Attr()->SetLineWidth( 2 )->LineColor()->Set( AxisColor() );
   axes_line_g->Attr()->SetLineCap( LineCap::Square );
-  axes_line_g->Attr()->FillColor()->Set( &axis_color );
+  axes_line_g->Attr()->FillColor()->Set( AxisColor() );
 
   chartbox_below_axes_g->Attr()->FillColor()->Clear();
   chartbox_above_axes_g->Attr()->FillColor()->Clear();
@@ -1960,7 +1502,7 @@ std::string Main::Build( void )
     ->SetHeightFactor( 0.80 )
     ->SetBaselineFactor( 0.30 );
 
-  legend_g->Attr()->TextFont()->SetSize( 14 * legend_size );
+  legend_g->Attr()->TextFont()->SetSize( 14 * legend_obj->size );
 
   std::vector< LegendBox > lb_list;
 
@@ -2000,7 +1542,7 @@ std::string Main::Build( void )
   }
 
   if ( title_inside ) {
-    AddTitle( chart_g, avoid_objects );
+    BuildTitle( avoid_objects );
   }
 
   CalcLegendBoxes( legend_g, lb_list, avoid_objects );
@@ -2010,7 +1552,7 @@ std::string Main::Build( void )
   PlaceLegends( avoid_objects, lb_list, legend_g );
 
   if ( !title_inside ) {
-    AddTitle( chart_g, avoid_objects );
+    BuildTitle( avoid_objects );
   }
 
 /*
@@ -2022,11 +1564,11 @@ std::string Main::Build( void )
       bb.min.y -= 0.1;
       bb.max.x += 0.1;
       bb.max.y += 0.1;
-      chart_g->Add( new Rect( bb.min, bb.max ) );
-      chart_g->Last()->Attr()->FillColor()->Clear();
-      chart_g->Last()->Attr()->SetLineWidth( 4 );
-      chart_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
-      chart_g->Last()->Attr()->LineColor()->SetTransparency( 0.5 );
+      svg_g->Add( new Rect( bb.min, bb.max ) );
+      svg_g->Last()->Attr()->FillColor()->Clear();
+      svg_g->Last()->Attr()->SetLineWidth( 4 );
+      svg_g->Last()->Attr()->LineColor()->Set( ColorName::blue );
+      svg_g->Last()->Attr()->LineColor()->SetTransparency( 0.5 );
     }
   }
 */
@@ -2034,10 +1576,10 @@ std::string Main::Build( void )
   // Add background for text objects in the Label data base.
   {
     bool partial_ok = true;
-    if ( chart_area_color.IsClear() ) {
-      label_bg_g->Attr()->FillColor()->Set( &background_color );
+    if ( ChartAreaColor()->IsClear() ) {
+      label_bg_g->Attr()->FillColor()->Set( ensemble->BackgroundColor() );
     } else {
-      label_bg_g->Attr()->FillColor()->Set( &chart_area_color );
+      label_bg_g->Attr()->FillColor()->Set( ChartAreaColor() );
       partial_ok = false;
     }
     BoundaryBox area;
@@ -2046,19 +1588,11 @@ std::string Main::Build( void )
     label_db->AddBackground( label_bg_g, area, partial_ok );
   }
 
-  AddChartMargin( chart_g, true );
-  AddFootnotes( chart_g );
-  AddChartMargin( chart_g, false );
-
-  std::ostringstream oss;
-  if ( enable_html ) {
+  if ( ensemble->enable_html ) {
     PrepareHTML();
-    oss << html_db->GenHTML( canvas );
-  } else {
-    oss << canvas->GenSVG();
   }
-  delete canvas;
-  return oss.str();
+
+  return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

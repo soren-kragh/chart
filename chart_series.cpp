@@ -19,8 +19,9 @@ using namespace Chart;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-Series::Series( SeriesType type )
+Series::Series( Main* main, SeriesType type )
 {
+  this->main = main;
   id = 0;
 
   axis_x = nullptr;
@@ -573,7 +574,46 @@ void Series::DetermineVisualProperties( void )
   return;
 }
 
-//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+
+bool Series::SameLegend( Series* s1, Series* s2 )
+{
+  bool same =
+    s1->type             == s2->type &&
+    s1->name             == s2->name &&
+    s1->marker_show      == s2->marker_show &&
+    s1->marker_show_out  == s2->marker_show_out &&
+    s1->marker_show_int  == s2->marker_show_int &&
+    s1->has_line         == s2->has_line &&
+    s1->has_fill         == s2->has_fill &&
+    s1->line_color_shown == s2->line_color_shown &&
+    s1->fill_color_shown == s2->fill_color_shown;
+
+  if ( same && s1->line_color_shown ) {
+    same = s1->line_color == s2->line_color;
+  }
+  if ( same && s1->fill_color_shown ) {
+    same = s1->fill_color == s2->fill_color;
+  }
+
+  if ( same && s1->has_line ) {
+    same =
+      s1->legend_outline == s2->legend_outline &&
+      s1->line_width     == s2->line_width &&
+      s1->line_dash      == s2->line_dash &&
+      s1->line_hole      == s2->line_hole;
+  }
+
+  if ( same && s1->marker_show ) {
+    same =
+      s1->marker_size  == s2->marker_size &&
+      s1->marker_shape == s2->marker_shape;
+  }
+
+  return same;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 void Series::BuildMarker( Group* g, const MarkerDims& m, SVG::Point p )
 {
