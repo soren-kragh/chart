@@ -214,8 +214,8 @@ void Ensemble::InitGrid( void )
 void Ensemble::ComputeGrid( void )
 {
   InitGrid();
-  grid.SolveSpace2( grid.space_list_x );
-  grid.SolveSpace2( grid.space_list_y );
+  grid.Solve2( grid.cell_list_x );
+  grid.Solve2( grid.cell_list_y );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -512,10 +512,10 @@ std::string Ensemble::Build( void )
   ComputeGrid();
 
   for ( auto& elem : grid.element_list ) {
-    U gx1 = grid.space_list_x[ elem.grid_x1 ].e1.coor;
-    U gx2 = grid.space_list_x[ elem.grid_x2 ].e2.coor;
-    U gy1 = grid.space_list_y[ elem.grid_y1 ].e1.coor;
-    U gy2 = grid.space_list_y[ elem.grid_y2 ].e2.coor;
+    U gx1 = grid.cell_list_x[ elem.grid_x1 ].e1.coor;
+    U gx2 = grid.cell_list_x[ elem.grid_x2 ].e2.coor;
+    U gy1 = grid.cell_list_y[ elem.grid_y1 ].e1.coor;
+    U gy2 = grid.cell_list_y[ elem.grid_y2 ].e2.coor;
 
     U mx = (gx1 + gx2) / 2 - (elem.area_bb.min.x + elem.area_bb.max.x) / 2;
     U my = (gy1 + gy2) / 2 - (elem.area_bb.min.y + elem.area_bb.max.y) / 2;
@@ -546,11 +546,11 @@ std::string Ensemble::Build( void )
     g->Attr()->FillColor()->Set( ColorName::yellow );
     g->Attr()->FillColor()->SetOpacity( 0.2 );
 
-    for ( auto& s : grid.space_list_x ) {
+    for ( auto& s : grid.cell_list_x ) {
       g->Add( new Rect( s.e1.coor, bb.min.y, s.e2.coor, bb.max.y ) );
     }
 
-    for ( auto& s : grid.space_list_y ) {
+    for ( auto& s : grid.cell_list_y ) {
       g->Add( new Rect( bb.min.x, s.e1.coor, bb.max.x, s.e2.coor ) );
     }
   }

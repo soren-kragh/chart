@@ -53,24 +53,24 @@ public:
     bool locked      = false;
   };
 
-  struct space_t {
+  struct cell_t {
     edge_t e1;
     edge_t e2;
   };
 
   std::vector< element_t > element_list;
 
-  std::vector< space_t > space_list_x;
-  std::vector< space_t > space_list_y;
+  std::vector< cell_t > cell_list_x;
+  std::vector< cell_t > cell_list_y;
 
   void Init( void );
-  uint32_t SolveSpace1( std::vector< space_t >& space_list );
-  uint32_t SolveSpace2( std::vector< space_t >& space_list );
+  uint32_t Solve1( std::vector< cell_t >& cell_list );
+  uint32_t Solve2( std::vector< cell_t >& cell_list );
 
-  void DisplayGridSpace( std::vector< space_t >& space_list );
-  void DisplayGridAdj( std::vector< space_t >& space_list );
-  void DisplayGridSlack( std::vector< space_t >& space_list );
-  void RenumberGridSpace( std::vector< space_t >& space_list );
+  void DisplayCoor( std::vector< cell_t >& cell_list );
+  void DisplayAdj( std::vector< cell_t >& cell_list );
+  void DisplaySlack( std::vector< cell_t >& cell_list );
+  void RenumberCoor( std::vector< cell_t >& cell_list );
   void Test( void );
 
 };

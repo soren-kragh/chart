@@ -39,16 +39,16 @@ void Grid::Init( void )
     max_x = std::max( max_x, elem.grid_x2 );
     max_y = std::max( max_y, elem.grid_y2 );
   }
-  space_t space;
-  space_list_x.resize( max_x + 1, space );
-  space_list_y.resize( max_y + 1, space );
+  cell_t space;
+  cell_list_x.resize( max_x + 1, space );
+  cell_list_y.resize( max_y + 1, space );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
+uint32_t Grid::Solve1( std::vector< cell_t >& cell_list )
 {
-  bool is_x = &space_list == &space_list_x;
+  bool is_x = &cell_list == &cell_list_x;
 
   // Create element sorting based on grid position.
   std::vector< size_t > sorted_indices( element_list.size() );
@@ -77,42 +77,42 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
 
       U ar = (a2 - a1) / 2;
 
-      U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
+      U c = (cell_list[ g1 ].e1.coor + cell_list[ g2 ].e2.coor) / 2;
       if (
         is_x
         ? (elem.anchor_x == SVG::AnchorX::Min)
         : (elem.anchor_y == SVG::AnchorY::Min)
       ) {
-        c = space_list[ g1 ].e1.coor + ar;
+        c = cell_list[ g1 ].e1.coor + ar;
       }
       if (
         is_x
         ? (elem.anchor_x == SVG::AnchorX::Max)
         : (elem.anchor_y == SVG::AnchorY::Max)
       ) {
-        c = space_list[ g2 ].e2.coor - ar;
+        c = cell_list[ g2 ].e2.coor - ar;
       }
 
-      space_list[ g1 ].e1.pad =
+      cell_list[ g1 ].e1.pad =
         std::max(
-          +space_list[ g1 ].e1.pad,
-          space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
+          +cell_list[ g1 ].e1.pad,
+          cell_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
         );
-      space_list[ g2 ].e2.pad =
+      cell_list[ g2 ].e2.pad =
         std::max(
-          +space_list[ g2 ].e2.pad,
-          (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
+          +cell_list[ g2 ].e2.pad,
+          (c + ar + (f2 - a2)) - cell_list[ g2 ].e2.coor
         );
     }
   };
 
-  for ( auto& s : space_list ) {
-    s.e1.coor    = 0;
-    s.e1.pad     = 0;
-    s.e1.pad_use = 0;
-    s.e2.coor    = 0;
-    s.e2.pad     = 0;
-    s.e2.pad_use = 0;
+  for ( auto& cell : cell_list ) {
+    cell.e1.coor    = 0;
+    cell.e1.pad     = 0;
+    cell.e1.pad_use = 0;
+    cell.e2.coor    = 0;
+    cell.e2.pad     = 0;
+    cell.e2.pad_use = 0;
   }
 
   bool solved = false;
@@ -128,9 +128,9 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
     if ( cur_trial == max_trial ) {
       // At last trial, just include all padding in the solver such that they
       // can have a chance to take some effect before we bail out.
-      for ( auto& s : space_list ) {
-        s.e1.pad_use = true;
-        s.e2.pad_use = true;
+      for ( auto& cell : cell_list ) {
+        cell.e1.pad_use = true;
+        cell.e2.pad_use = true;
       }
     }
 
@@ -145,41 +145,43 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
         uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
         uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
 
-        space_list[ g2 ].e2.coor =
+        cell_list[ g2 ].e2.coor =
           std::max(
-            +space_list[ g2 ].e2.coor,
-            space_list[ g1 ].e1.coor + (a2 - a1)
+            +cell_list[ g2 ].e2.coor,
+            cell_list[ g1 ].e1.coor + (a2 - a1)
           );
 
-        U coor = space_list[ g2 ].e2.coor;
-        for ( uint32_t g = g2 + 1; g < space_list.size(); g++ ) {
-          space_list[ g ].e1.coor = std::max( space_list[ g ].e1.coor, coor );
-          coor = space_list[ g ].e1.coor;
-          space_list[ g ].e2.coor = std::max( space_list[ g ].e2.coor, coor );
-          coor = space_list[ g ].e2.coor;
+        U coor = cell_list[ g2 ].e2.coor;
+        for ( uint32_t g = g2 + 1; g < cell_list.size(); g++ ) {
+          cell_list[ g ].e1.coor = std::max( cell_list[ g ].e1.coor, coor );
+          coor = cell_list[ g ].e1.coor;
+          cell_list[ g ].e2.coor = std::max( cell_list[ g ].e2.coor, coor );
+          coor = cell_list[ g ].e2.coor;
         }
       }
 
-      for ( auto& s : space_list ) {
-        s.e1.pad = 0;
-        s.e2.pad = 0;
+      for ( auto& cell : cell_list ) {
+        cell.e1.pad = 0;
+        cell.e2.pad = 0;
       }
       update_pad();
 
       U coor = -num_hi;
-      for ( auto& s : space_list ) {
-        U aw = s.e2.coor - s.e1.coor;
-        s.e1.coor =
-          std::max( +s.e1.coor, coor + (s.e1.pad_use ? +s.e1.pad : 0) );
-        s.e2.coor = s.e1.coor + aw;
-        coor = s.e2.coor + (s.e2.pad_use ? +s.e2.pad : 0);
+      for ( auto& cell : cell_list ) {
+        U aw = cell.e2.coor - cell.e1.coor;
+        cell.e1.coor =
+          std::max(
+            +cell.e1.coor, coor + (cell.e1.pad_use ? +cell.e1.pad : 0)
+          );
+        cell.e2.coor = cell.e1.coor + aw;
+        coor = cell.e2.coor + (cell.e2.pad_use ? +cell.e2.pad : 0);
       }
     }
 
 /*
     printf( "Trial %1d initial placement:\n", cur_trial );
-    RenumberGridSpace( space_list );
-    DisplayGridSpace( space_list );
+    RenumberCoor( cell_list );
+    DisplayCoor( cell_list );
 */
 
     uint32_t max_iter = 100000;
@@ -189,11 +191,11 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
       cur_iter++;
       tot_iter++;
 
-      for ( auto& s : space_list ) {
-        s.e1.pad = 0;
-        s.e2.pad = 0;
-        s.e1.adj = (s.e2.coor - s.e1.coor) / 2;
-        s.e2.adj = (s.e1.coor - s.e2.coor) / 2;
+      for ( auto& cell : cell_list ) {
+        cell.e1.pad = 0;
+        cell.e2.pad = 0;
+        cell.e1.adj = (cell.e2.coor - cell.e1.coor) / 2;
+        cell.e2.adj = (cell.e1.coor - cell.e2.coor) / 2;
       }
 
       update_pad();
@@ -205,19 +207,19 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
         uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
 
         U aw = a2 - a1;
-        U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
+        U sw = cell_list[ g2 ].e2.coor - cell_list[ g1 ].e1.coor;
 
-        space_list[ g1 ].e1.adj =
-          std::min( +space_list[ g1 ].e1.adj, (sw - aw) / 2 );
-        space_list[ g2 ].e2.adj =
-          std::max( +space_list[ g2 ].e2.adj, (aw - sw) / 2 );
+        cell_list[ g1 ].e1.adj =
+          std::min( +cell_list[ g1 ].e1.adj, (sw - aw) / 2 );
+        cell_list[ g2 ].e2.adj =
+          std::max( +cell_list[ g2 ].e2.adj, (aw - sw) / 2 );
       }
 
       {
         edge_t* e1 = nullptr;
         edge_t* e2 = nullptr;
-        for ( auto& s : space_list ) {
-          e1 = &s.e1;
+        for ( auto& cell : cell_list ) {
+          e1 = &cell.e1;
           if ( e2 ) {
             U overlap =
               (e2->coor + (e2->pad_use ? +e2->pad : 0)) -
@@ -225,16 +227,16 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
             e2->adj -= overlap / 2;
             e1->adj += overlap / 2;
           }
-          e2 = &s.e2;
+          e2 = &cell.e2;
         }
       }
 
       U acu_adj = 0;
-      for ( auto& s : space_list ) {
-        s.e1.coor += s.e1.adj * 0.9;
-        s.e2.coor += s.e2.adj * 0.9;
-        acu_adj += std::abs( s.e1.adj );
-        acu_adj += std::abs( s.e2.adj );
+      for ( auto& cell : cell_list ) {
+        cell.e1.coor += cell.e1.adj * 0.9;
+        cell.e2.coor += cell.e2.adj * 0.9;
+        acu_adj += std::abs( cell.e1.adj );
+        acu_adj += std::abs( cell.e2.adj );
       }
 
       U converge_limit = 1e-3;
@@ -254,8 +256,8 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
       if ( solved || cur_iter == max_iter ) {
         edge_t* e1 = nullptr;
         edge_t* e2 = nullptr;
-        for ( auto& s : space_list ) {
-          e1 = &s.e1;
+        for ( auto& cell : cell_list ) {
+          e1 = &cell.e1;
           if ( e2 ) {
             U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
             if ( overlap > 4 * converge_limit ) {
@@ -264,7 +266,7 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
               solved = false;
             }
           }
-          e2 = &s.e2;
+          e2 = &cell.e2;
         }
         break;
       }
@@ -273,8 +275,8 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
 
 /*
     printf( "Trial %1d final placement:\n", cur_trial );
-    RenumberGridSpace( space_list );
-    DisplayGridSpace( space_list );
+    RenumberCoor( cell_list );
+    DisplayCoor( cell_list );
 */
   }
 
@@ -283,9 +285,9 @@ uint32_t Grid::SolveSpace1( std::vector< space_t >& space_list )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
+uint32_t Grid::Solve2( std::vector< cell_t >& cell_list )
 {
-  bool is_x = &space_list == &space_list_x;
+  bool is_x = &cell_list == &cell_list_x;
 
   // Create element sorting based on grid position.
   std::vector< size_t > sorted_indices( element_list.size() );
@@ -314,31 +316,31 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
 
       U ar = (a2 - a1) / 2;
 
-      U c = (space_list[ g1 ].e1.coor + space_list[ g2 ].e2.coor) / 2;
+      U c = (cell_list[ g1 ].e1.coor + cell_list[ g2 ].e2.coor) / 2;
       if (
         is_x
         ? (elem.anchor_x == SVG::AnchorX::Min)
         : (elem.anchor_y == SVG::AnchorY::Min)
       ) {
-        c = space_list[ g1 ].e1.coor + ar;
+        c = cell_list[ g1 ].e1.coor + ar;
       }
       if (
         is_x
         ? (elem.anchor_x == SVG::AnchorX::Max)
         : (elem.anchor_y == SVG::AnchorY::Max)
       ) {
-        c = space_list[ g2 ].e2.coor - ar;
+        c = cell_list[ g2 ].e2.coor - ar;
       }
 
-      space_list[ g1 ].e1.pad =
+      cell_list[ g1 ].e1.pad =
         std::max(
-          +space_list[ g1 ].e1.pad,
-          space_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
+          +cell_list[ g1 ].e1.pad,
+          cell_list[ g1 ].e1.coor - (c - ar - (a1 - f1))
         );
-      space_list[ g2 ].e2.pad =
+      cell_list[ g2 ].e2.pad =
         std::max(
-          +space_list[ g2 ].e2.pad,
-          (c + ar + (f2 - a2)) - space_list[ g2 ].e2.coor
+          +cell_list[ g2 ].e2.pad,
+          (c + ar + (f2 - a2)) - cell_list[ g2 ].e2.coor
         );
     }
   };
@@ -349,10 +351,10 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
     if ( g1 == g2 ) {
       U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
       U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
-      space_list[ g2 ].e2.coor = std::max( +space_list[ g2 ].e2.coor, a2 - a1 );
+      cell_list[ g2 ].e2.coor = std::max( +cell_list[ g2 ].e2.coor, a2 - a1 );
     } else {
-      space_list[ g1 ].e1.constrained = true;
-      space_list[ g2 ].e2.constrained = true;
+      cell_list[ g1 ].e1.constrained = true;
+      cell_list[ g2 ].e2.constrained = true;
     }
   }
 
@@ -361,9 +363,9 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
     uint32_t seed = std::time( 0 ) * getpid();
     SVG_DBG( "coor seed = " << seed );
     std::srand( seed );
-    for ( auto& s : space_list ) {
-      s.e1.coor = std::rand();
-      s.e2.coor = std::rand();
+    for ( auto& cell : cell_list ) {
+      cell.e1.coor = std::rand();
+      cell.e2.coor = std::rand();
     }
   }
 */
@@ -380,17 +382,17 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
       phase++;
       solved = false;
       cur_trial = 0;
-      space_list.front().e1.locked = true;
-      space_list.back().e2.locked = true;
+      cell_list.front().e1.locked = true;
+      cell_list.back().e2.locked = true;
     }
     cur_trial++;
 
     if ( cur_trial == max_trial ) {
       // At last trial, just include all padding in the solver such that they
       // can have a chance to take effect before we bail out.
-      for ( auto& s : space_list ) {
-        s.e1.pad_use = true;
-        s.e2.pad_use = true;
+      for ( auto& cell : cell_list ) {
+        cell.e1.pad_use = true;
+        cell.e2.pad_use = true;
       }
     }
 
@@ -407,35 +409,35 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
         U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
         U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
 
-        U d = space_list[ g1 ].e1.coor + (a2 - a1) - space_list[ g2 ].e2.coor;
+        U d = cell_list[ g1 ].e1.coor + (a2 - a1) - cell_list[ g2 ].e2.coor;
         if ( d > epsilon ) {
-          space_list[ g2 ].e1.coor += d;
-          space_list[ g2 ].e2.coor += d;
+          cell_list[ g2 ].e1.coor += d;
+          cell_list[ g2 ].e2.coor += d;
           moved = true;
         }
       }
 
-      for ( auto& s : space_list ) {
-        s.e1.pad = 0;
-        s.e2.pad = 0;
+      for ( auto& cell : cell_list ) {
+        cell.e1.pad = 0;
+        cell.e2.pad = 0;
       }
       update_pad();
 
-      space_t* ps = nullptr;
-      space_t* cs = nullptr;
-      for ( auto& s : space_list ) {
-        cs = &s;
-        if ( ps ) {
+      cell_t* prv_cell = nullptr;
+      cell_t* cur_cell = nullptr;
+      for ( auto& cell : cell_list ) {
+        cur_cell = &cell;
+        if ( prv_cell ) {
           U d =
-            (ps->e2.coor + (ps->e2.pad_use ? +ps->e2.pad : 0)) -
-            (cs->e1.coor - (cs->e1.pad_use ? +cs->e1.pad : 0));
+            (prv_cell->e2.coor + (prv_cell->e2.pad_use ? +prv_cell->e2.pad : 0)) -
+            (cur_cell->e1.coor - (cur_cell->e1.pad_use ? +cur_cell->e1.pad : 0));
           if ( d > epsilon ) {
-            cs->e1.coor += d;
-            cs->e2.coor += d;
+            cur_cell->e1.coor += d;
+            cur_cell->e2.coor += d;
             moved = true;
           }
         }
-        ps = cs;
+        prv_cell = cur_cell;
       }
 
       if ( !moved ) break;
@@ -443,8 +445,8 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
 
 /*
     printf( "Trial %1d initial placement:\n", cur_trial );
-    RenumberGridSpace( space_list );
-    DisplayGridSpace( space_list );
+    RenumberCoor( cell_list );
+    DisplayCoor( cell_list );
 */
 
     uint32_t max_iter = 100000;
@@ -454,13 +456,13 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
       cur_iter++;
       tot_iter++;
 
-      for ( auto& s : space_list ) {
-        s.e1.pad   = 0;
-        s.e2.pad   = 0;
-        s.e1.adj   = (s.e2.coor - s.e1.coor) / 2;
-        s.e2.adj   = (s.e1.coor - s.e2.coor) / 2;
-        s.e1.slack = +num_hi;
-        s.e2.slack = -num_hi;
+      for ( auto& cell : cell_list ) {
+        cell.e1.pad   = 0;
+        cell.e2.pad   = 0;
+        cell.e1.adj   = (cell.e2.coor - cell.e1.coor) / 2;
+        cell.e2.adj   = (cell.e1.coor - cell.e2.coor) / 2;
+        cell.e1.slack = +num_hi;
+        cell.e2.slack = -num_hi;
       }
       update_pad();
 
@@ -470,70 +472,70 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
         U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
         U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
         U aw = a2 - a1;
-        U sw = space_list[ g2 ].e2.coor - space_list[ g1 ].e1.coor;
+        U sw = cell_list[ g2 ].e2.coor - cell_list[ g1 ].e1.coor;
         U d = (sw - aw) / 2;
         if ( g2 > g1 ) {
-          space_list[ g1 ].e1.slack = std::min( +space_list[ g1 ].e1.slack, +d );
-          space_list[ g2 ].e2.slack = std::max( +space_list[ g2 ].e2.slack, -d );
+          cell_list[ g1 ].e1.slack = std::min( +cell_list[ g1 ].e1.slack, +d );
+          cell_list[ g2 ].e2.slack = std::max( +cell_list[ g2 ].e2.slack, -d );
         } else {
-          space_list[ g1 ].e1.adj = std::min( +space_list[ g1 ].e1.adj, +d );
-          space_list[ g2 ].e2.adj = std::max( +space_list[ g2 ].e2.adj, -d );
+          cell_list[ g1 ].e1.adj = std::min( +cell_list[ g1 ].e1.adj, +d );
+          cell_list[ g2 ].e2.adj = std::max( +cell_list[ g2 ].e2.adj, -d );
         }
       }
 
       {
-        space_t* ps = nullptr;
-        space_t* cs = nullptr;
-        for ( auto& s : space_list ) {
-          cs = &s;
-          if ( cs->e1.slack < 0 ) {
-            cs->e1.adj += cs->e1.slack;
-            cs->e2.adj += cs->e1.slack;
+        cell_t* prv_cell = nullptr;
+        cell_t* cur_cell = nullptr;
+        for ( auto& cell : cell_list ) {
+          cur_cell = &cell;
+          if ( cur_cell->e1.slack < 0 ) {
+            cur_cell->e1.adj += cur_cell->e1.slack;
+            cur_cell->e2.adj += cur_cell->e1.slack;
           }
-          if ( cs->e2.slack > 0 ) {
-            cs->e1.adj += cs->e2.slack;
-            cs->e2.adj += cs->e2.slack;
+          if ( cur_cell->e2.slack > 0 ) {
+            cur_cell->e1.adj += cur_cell->e2.slack;
+            cur_cell->e2.adj += cur_cell->e2.slack;
           }
-          if ( ps ) {
+          if ( prv_cell ) {
             U adj =
-              (cs->e1.coor - (cs->e1.pad_use ? +cs->e1.pad : 0)) -
-              (ps->e2.coor + (ps->e2.pad_use ? +ps->e2.pad : 0));
+              (cur_cell->e1.coor - (cur_cell->e1.pad_use ? +cur_cell->e1.pad : 0)) -
+              (prv_cell->e2.coor + (prv_cell->e2.pad_use ? +prv_cell->e2.pad : 0));
             adj = adj / 2;
             if ( adj < 0 ) {
-              ps->e1.adj += adj;
-              ps->e2.adj += adj;
-              cs->e1.adj -= adj;
-              cs->e2.adj -= adj;
+              prv_cell->e1.adj += adj;
+              prv_cell->e2.adj += adj;
+              cur_cell->e1.adj -= adj;
+              cur_cell->e2.adj -= adj;
             } else {
-              bool p_ok = (phase == 0) || !ps->e2.constrained || ps->e1.constrained;
-              bool c_ok = (phase == 0) || !cs->e1.constrained || cs->e2.constrained;
-              if ( ps->e1.slack > 0 && p_ok ) {
-                U a = std::min( +adj, +ps->e1.slack );
-                ps->e1.adj += a;
-                ps->e2.adj += a;
+              bool p_ok = (phase == 0) || !prv_cell->e2.constrained || prv_cell->e1.constrained;
+              bool c_ok = (phase == 0) || !cur_cell->e1.constrained || cur_cell->e2.constrained;
+              if ( prv_cell->e1.slack > 0 && p_ok ) {
+                U a = std::min( +adj, +prv_cell->e1.slack );
+                prv_cell->e1.adj += a;
+                prv_cell->e2.adj += a;
               }
-              if ( cs->e2.slack < 0 && c_ok ) {
-                U a = std::min( +adj, -cs->e2.slack );
-                cs->e1.adj -= a;
-                cs->e2.adj -= a;
+              if ( cur_cell->e2.slack < 0 && c_ok ) {
+                U a = std::min( +adj, -cur_cell->e2.slack );
+                cur_cell->e1.adj -= a;
+                cur_cell->e2.adj -= a;
               }
             }
           }
-          ps = cs;
+          prv_cell = cur_cell;
         }
       }
 
       U acu_adj = 0;
       U max_adj = 0;
-      for ( auto& s : space_list ) {
-        if ( s.e1.locked ) s.e1.adj = 0;
-        if ( s.e2.locked ) s.e2.adj = 0;
-        s.e1.coor += s.e1.adj * 0.3;
-        s.e2.coor += s.e2.adj * 0.3;
-        acu_adj += std::abs( s.e1.adj );
-        acu_adj += std::abs( s.e2.adj );
-        max_adj = std::max( +max_adj, std::abs( s.e1.adj ) );
-        max_adj = std::max( +max_adj, std::abs( s.e2.adj ) );
+      for ( auto& cell : cell_list ) {
+        if ( cell.e1.locked ) cell.e1.adj = 0;
+        if ( cell.e2.locked ) cell.e2.adj = 0;
+        cell.e1.coor += cell.e1.adj * 0.3;
+        cell.e2.coor += cell.e2.adj * 0.3;
+        acu_adj += std::abs( cell.e1.adj );
+        acu_adj += std::abs( cell.e2.adj );
+        max_adj = std::max( +max_adj, std::abs( cell.e1.adj ) );
+        max_adj = std::max( +max_adj, std::abs( cell.e2.adj ) );
       }
 
       U converge_limit = 1e-4;
@@ -553,8 +555,8 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
       if ( solved || cur_iter == max_iter ) {
         edge_t* e1 = nullptr;
         edge_t* e2 = nullptr;
-        for ( auto& s : space_list ) {
-          e1 = &s.e1;
+        for ( auto& cell : cell_list ) {
+          e1 = &cell.e1;
           if ( e2 ) {
             U overlap = (e2->coor + e2->pad) - (e1->coor - e1->pad);
             if ( overlap > 4 * converge_limit ) {
@@ -563,7 +565,7 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
               solved = false;
             }
           }
-          e2 = &s.e2;
+          e2 = &cell.e2;
         }
         break;
       }
@@ -572,8 +574,8 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
 
 /*
     printf( "Trial %1d final placement:\n", cur_trial );
-    RenumberGridSpace( space_list );
-    DisplayGridSpace( space_list );
+    RenumberCoor( cell_list );
+    DisplayCoor( cell_list );
 */
   }
 
@@ -582,58 +584,58 @@ uint32_t Grid::SolveSpace2( std::vector< space_t >& space_list )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Grid::DisplayGridSpace( std::vector< space_t >& space_list )
+void Grid::DisplayCoor( std::vector< cell_t >& cell_list )
 {
   uint32_t n = 0;
-  for ( auto& s : space_list ) {
+  for ( auto& cell : cell_list ) {
     n++;
     if ( n > 8 ) {
       printf( "..." );
       break;
     }
-    printf( "| %8.3f : %8.3f |", +s.e1.coor, +s.e2.coor );
+    printf( "| %8.3f : %8.3f |", +cell.e1.coor, +cell.e2.coor );
   }
   printf( "\n" );
 }
 
-void Grid::DisplayGridAdj( std::vector< space_t >& space_list )
+void Grid::DisplayAdj( std::vector< cell_t >& cell_list )
 {
   uint32_t n = 0;
-  for ( auto& s : space_list ) {
+  for ( auto& cell : cell_list ) {
     n++;
     if ( n > 8 ) {
       printf( "..." );
       break;
     }
-    printf( "· %8.3f : %8.3f ·", +s.e1.adj, +s.e2.adj );
+    printf( "· %8.3f : %8.3f ·", +cell.e1.adj, +cell.e2.adj );
   }
   printf( "\n" );
 }
 
-void Grid::DisplayGridSlack( std::vector< space_t >& space_list )
+void Grid::DisplaySlack( std::vector< cell_t >& cell_list )
 {
   uint32_t n = 0;
-  for ( auto& s : space_list ) {
+  for ( auto& cell : cell_list ) {
     n++;
     if ( n > 8 ) {
       printf( "..." );
       break;
     }
-    printf( "~ %8.3f : %8.3f ~", +s.e1.slack, +s.e2.slack );
+    printf( "~ %8.3f : %8.3f ~", +cell.e1.slack, +cell.e2.slack );
   }
   printf( "\n" );
 }
 
-void Grid::RenumberGridSpace( std::vector< space_t >& space_list )
+void Grid::RenumberCoor( std::vector< cell_t >& cell_list )
 {
   bool first = true;
   U ofs = 0;
-  for ( auto& s : space_list ) {
+  for ( auto& cell : cell_list ) {
     if ( first ) {
-      ofs = s.e1.coor;
+      ofs = cell.e1.coor;
     }
-    s.e1.coor -= ofs;
-    s.e2.coor -= ofs;
+    cell.e1.coor -= ofs;
+    cell.e2.coor -= ofs;
     first = false;
   }
 }
@@ -689,11 +691,11 @@ void Grid::Test( void )
 
   Init();
 
-  uint32_t tot_iter = SolveSpace2( space_list_x );
+  uint32_t tot_iter = Solve2( cell_list_x );
   SVG_DBG( "tot_iter = " << tot_iter );
   if ( tot_iter > 100000 ) exit( 1 );
 
-  if ( space_list_x.back().e2.coor > 10000 ) exit( 1 );
+  if ( cell_list_x.back().e2.coor > 10000 ) exit( 1 );
 
   return;
 }
