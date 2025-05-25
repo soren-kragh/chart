@@ -672,9 +672,6 @@ function createInfoBox(snapPoint, x, y, anchor, highlightSeries = true) {
   const padX = chart.infoFontSize / 2;
   const padY = chart.infoFontSize / 4;
 
-  let startX = 0;
-  let startY = 0;
-
   let textualX = false;
   let itemX = snapPoint.x;
   let itemY = snapPoint.y;
@@ -682,21 +679,13 @@ function createInfoBox(snapPoint, x, y, anchor, highlightSeries = true) {
     textualX = true;
   }
 
-  if ( !textualX ) {
-    startY += chart.infoFontSize * 1.2;
-    let text = newObj("text");
-    text.setAttribute("x", startX);
-    text.setAttribute("y", startY);
-    text.textContent = "X: " + itemX;
-    group.appendChild(text);
-  }
-
   {
-    startY += chart.infoFontSize * 1.2;
     let text = newObj("text");
-    text.setAttribute("x", startX);
-    text.setAttribute("y", startY);
-    text.textContent = (textualX ? "" : "Y: ") + itemY;
+    if ( textualX ) {
+      text.textContent = itemY;
+    } else {
+      text.textContent = "(" + itemX + "," + itemY + ")";
+    }
     group.appendChild(text);
   }
 
