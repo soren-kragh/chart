@@ -447,7 +447,7 @@ function resolveOverlaps(boxes, sx, sy) {
 
 //------------------------------------------------------------------------------
 
-function createCategoryBoxes(x, y, axis) {
+function createCategoryBoxes(chart_snap, x, y, axis) {
   showCursor();
 
   let horizontal = false;
@@ -492,7 +492,7 @@ function createCategoryBoxes(x, y, axis) {
 
   let lst = [];
   chart.catList[i].forEach(({serId, id}) => {
-    const sp = svg_snap.getElementById(id);
+    const sp = chart_snap.querySelector(`[id="${id}"]`);
     if (sp) {
       const x = Number(sp.getAttribute("cx"));
       const y = Number(sp.getAttribute("cy"));
@@ -759,9 +759,9 @@ svg_snap.addEventListener("mousemove", (event) => {
   }
 
   if (chart != undefined) {
+    const chart_snap = svg_snap.getElementById(`snapPoints${chart_idx}`);
     const elems = document.elementsFromPoint(event.clientX, event.clientY);
-    const snapCandidates =
-      elems.filter(el => el.parentNode.id === `snapPoints${chart_idx}`);
+    const snapCandidates = elems.filter(el => el.parentNode === chart_snap);
     const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;
@@ -819,7 +819,7 @@ svg_snap.addEventListener("mousemove", (event) => {
       }
 
       if (inCat) {
-        createCategoryBoxes(x, y, catAxis);
+        createCategoryBoxes(chart_snap, x, y, catAxis);
       } else {
         createCrosshair(x, y, atPoint);
         let showX = [true, true];
