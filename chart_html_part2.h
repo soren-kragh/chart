@@ -12,6 +12,9 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const svg_cursor = document.getElementById("svgCursor");
 const svg_snap = document.getElementById("svgSnap");
 
+let chart;
+let chart_idx;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 let cursorTimer;
@@ -447,7 +450,7 @@ function resolveOverlaps(boxes, sx, sy) {
 
 //------------------------------------------------------------------------------
 
-function createCategoryBoxes(chart_snap, x, y, axis) {
+function createCategoryBoxes(x, y, axis) {
   showCursor();
 
   let horizontal = false;
@@ -492,7 +495,7 @@ function createCategoryBoxes(chart_snap, x, y, axis) {
 
   let lst = [];
   chart.catList[i].forEach(({serId, id}) => {
-    const sp = chart_snap.querySelector(`[id="${id}"]`);
+    const sp = svg_snap.getElementById(`${chart_idx}_${id}`);
     if (sp) {
       const x = Number(sp.getAttribute("cx"));
       const y = Number(sp.getAttribute("cy"));
@@ -744,8 +747,8 @@ svg_snap.addEventListener("mousemove", (event) => {
   const mouseX = svgPoint.x;
   const mouseY = svgPoint.y;
 
-  let chart_idx = undefined;
   chart = undefined;
+  chart_idx = undefined;
   for (let i = 0; i < chart_list.length; i++) {
     const c = chart_list[i];
     if (
@@ -799,27 +802,31 @@ svg_snap.addEventListener("mousemove", (event) => {
 
       if (snapCandidates.length > 0 && !inCat) {
         snapCandidates.forEach(circle => {
+          const id = circle.getAttribute("id");
+          const [chartNum, snapNum] = id.split('_').map(Number);
           const cx = parseFloat(circle.getAttribute("cx"));
           const cy = parseFloat(circle.getAttribute("cy"));
           const dx = mouseX - cx;
           const dy = mouseY - cy;
           const dist = dx * dx + dy * dy;
-          if (dist < minDist) {
+          if (chartNum == chart_idx && dist < minDist) {
             minDist = dist;
-            snapPoint = chart.snapPoints[ Number(circle.getAttribute("id")) ];
+            snapPoint = chart.snapPoints[ snapNum ];
             x = cx;
             y = cy;
             atPoint = true;
           }
         });
-        let anchor = {anchorX: -1, anchorY: -1};
-        if (x > (chart.area.x2 + chart.area.x1)/2) anchor.anchorX = 1;
-        if (y > (chart.area.y2 + chart.area.y1)/2) anchor.anchorY = 1;
-        createInfoBox(snapPoint, x, y, anchor);
+        if (atPoint) {
+          let anchor = {anchorX: -1, anchorY: -1};
+          if (x > (chart.area.x2 + chart.area.x1)/2) anchor.anchorX = 1;
+          if (y > (chart.area.y2 + chart.area.y1)/2) anchor.anchorY = 1;
+          createInfoBox(snapPoint, x, y, anchor);
+        }
       }
 
       if (inCat) {
-        createCategoryBoxes(chart_snap, x, y, catAxis);
+        createCategoryBoxes(x, y, catAxis);
       } else {
         createCrosshair(x, y, atPoint);
         let showX = [true, true];

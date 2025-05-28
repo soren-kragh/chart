@@ -418,7 +418,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
       uint32_t snap_id = 0;
       for ( const auto& sp : main->html.snap_points ) {
         std::ostringstream oss;
-        oss << "id=\"" << snap_id << '"';
+        oss << "id=\"" << main_id << '_' << snap_id << '"';
         snap_g->Add(
           new Circle(
             sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
@@ -442,8 +442,6 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
   oss << "</div>\n";
 
   oss << "\n<script>\n\n";
-
-  oss << "let chart;\n\n";
 
   oss << "const chart_list = [" << '\n';
   for ( auto main : main_list ) {
