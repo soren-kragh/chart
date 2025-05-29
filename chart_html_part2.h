@@ -769,7 +769,7 @@ svg_snap.addEventListener("mousemove", (event) => {
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;
 
-    const minCatWidth = 24;
+    const minCatWidth = -1;
     let inCat = false;
     let catAxis;
     if (chart.axisX[0].isCategory) {
