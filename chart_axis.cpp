@@ -323,7 +323,7 @@ void Axis::LegalizeMajor( void ) {
       }
       if ( major <= 0 ) {
         // Minimum major spacing to aim for.
-        U min_space = 100;
+        U min_space = std::min( 100.0, length / 4 );
         int32_t p = 0;
         int32_t m = 1;
         int32_t d = 1;
