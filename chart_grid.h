@@ -67,6 +67,16 @@ public:
   uint32_t Solve1( std::vector< cell_t >& cell_list );
   uint32_t Solve2( std::vector< cell_t >& cell_list );
 
+  struct hole_t {
+    uint32_t x1 = 0;
+    uint32_t y1 = 0;
+    uint32_t x2 = 0;
+    uint32_t y2 = 0;
+    BoundaryBox bb;
+  };
+
+  void GetHoles( std::vector< Grid::hole_t >& holes );
+
   void DisplayCoor( std::vector< cell_t >& cell_list );
   void DisplayAdj( std::vector< cell_t >& cell_list );
   void DisplaySlack( std::vector< cell_t >& cell_list );

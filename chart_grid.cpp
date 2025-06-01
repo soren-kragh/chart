@@ -584,6 +584,63 @@ uint32_t Grid::Solve2( std::vector< cell_t >& cell_list )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Grid::GetHoles( std::vector< Grid::hole_t >& holes )
+{
+  std::vector< std::vector< bool > > grid;
+  grid.resize( max_x + 1, std::vector< bool >( max_y + 1, false ) );
+
+  for ( auto& elem : element_list ) {
+    for ( uint32_t x = 0; x <= max_x; ++x ) {
+      for ( uint32_t y = 0; y <= max_y; ++y ) {
+        grid[ x ][ y ] = true;
+      }
+    }
+  }
+
+  auto BarLen = [&]( uint32_t x, uint32_t y )
+  {
+    uint32_t len = 0;
+    while ( x <= max_x && !grid[ x++ ][ y ] ) ++len;
+    return len;
+  };
+
+  auto AddHole = [&](
+    uint32_t x1, uint32_t y1,
+    uint32_t x2, uint32_t y2
+  )
+  {
+    for ( auto& h : holes ) {
+      if ( x1 >= h.x1 && x2 <= h.x2 && y1 >= h.y1 && y2 <= h.y2 ) return;
+    }
+    hole_t hole;
+    hole.x1 = x1; hole.x2 = x2;
+    hole.y1 = y1; hole.y2 = y2;
+    holes.push_back( hole );
+  };
+
+  for ( uint32_t cx = 0; cx <= max_x; ++cx ) {
+    for ( uint32_t cy = 0; cy <= max_y; ++cy ) {
+      uint32_t cur_bl = 0;
+      for ( uint32_t by = cy; by <= max_y; ++by ) {
+        uint32_t new_bl = BarLen( cx, by );
+        if ( by > cy ) {
+          new_bl = std::min( cur_bl, new_bl );
+          if ( new_bl < cur_bl ) {
+            AddHole( cx, cy, cx + cur_bl - 1, by - 1 );
+          }
+        }
+        if ( new_bl == 0 ) break;
+        if ( by == max_y ) {
+          AddHole( cx, cy, cx + new_bl - 1, by );
+        }
+        cur_bl = new_bl;
+      }
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Grid::DisplayCoor( std::vector< cell_t >& cell_list )
 {
   uint32_t n = 0;

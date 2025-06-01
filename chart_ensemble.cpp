@@ -244,6 +244,17 @@ void Ensemble::BuildLegends( void )
 
   BoundaryBox build_bb;
   BoundaryBox moved_bb;
+
+  if ( legend_obj->pos == Pos::Auto ) {
+    std::vector< Grid::hole_t > holes;
+
+    grid.GetHoles( holes );
+
+
+
+    return;
+  }
+
   BoundaryBox all_bb = top_g->GetBB();
 
   Group* legend_g = top_g->AddNewGroup();
@@ -267,6 +278,7 @@ void Ensemble::BuildLegends( void )
     }
     U avail_h = all_bb.max.y - all_bb.min.y;
     uint32_t nx = 1;
+    // TBD: Make method in Legend class out of this:
     while ( 1 ) {
       uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
       U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
@@ -325,7 +337,6 @@ void Ensemble::BuildLegends( void )
       moved_bb.min.y - build_bb.min.y
     );
   }
-
   return;
 }
 
