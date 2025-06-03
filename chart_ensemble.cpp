@@ -245,18 +245,6 @@ void Ensemble::BuildLegends( void )
   BoundaryBox build_bb;
   BoundaryBox moved_bb;
 
-  if ( legend_obj->pos == Pos::Auto ) {
-    std::vector< Grid::hole_t > holes;
-
-    grid.GetHoles( holes );
-
-
-
-    return;
-  }
-
-  BoundaryBox all_bb = top_g->GetBB();
-
   Group* legend_g = top_g->AddNewGroup();
   legend_g->Attr()->TextFont()->SetSize( 14 * legend_obj->size );
 
@@ -266,68 +254,165 @@ void Ensemble::BuildLegends( void )
   Legend::LegendDims legend_dims;
   legend_obj->CalcLegendDims( framed, legend_g, legend_dims );
 
-  if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
+  if ( legend_obj->pos == Pos::Auto ) {
+    std::vector< Grid::hole_t > holes;
 
-    U mx = framed ? +box_spacing : 20;
-    U x = all_bb.min.x - mx;
-    U y = all_bb.max.y;
-    AnchorX anchor_x = AnchorX::Max;
-    if ( legend_obj->pos == Pos::Right ) {
-      x = all_bb.max.x + mx;
-      anchor_x = AnchorX::Min;
-    }
-    U avail_h = all_bb.max.y - all_bb.min.y;
-    uint32_t nx = 1;
-    // TBD: Make method in Legend class out of this:
-    while ( 1 ) {
-      uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
-      U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-      if ( need_h > avail_h && ny > 1 ) {
-        nx++;
-        continue;
+    grid.GetHoles( holes );
+
+    std::sort(
+      holes.begin(), holes.end(),
+      [&]( Grid::hole_t a, Grid::hole_t b ) {
+        bool a_top = a.y2 == grid.max_y;
+        bool a_bot = a.y1 == 0;
+        bool a_side = a.x1 == 0 || a.x2 == grid.max_x;
+        bool a_corner = a_side && (a_top || a_bot);
+        bool a_rim = a_side || a_top || a_bot;
+
+        bool b_top = b.y2 == grid.max_y;
+        bool b_bot = b.y1 == 0;
+        bool b_side = b.x1 == 0 || b.x2 == grid.max_x;
+        bool b_corner = b_side && (b_top || b_bot);
+        bool b_rim = b_side || b_top || b_bot;
+
+        if ( a_rim != b_rim ) return a_rim;
+        if ( a_corner != b_corner ) return a_corner;
+        if ( a_bot != b_bot ) return a_bot;
+        if ( a_top != b_top ) return a_top;
+
+        double a_size = (a.bb.max.x - a.bb.min.x) * (a.bb.max.y - a.bb.min.y);
+        double b_size = (b.bb.max.x - b.bb.min.x) * (b.bb.max.y - b.bb.min.y);
+
+        return a_size > b_size;
       }
-      break;
-    }
-    legend_obj->BuildLegends(
-      framed, ForegroundColor(), LegendColor(),
-      legend_g->AddNewGroup(), nx
     );
-    Object* legend = legend_g->Last();
-    build_bb = legend->GetBB();
-    legend->MoveTo( anchor_x, AnchorY::Max, x, y );
-    moved_bb = legend->GetBB();
 
-  } else {
-
-    U my = box_spacing;
-    U x = (all_bb.min.x + all_bb.max.x) / 2;
-    U y = all_bb.min.y - my;
-    AnchorY anchor_y = AnchorY::Max;
-    if ( legend_obj->pos == Pos::Top ) {
-      y = all_bb.max.y + my;
-      anchor_y = AnchorY::Min;
-    }
-    U avail_w = all_bb.max.x - all_bb.min.x;
-    uint32_t nx = legend_obj->Cnt();
-    uint32_t ny = 1;
-    while ( 1 ) {
-      nx = (legend_obj->Cnt() + ny - 1) / ny;
-      U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-      if ( need_w > avail_w && nx > 1 ) {
-        ny++;
-        continue;
+/*
+    {
+      uint32_t n = 1;
+      for ( auto& h : holes ) {
+        top_g->Add( new Rect( h.bb.min, h.bb.max ) );
+        top_g->Last()->Attr()->SetLineWidth( 2 );
+        top_g->Last()->Attr()->FillColor()->Clear();
+        top_g->Last()->Attr()->LineColor()->Set( ColorName::orange );
+        std::ostringstream oss;
+        oss << n;
+        top_g->Add( new Text( oss.str() ) );
+        top_g->Last()->Attr()->TextFont()->SetSize( 20 );
+        top_g->Last()->Attr()->TextColor()->Set( ColorName::black );
+        top_g->Last()->MoveTo(
+          AnchorX::Mid, AnchorY::Mid,
+          (h.bb.min.x + h.bb.max.x) / 2,
+          (h.bb.min.y + h.bb.max.y) / 2
+        );
+        ++n;
       }
-      break;
     }
-    legend_obj->BuildLegends(
-      framed, ForegroundColor(), LegendColor(),
-      legend_g->AddNewGroup(), nx
-    );
-    Object* legend = legend_g->Last();
-    build_bb = legend->GetBB();
-    legend->MoveTo( AnchorX::Mid, anchor_y, x, y );
-    moved_bb = legend->GetBB();
+*/
 
+    for ( auto& hole : holes ) {
+      U avail_h = hole.bb.max.y - hole.bb.min.y - box_spacing;
+      U avail_w = hole.bb.max.x - hole.bb.min.x - box_spacing;
+      if ( framed ) {
+        avail_h -= legend_dims.my;
+        avail_w -= legend_dims.mx;
+      }
+      uint32_t nx = 1;
+      U need_h;
+      U need_w;
+      while ( 1 ) {
+        uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
+        need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+        if ( need_h > avail_h && ny > 1 ) {
+          nx++;
+          continue;
+        }
+        break;
+      }
+      need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+      need_w += legend_dims.lx + legend_dims.rx;
+      if ( need_h <= avail_h && need_w <= avail_w ) {
+        legend_obj->BuildLegends(
+          framed, ForegroundColor(), LegendColor(),
+          legend_g->AddNewGroup(), nx
+        );
+        Object* legend = legend_g->Last();
+        build_bb = legend->GetBB();
+        legend->MoveTo(
+          AnchorX::Mid, AnchorY::Mid,
+          (hole.bb.min.x + hole.bb.max.x) / 2,
+          (hole.bb.min.y + hole.bb.max.y) / 2
+        );
+        moved_bb = legend->GetBB();
+        break;
+      }
+    }
+  }
+
+  if ( !build_bb.Defined() ) {
+    BoundaryBox all_bb = top_g->GetBB();
+
+    if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
+
+      U mx = framed ? +box_spacing : 20;
+      U x = all_bb.min.x - mx;
+      U y = all_bb.max.y;
+      AnchorX anchor_x = AnchorX::Max;
+      if ( legend_obj->pos == Pos::Right ) {
+        x = all_bb.max.x + mx;
+        anchor_x = AnchorX::Min;
+      }
+      U avail_h = all_bb.max.y - all_bb.min.y;
+      uint32_t nx = 1;
+      while ( 1 ) {
+        uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
+        U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+        if ( need_h > avail_h && ny > 1 ) {
+          nx++;
+          continue;
+        }
+        break;
+      }
+      legend_obj->BuildLegends(
+        framed, ForegroundColor(), LegendColor(),
+        legend_g->AddNewGroup(), nx
+      );
+      Object* legend = legend_g->Last();
+      build_bb = legend->GetBB();
+      legend->MoveTo( anchor_x, AnchorY::Max, x, y );
+      moved_bb = legend->GetBB();
+
+    } else {
+
+      U my = box_spacing;
+      U x = (all_bb.min.x + all_bb.max.x) / 2;
+      U y = all_bb.min.y - my;
+      AnchorY anchor_y = AnchorY::Max;
+      if ( legend_obj->pos == Pos::Top ) {
+        y = all_bb.max.y + my;
+        anchor_y = AnchorY::Min;
+      }
+      U avail_w = all_bb.max.x - all_bb.min.x;
+      uint32_t nx = legend_obj->Cnt();
+      uint32_t ny = 1;
+      while ( 1 ) {
+        nx = (legend_obj->Cnt() + ny - 1) / ny;
+        U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+        if ( need_w > avail_w && nx > 1 ) {
+          ny++;
+          continue;
+        }
+        break;
+      }
+      legend_obj->BuildLegends(
+        framed, ForegroundColor(), LegendColor(),
+        legend_g->AddNewGroup(), nx
+      );
+      Object* legend = legend_g->Last();
+      build_bb = legend->GetBB();
+      legend->MoveTo( AnchorX::Mid, anchor_y, x, y );
+      moved_bb = legend->GetBB();
+
+    }
   }
 
   for ( auto series : legend_obj->series_list ) {

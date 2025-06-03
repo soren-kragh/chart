@@ -590,8 +590,8 @@ void Grid::GetHoles( std::vector< Grid::hole_t >& holes )
   grid.resize( max_x + 1, std::vector< bool >( max_y + 1, false ) );
 
   for ( auto& elem : element_list ) {
-    for ( uint32_t x = 0; x <= max_x; ++x ) {
-      for ( uint32_t y = 0; y <= max_y; ++y ) {
+    for ( uint32_t x = elem.grid_x1; x <= elem.grid_x2; ++x ) {
+      for ( uint32_t y = elem.grid_y1; y <= elem.grid_y2; ++y ) {
         grid[ x ][ y ] = true;
       }
     }
@@ -636,6 +636,11 @@ void Grid::GetHoles( std::vector< Grid::hole_t >& holes )
         cur_bl = new_bl;
       }
     }
+  }
+
+  for ( auto& h : holes ) {
+    h.bb.Update( cell_list_x[ h.x1 ].e1.coor, cell_list_y[ h.y1 ].e1.coor );
+    h.bb.Update( cell_list_x[ h.x2 ].e2.coor, cell_list_y[ h.y2 ].e2.coor );
   }
 }
 
@@ -699,6 +704,32 @@ void Grid::RenumberCoor( std::vector< cell_t >& cell_list )
 
 void Grid::Test( void )
 {
+  if ( 0 ) {
+    auto AddGrid = [&](
+      uint32_t x1, uint32_t y1,
+      uint32_t x2, uint32_t y2
+    ) {
+      element_t elem;
+      elem.grid_x1 = x1; elem.grid_x2 = x2;
+      elem.grid_y1 = y1; elem.grid_y2 = y2;
+      element_list.push_back( elem );
+    };
+
+    AddGrid( 0, 0, 1, 1 );
+    AddGrid( 3, 0, 4, 1 );
+    AddGrid( 0, 3, 2, 4 );
+
+    Init();
+
+    std::vector< Grid::hole_t > holes;
+    GetHoles( holes );
+    for ( auto& h : holes ) {
+      printf( "%0d:%0d %0d:%0d\n", h.x1, h.y1, h.x2, h.y2 );
+    }
+
+    return;
+  }
+
   auto AddElem = [&](
     U w, uint32_t x1, uint32_t x2, U x1_pad = 0, U x2_pad = 0
   ) {
@@ -744,7 +775,6 @@ void Grid::Test( void )
   AddElem( 100, 0, 1 );
   AddElem( 300, 2, 3 );
   AddElem( 300, 0, 2 );
-
 
   Init();
 

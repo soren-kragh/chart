@@ -72,7 +72,7 @@ public:
     uint32_t y1 = 0;
     uint32_t x2 = 0;
     uint32_t y2 = 0;
-    BoundaryBox bb;
+    SVG::BoundaryBox bb;
   };
 
   void GetHoles( std::vector< Grid::hole_t >& holes );
