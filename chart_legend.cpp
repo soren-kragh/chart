@@ -68,8 +68,8 @@ void Legend::CalcLegendDims(
   legend_dims.dy = 4;
   legend_dims.sx = 0;
   legend_dims.sy = 0;
-  legend_dims.mx = framed ? (2 * box_spacing) : (1 * box_spacing);
-  legend_dims.my = framed ? (2 * box_spacing) : (1 * box_spacing);
+  legend_dims.mx = framed ? (2 * box_spacing) : (1 * box_spacing); // TBD
+  legend_dims.my = framed ? (2 * box_spacing) : (1 * box_spacing); // TBD
   legend_dims.hx = 0;
   legend_dims.hy = 0;
 
@@ -237,6 +237,72 @@ void Legend::CalcLegendDims(
   }
 
   return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Legend::GetDims(
+  SVG::U& w, SVG::U& h,
+  Legend::LegendDims& legend_dims, bool framed, uint32_t nx
+)
+{
+  uint32_t ny = (Cnt() + nx - 1) / nx;
+  w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+  h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+  w += legend_dims.lx + legend_dims.rx;
+  h += legend_dims.hy;
+  w = std::max( w, legend_dims.hx );
+  if ( framed ) {
+    w += 2 * box_spacing;
+    h += 2 * box_spacing;
+  }
+}
+
+//------------------------------------------------------------------------------
+
+bool Legend::GetBestFit(
+  Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
+  SVG::U avail_x, SVG::U avail_y
+)
+{
+  avail_x = std::max( 1.0, +avail_x );
+  avail_y = std::max( 1.0, +avail_y );
+  double avail_aspect = avail_x / avail_y;
+
+  bool best_fits = false;
+  uint32_t best_nx = 0;
+  uint32_t best_rem = 0;
+  double best_aspfit = 0;
+
+  for ( uint32_t nx = 1; nx <= Cnt(); ++nx ) {
+    U need_x;
+    U need_y;
+    GetDims( need_x, need_y, legend_dims, framed, nx );
+    bool fits =
+      (avail_x == 0 || need_x <= avail_x) &&
+      (avail_y == 0 || need_y <= avail_y);
+    uint32_t rem = Cnt() % nx;
+    if ( rem > 0 ) rem = nx - rem;
+    double aspect = need_x / need_y;
+    double aspfit = std::max( avail_aspect / aspect, aspect / avail_aspect);
+
+    bool better = best_nx == 0 || (fits && !best_fits);
+    if ( fits == best_fits ) {
+      if ( rem < best_rem ) better = true;
+      if ( rem == best_rem ) {
+        if ( aspfit < best_aspfit ) better = true;
+      }
+    }
+    if ( better ) {
+      best_fits = fits;
+      best_nx = nx;
+      best_rem = rem;
+      best_aspfit = aspfit;
+    }
+  }
+
+  nx = best_nx;
+  return best_fits;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

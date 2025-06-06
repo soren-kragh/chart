@@ -63,6 +63,20 @@ public:
     SVG::Group* g, Legend::LegendDims& legend_dims
   );
 
+  // Get dimensions of legends when nx legends in the X direction.
+  void GetDims(
+    SVG::U& w, SVG::U& h,
+    Legend::LegendDims& legend_dims, bool framed, uint32_t nx
+  );
+
+  // Compute the number (nx) of legends in the X direction that best fits
+  // the available area.
+  // Return value indicates if legends fit within the given available area.
+  bool GetBestFit(
+    Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
+    SVG::U avail_x, SVG::U avail_y
+  );
+
   void BuildLegends(
     bool framed,
     SVG::Color* frame_line_color,

@@ -312,25 +312,10 @@ void Ensemble::BuildLegends( void )
     for ( auto& hole : holes ) {
       U avail_h = hole.bb.max.y - hole.bb.min.y - box_spacing;
       U avail_w = hole.bb.max.x - hole.bb.min.x - box_spacing;
-      if ( framed ) {
-        avail_h -= legend_dims.my;
-        avail_w -= legend_dims.mx;
-      }
-      uint32_t nx = 1;
-      U need_h;
-      U need_w;
-      while ( 1 ) {
-        uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
-        need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-        if ( need_h > avail_h && ny > 1 ) {
-          nx++;
-          continue;
-        }
-        break;
-      }
-      need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-      need_w += legend_dims.lx + legend_dims.rx;
-      if ( need_h <= avail_h && need_w <= avail_w ) {
+      uint32_t nx;
+      bool fits =
+        legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, avail_h );
+      if ( fits ) {
         legend_obj->BuildLegends(
           framed, ForegroundColor(), LegendColor(),
           legend_g->AddNewGroup(), nx
