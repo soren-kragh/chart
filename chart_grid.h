@@ -66,8 +66,7 @@ public:
   std::vector< cell_t > cell_list_y;
 
   void Init( SVG::U cell_margin );
-  uint32_t Solve1( std::vector< cell_t >& cell_list );
-  uint32_t Solve2( std::vector< cell_t >& cell_list );
+  uint32_t Solve( std::vector< cell_t >& cell_list );
 
   struct hole_t {
     uint32_t x1 = 0;

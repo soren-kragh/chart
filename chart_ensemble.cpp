@@ -210,8 +210,8 @@ void Ensemble::InitGrid( void )
 void Ensemble::ComputeGrid( void )
 {
   InitGrid();
-  grid.Solve2( grid.cell_list_x );
-  grid.Solve2( grid.cell_list_y );
+  grid.Solve( grid.cell_list_x );
+  grid.Solve( grid.cell_list_y );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
