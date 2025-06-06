@@ -29,6 +29,8 @@ public:
   uint32_t max_x = 0;
   uint32_t max_y = 0;
 
+  SVG::U cell_margin = 0;
+
   struct element_t {
     Main* chart = nullptr;
     SVG::BoundaryBox full_bb;
@@ -63,7 +65,7 @@ public:
   std::vector< cell_t > cell_list_x;
   std::vector< cell_t > cell_list_y;
 
-  void Init( void );
+  void Init( SVG::U cell_margin );
   uint32_t Solve1( std::vector< cell_t >& cell_list );
   uint32_t Solve2( std::vector< cell_t >& cell_list );
 

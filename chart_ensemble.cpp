@@ -167,7 +167,7 @@ void Ensemble::SetFootnoteLine( bool footnote_line )
 
 void Ensemble::InitGrid( void )
 {
-  grid.Init();
+  grid.Init( std::max( 0.0, +grid_padding ) );
 
   for ( auto& elem : grid.element_list ) {
     elem.area_bb.Update( 0, 0 );
@@ -177,10 +177,6 @@ void Ensemble::InitGrid( void )
       elem.full_bb = elem.area_bb;
     } else {
       elem.full_bb = elem.chart->GetGroup()->GetBB();
-      elem.full_bb.min.x -= grid_padding;
-      elem.full_bb.max.x += grid_padding;
-      elem.full_bb.min.y -= grid_padding;
-      elem.full_bb.max.y += grid_padding;
     }
 
     // Convert row location to Y grid coordinates.
@@ -617,25 +613,31 @@ std::string Ensemble::Build( void )
 
   BuildBackground();
 
-/*
+
   {
     BoundaryBox bb = canvas->TopGroup()->GetBB();
 
     Group* g = canvas->TopGroup()->AddNewGroup();
-    g->Attr()->LineColor()->Set( ColorName::black );
-    g->Attr()->SetLineWidth( 0.5 );
+    g->Attr()->LineColor()->Set( ColorName::orange );
+    g->Attr()->SetLineWidth( 2 );
     g->Attr()->FillColor()->Set( ColorName::yellow );
     g->Attr()->FillColor()->SetOpacity( 0.2 );
 
     for ( auto& s : grid.cell_list_x ) {
       g->Add( new Rect( s.e1.coor, bb.min.y, s.e2.coor, bb.max.y ) );
+      g->Last()->Attr()->SetLineWidth( 0 );
+      g->Add( new Line( s.e1.coor, bb.min.y, s.e1.coor, bb.max.y ) );
+      g->Add( new Line( s.e2.coor, bb.min.y, s.e2.coor, bb.max.y ) );
     }
 
     for ( auto& s : grid.cell_list_y ) {
       g->Add( new Rect( bb.min.x, s.e1.coor, bb.max.x, s.e2.coor ) );
+      g->Last()->Attr()->SetLineWidth( 0 );
+      g->Add( new Line( bb.min.x, s.e1.coor, bb.max.x, s.e1.coor ) );
+      g->Add( new Line( bb.min.x, s.e2.coor, bb.max.x, s.e2.coor ) );
     }
   }
-*/
+
 
   std::ostringstream oss;
   if ( enable_html ) {
