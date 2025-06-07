@@ -306,8 +306,10 @@ void Ensemble::BuildLegends( void )
 */
 
     for ( auto& hole : holes ) {
-      U avail_h = hole.bb.max.y - hole.bb.min.y - box_spacing;
-      U avail_w = hole.bb.max.x - hole.bb.min.x - box_spacing;
+      U margin = box_spacing;
+      margin = std::max( 0.0, margin - std::max( 2 * grid_padding, 0.0 ) );
+      U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * margin;
+      U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * margin;
       uint32_t nx;
       bool fits =
         legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, avail_h );
