@@ -168,7 +168,10 @@ function buildAxisLabel(val, axis) {
 
   if (axis.isCategory) {
     const i = Math.round(val);
-    if ( i >= 0 && i < chart.categories.length && chart.categories[i] ) {
+    if (
+      chart.categories && i >= 0 &&
+      i < chart.categories.length && chart.categories[i]
+    ) {
       const text = newObj("text");
       text.textContent = chart.categories[i];
       group.appendChild(text);
