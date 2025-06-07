@@ -619,9 +619,9 @@ std::string Ensemble::Build( void )
 
     Group* g = canvas->TopGroup()->AddNewGroup();
     g->Attr()->LineColor()->Set( ColorName::orange );
-    g->Attr()->SetLineWidth( 2 );
+    g->Attr()->SetLineWidth( 2 )->LineColor()->SetOpacity( 0.5 );
     g->Attr()->FillColor()->Set( ColorName::yellow );
-    g->Attr()->FillColor()->SetOpacity( 0.2 );
+    g->Attr()->FillColor()->SetOpacity( 0.1 );
 
     for ( auto& s : grid.cell_list_x ) {
       g->Add( new Rect( s.e1.coor, bb.min.y, s.e2.coor, bb.max.y ) );

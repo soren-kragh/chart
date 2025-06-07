@@ -51,8 +51,6 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
 {
   bool is_x = &cell_list == &cell_list_x;
 
-  std::vector< element_t > elem_list( element_list );
-
   // Phase 1: Unconstrained solve.
   // Phase 2: Minimize occupied cell widths.
   // Phase 3: Expand empty cell sides to allow shared legends to be
@@ -60,7 +58,7 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
   uint32_t phase = 1;
 
   auto update_pad = [&]( void ) {
-    for ( auto& elem : elem_list ) {
+    for ( auto& elem : element_list ) {
       uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
       uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
       U f1 = is_x ? elem.full_bb.min.x : elem.full_bb.min.y;
@@ -102,11 +100,9 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
     }
   };
 
-  for ( auto& elem : elem_list ) {
+  for ( auto& elem : element_list ) {
     uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
     uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
-    cell_list[ g1 ].isolated = false;
-    cell_list[ g2 ].isolated = false;
     if ( g1 == g2 ) {
       U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
       U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
@@ -114,26 +110,6 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
     } else {
       cell_list[ g1 ].e1.constrained = true;
       cell_list[ g2 ].e2.constrained = true;
-    }
-  }
-
-  // Create fake zero-width elements for isolated cells.
-  {
-    uint32_t g = 0;
-    for ( auto& cell : cell_list ) {
-      if ( cell.isolated ) {
-        element_t elem;
-        elem.area_bb.Update( 0, 0 );
-        elem.full_bb.Update( 0, 0 );
-        elem.grid_x1 = g;
-        elem.grid_y1 = g;
-        elem.grid_x2 = g;
-        elem.grid_y2 = g;
-        elem_list.push_back( elem );
-        cell.e1.pad_use = true;
-        cell.e2.pad_use = true;
-      }
-      ++g;
     }
   }
 
@@ -150,13 +126,13 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
 */
 
   // Create element sorting based on grid position.
-  std::vector< size_t > sorted_indices( elem_list.size() );
+  std::vector< size_t > sorted_indices( element_list.size() );
   std::iota( sorted_indices.begin(), sorted_indices.end(), 0 );
   std::sort(
     sorted_indices.begin(), sorted_indices.end(),
     [&]( size_t a_index, size_t b_index ) {
-      const auto& a = elem_list[ a_index ];
-      const auto& b = elem_list[ b_index ];
+      const auto& a = element_list[ a_index ];
+      const auto& b = element_list[ b_index ];
       uint32_t a1 = is_x ? a.grid_x1 : a.grid_y1;
       uint32_t a2 = is_x ? a.grid_x2 : a.grid_y2;
       uint32_t b1 = is_x ? b.grid_x1 : b.grid_y1;
@@ -179,11 +155,11 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
       cell_list.front().e1.locked = true;
       cell_list.back().e2.locked = true;
       if ( phase == 3 ) {
-        for ( auto& elem : elem_list ) {
+        for ( auto& elem : element_list ) {
           uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
           uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
-          cell_list[ g1 ].e1.locked = !cell_list[ g1 ].isolated;
-          cell_list[ g2 ].e2.locked = !cell_list[ g2 ].isolated;
+          cell_list[ g1 ].e1.locked = true;
+          cell_list[ g2 ].e2.locked = true;
         }
         cell_t* prv_cell = nullptr;
         cell_t* cur_cell = nullptr;
@@ -211,11 +187,11 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
     // Initial placement (not really needed, but gives much faster convergence
     // in some cases).
     if ( phase < 3 ) {
-      for ( size_t i = 0; i < elem_list.size(); i++ ) {
+      for ( size_t i = 0; i < element_list.size(); i++ ) {
         bool moved = false;
 
         for ( auto i : sorted_indices ) {
-          auto& elem = elem_list[ i ];
+          auto& elem = element_list[ i ];
 
           uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
           uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
@@ -281,7 +257,7 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
       update_pad();
 
       if ( phase < 3 ) {
-        for ( auto& elem : elem_list ) {
+        for ( auto& elem : element_list ) {
           uint32_t g1 = is_x ? elem.grid_x1 : elem.grid_y1;
           uint32_t g2 = is_x ? elem.grid_x2 : elem.grid_y2;
           U a1 = is_x ? elem.area_bb.min.x : elem.area_bb.min.y;
