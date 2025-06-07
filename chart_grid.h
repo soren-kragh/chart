@@ -58,6 +58,7 @@ public:
   struct cell_t {
     edge_t e1;
     edge_t e2;
+    bool isolated = true;
   };
 
   std::vector< element_t > element_list;
