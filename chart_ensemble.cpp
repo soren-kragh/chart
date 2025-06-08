@@ -218,38 +218,37 @@ void Ensemble::InitGrid( void )
   grid.Init( std::max( 0.0, +grid_padding ), area_padding );
 
   for ( auto& elem : grid.element_list ) {
+    // Convert row location to Y grid coordinates.
+    std::swap( elem.grid_y1, elem.grid_y2 );
+    elem.grid_y1 = grid.max_y - elem.grid_y1;
+    elem.grid_y2 = grid.max_y - elem.grid_y2;
+
+    if ( !elem.anchor_x_defined ) {
+      if ( elem.grid_x1 == 0 && elem.grid_x2 < grid.max_x ) {
+        elem.anchor_x = SVG::AnchorX::Min;
+      }
+      if ( elem.grid_x1 > 0 && elem.grid_x2 == grid.max_x ) {
+        elem.anchor_x = SVG::AnchorX::Max;
+      }
+    }
+
+    if ( !elem.anchor_y_defined ) {
+      if ( elem.grid_y1 == 0 && elem.grid_y2 < grid.max_y ) {
+        elem.anchor_y = SVG::AnchorY::Min;
+      }
+      if ( elem.grid_y1 > 0 && elem.grid_y2 == grid.max_y ) {
+        elem.anchor_y = SVG::AnchorY::Max;
+      }
+      elem.anchor_y_defined = true;
+    }
+
     if ( elem.chart ) {
       elem.area_bb.Update( 0, 0 );
       elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
-
       if ( grid_padding < 0 ) {
         elem.full_bb = elem.area_bb;
       } else {
         elem.full_bb = elem.chart->GetGroup()->GetBB();
-      }
-
-      // Convert row location to Y grid coordinates.
-      std::swap( elem.grid_y1, elem.grid_y2 );
-      elem.grid_y1 = grid.max_y - elem.grid_y1;
-      elem.grid_y2 = grid.max_y - elem.grid_y2;
-
-      if ( !elem.anchor_x_defined ) {
-        if ( elem.grid_x1 == 0 && elem.grid_x2 < grid.max_x ) {
-          elem.anchor_x = SVG::AnchorX::Min;
-        }
-        if ( elem.grid_x1 > 0 && elem.grid_x2 == grid.max_x ) {
-          elem.anchor_x = SVG::AnchorX::Max;
-        }
-      }
-
-      if ( !elem.anchor_y_defined ) {
-        if ( elem.grid_y1 == 0 && elem.grid_y2 < grid.max_y ) {
-          elem.anchor_y = SVG::AnchorY::Min;
-        }
-        if ( elem.grid_y1 > 0 && elem.grid_y2 == grid.max_y ) {
-          elem.anchor_y = SVG::AnchorY::Max;
-        }
-        elem.anchor_y_defined = true;
       }
     }
   }
@@ -301,7 +300,60 @@ void Ensemble::BuildLegends( void )
   Legend::LegendDims legend_dims;
   legend_obj->CalcLegendDims( framed, legend_g, legend_dims );
 
-  if ( legend_obj->pos == Pos::Auto ) {
+  U margin = 2 * std::max( grid_padding, area_padding );
+  margin = std::max( 0.0,  box_spacing - margin );
+
+  if ( legend_obj->grid_coor_specified ) {
+    Grid::element_t* elem = nullptr;
+    for ( auto& e : grid.element_list ) {
+      if ( !e.chart ) elem = &e;
+    }
+
+    BoundaryBox avail_bb;
+    auto UpdateAvailBB = [&]( void )
+    {
+      avail_bb.Reset();
+      avail_bb.Update(
+        grid.cell_list_x[ elem->grid_x1 ].e1.coor,
+        grid.cell_list_y[ elem->grid_y1 ].e1.coor
+      );
+      avail_bb.Update(
+        grid.cell_list_x[ elem->grid_x2 ].e2.coor,
+        grid.cell_list_y[ elem->grid_y2 ].e2.coor
+      );
+    };
+
+    uint32_t nx;
+    legend_obj->GetBestFit( legend_dims, nx, framed, 15, 10 );
+
+    while ( 1 ) {
+      U legend_w;
+      U legend_h;
+      legend_obj->GetDims( legend_w, legend_h, legend_dims, framed, nx );
+      elem->full_bb.Reset();
+      elem->full_bb.Update( 0, 0 );
+      elem->full_bb.Update( legend_w + 2 * margin, legend_h + 2 * margin );
+      elem->area_bb = elem->full_bb;
+      SolveGrid();
+      UpdateAvailBB();
+      break;
+    }
+
+    legend_obj->BuildLegends(
+      framed, ForegroundColor(), LegendColor(),
+      legend_g->AddNewGroup(), nx
+    );
+    Object* legend = legend_g->Last();
+    build_bb = legend->GetBB();
+    legend->MoveTo(
+      AnchorX::Mid, AnchorY::Mid,
+      (avail_bb.min.x + avail_bb.max.x) / 2,
+      (avail_bb.min.y + avail_bb.max.y) / 2
+    );
+    moved_bb = legend->GetBB();
+  }
+
+  if ( !build_bb.Defined() && legend_obj->pos == Pos::Auto ) {
     std::vector< Grid::hole_t > holes;
 
     grid.GetHoles( holes );
@@ -333,14 +385,14 @@ void Ensemble::BuildLegends( void )
       }
     );
 
-/*
+
     {
       uint32_t n = 1;
       for ( auto& h : holes ) {
         top_g->Add( new Rect( h.bb.min, h.bb.max ) );
         top_g->Last()->Attr()->SetLineWidth( 2 );
         top_g->Last()->Attr()->FillColor()->Clear();
-        top_g->Last()->Attr()->LineColor()->Set( ColorName::orange );
+        top_g->Last()->Attr()->LineColor()->Set( ColorName::red );
         std::ostringstream oss;
         oss << n;
         top_g->Add( new Text( oss.str() ) );
@@ -354,11 +406,9 @@ void Ensemble::BuildLegends( void )
         ++n;
       }
     }
-*/
+
 
     for ( auto& hole : holes ) {
-      U margin = 2 * std::max( grid_padding, area_padding );
-      margin = std::max( 0.0,  box_spacing - margin );
       U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * margin;
       U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * margin;
       uint32_t nx;
