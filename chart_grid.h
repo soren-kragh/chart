@@ -30,6 +30,7 @@ public:
   uint32_t max_y = 0;
 
   SVG::U cell_margin = 0;
+  SVG::U area_padding = 0;
 
   struct element_t {
     Main* chart = nullptr;
@@ -65,7 +66,7 @@ public:
   std::vector< cell_t > cell_list_x;
   std::vector< cell_t > cell_list_y;
 
-  void Init( SVG::U cell_margin );
+  void Init( SVG::U cell_margin, SVG::U area_padding );
   uint32_t Solve( std::vector< cell_t >& cell_list );
 
   struct hole_t {

@@ -61,9 +61,14 @@ public:
   // Padding around all elements.
   void SetPadding( SVG::U padding ) { this->padding = padding; }
 
-  // Padding around elements in the grid; a negative value means that
-  // only the core chart areas are considered when laying out the grid.
-  void SetGridPadding( SVG::U padding ) { grid_padding = padding; }
+  // Padding around elements in the grid; a negative value for the grid_padding
+  // means that only the core chart areas are considered when laying out the
+  // grid.
+  void SetGridPadding( SVG::U grid_padding, SVG::U area_padding )
+  {
+    this->grid_padding = grid_padding;
+    this->area_padding = area_padding;
+  }
 
   void SetLegendHeading( const std::string& txt );
   void SetLegendFrame( bool enable = true );
@@ -101,6 +106,7 @@ public:
   SVG::U margin       = 0;
   SVG::U padding      = 8;
   SVG::U grid_padding = 4;
+  SVG::U area_padding = 0;
 
   SVG::U max_area_pad = 0;
 

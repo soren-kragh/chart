@@ -167,7 +167,7 @@ void Ensemble::SetFootnoteLine( bool footnote_line )
 
 void Ensemble::InitGrid( void )
 {
-  grid.Init( std::max( 0.0, +grid_padding ) );
+  grid.Init( std::max( 0.0, +grid_padding ), area_padding );
 
   for ( auto& elem : grid.element_list ) {
     elem.area_bb.Update( 0, 0 );
@@ -306,8 +306,8 @@ void Ensemble::BuildLegends( void )
 */
 
     for ( auto& hole : holes ) {
-      U margin = box_spacing;
-      margin = std::max( 0.0, margin - std::max( 2 * grid_padding, 0.0 ) );
+      U margin = 2 * std::max( grid_padding, area_padding );
+      margin = std::max( 0.0,  box_spacing - margin );
       U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * margin;
       U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * margin;
       uint32_t nx;

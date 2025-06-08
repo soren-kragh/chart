@@ -31,9 +31,10 @@ Grid::~Grid( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Grid::Init( SVG::U cell_margin )
+void Grid::Init( SVG::U cell_margin, SVG::U area_padding )
 {
   this->cell_margin = cell_margin;
+  this->area_padding = area_padding;
   for ( auto& elem : element_list ) {
     if ( elem.grid_x1 > elem.grid_x2 ) std::swap( elem.grid_x1, elem.grid_x2 );
     if ( elem.grid_y1 > elem.grid_y2 ) std::swap( elem.grid_y1, elem.grid_y2 );
@@ -50,6 +51,8 @@ void Grid::Init( SVG::U cell_margin )
 uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
 {
   bool is_x = &cell_list == &cell_list_x;
+
+  U min_pad = std::max( cell_margin, area_padding );
 
   // Phase 1: Unconstrained solve.
   // Phase 2: Minimize occupied cell widths.
@@ -207,8 +210,8 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
         }
 
         for ( auto& cell : cell_list ) {
-          cell.e1.pad = cell_margin;
-          cell.e2.pad = cell_margin;
+          cell.e1.pad = min_pad;
+          cell.e2.pad = min_pad;
         }
         update_pad();
 
@@ -247,8 +250,8 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
       tot_iter++;
 
       for ( auto& cell : cell_list ) {
-        cell.e1.pad   = cell_margin;
-        cell.e2.pad   = cell_margin;
+        cell.e1.pad   = min_pad;
+        cell.e2.pad   = min_pad;
         cell.e1.adj   = (phase == 3) ? 0.0 : ((cell.e2.coor - cell.e1.coor) / 2);
         cell.e2.adj   = (phase == 3) ? 0.0 : ((cell.e1.coor - cell.e2.coor) / 2);
         cell.e1.slack = +num_hi;
@@ -529,7 +532,7 @@ void Grid::Test( void )
     AddGrid( 3, 0, 4, 1 );
     AddGrid( 0, 3, 2, 4 );
 
-    Init( 0 );
+    Init( 0, 0 );
 
     std::vector< Grid::hole_t > holes;
     GetHoles( holes );
@@ -586,7 +589,7 @@ void Grid::Test( void )
   AddElem( 300, 2, 3 );
   AddElem( 300, 0, 2 );
 
-  Init( 0 );
+  Init( 0, 0 );
 
   uint32_t tot_iter = Solve( cell_list_x );
   SVG_DBG( "tot_iter = " << tot_iter );
