@@ -52,6 +52,8 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
 {
   bool is_x = &cell_list == &cell_list_x;
 
+  for ( auto& cell : cell_list ) cell = {};
+
   U min_pad = std::max( cell_margin, area_padding );
 
   // Phase 1: Unconstrained solve.

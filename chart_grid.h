@@ -46,6 +46,8 @@ public:
     SVG::AnchorY anchor_y = SVG::AnchorY::Mid;
   };
 
+  std::vector< element_t > element_list;
+
   struct edge_t {
     SVG::U coor      = 0;   // Coordinate of this core chart area edge
     SVG::U adj       = 0;   // Iterative adjustment to coor
@@ -60,8 +62,6 @@ public:
     edge_t e1;
     edge_t e2;
   };
-
-  std::vector< element_t > element_list;
 
   std::vector< cell_t > cell_list_x;
   std::vector< cell_t > cell_list_y;

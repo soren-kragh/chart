@@ -73,6 +73,10 @@ public:
   void SetLegendHeading( const std::string& txt );
   void SetLegendFrame( bool enable = true );
   void SetLegendPos( Pos pos );
+  bool SetLegendPos(
+    uint32_t grid_row1, uint32_t grid_col1,
+    uint32_t grid_row2, uint32_t grid_col2
+  );
   void SetLegendSize( float size );
   SVG::Color* LegendColor( void ) { return &legend_color; }
 
@@ -87,6 +91,7 @@ public:
   // Footnote size scaling factor.
   void SetFootnoteSize( float size ) { footnote_size = size; }
 
+  void MoveCharts( void );
   std::string Build( void );
 
   SVG::Canvas* canvas;
@@ -113,7 +118,7 @@ public:
   Grid grid;
 
   void InitGrid( void );
-  void ComputeGrid( void );
+  void SolveGrid( void );
 
   std::string heading;
   std::string sub_heading;

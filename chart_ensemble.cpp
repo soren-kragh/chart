@@ -137,6 +137,54 @@ void Ensemble::SetLegendFrame( bool enable )
 void Ensemble::SetLegendPos( Pos pos )
 {
   legend_obj->pos = pos;
+  legend_obj->grid_coor_specified = false;
+}
+
+bool Ensemble::SetLegendPos(
+  uint32_t grid_row1, uint32_t grid_col1,
+  uint32_t grid_row2, uint32_t grid_col2
+)
+{
+  // Shared legend grid elements are identified by chart == nullptr; start
+  // by removing if already specified earlier.
+  grid.element_list.erase(
+    std::remove_if(
+      grid.element_list.begin(), grid.element_list.end(),
+      []( const Grid::element_t& elem ) { return elem.chart == nullptr; }
+    ),
+    grid.element_list.end()
+  );
+
+  for ( auto& elem : grid.element_list ) {
+    if (
+      !(grid_col1 < elem.grid_x1 && grid_col2 < elem.grid_x1) &&
+      !(grid_col1 > elem.grid_x2 && grid_col2 > elem.grid_x2) &&
+      !(grid_row1 < elem.grid_y1 && grid_row2 < elem.grid_y1) &&
+      !(grid_row1 > elem.grid_y2 && grid_row2 > elem.grid_y2)
+    )
+      return false;
+  }
+
+  Grid::element_t elem;
+
+  // Note that the Y grid coordinates are in normal bottom to top "mathematical"
+  // direction, whereas rows goes top to bottom. The InitGrid() will reorient
+  // the Y grid coordinates to match these notations.
+  elem.grid_x1 = grid_col1;
+  elem.grid_y1 = grid_row1;
+  elem.grid_x2 = grid_col2;
+  elem.grid_y2 = grid_row2;
+  elem.anchor_x_defined = true;
+  elem.anchor_y_defined = true;
+  elem.anchor_x = AnchorX::Mid;
+  elem.anchor_y = AnchorY::Mid;
+
+  grid.element_list.push_back( elem );
+
+  legend_obj->pos = Pos::Auto;
+  legend_obj->grid_coor_specified = true;
+
+  return true;
 }
 
 void Ensemble::SetLegendSize( float size )
@@ -170,46 +218,47 @@ void Ensemble::InitGrid( void )
   grid.Init( std::max( 0.0, +grid_padding ), area_padding );
 
   for ( auto& elem : grid.element_list ) {
-    elem.area_bb.Update( 0, 0 );
-    elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
+    if ( elem.chart ) {
+      elem.area_bb.Update( 0, 0 );
+      elem.area_bb.Update( elem.chart->chart_w, elem.chart->chart_h );
 
-    if ( grid_padding < 0 ) {
-      elem.full_bb = elem.area_bb;
-    } else {
-      elem.full_bb = elem.chart->GetGroup()->GetBB();
-    }
+      if ( grid_padding < 0 ) {
+        elem.full_bb = elem.area_bb;
+      } else {
+        elem.full_bb = elem.chart->GetGroup()->GetBB();
+      }
 
-    // Convert row location to Y grid coordinates.
-    std::swap( elem.grid_y1, elem.grid_y2 );
-    elem.grid_y1 = grid.max_y - elem.grid_y1;
-    elem.grid_y2 = grid.max_y - elem.grid_y2;
+      // Convert row location to Y grid coordinates.
+      std::swap( elem.grid_y1, elem.grid_y2 );
+      elem.grid_y1 = grid.max_y - elem.grid_y1;
+      elem.grid_y2 = grid.max_y - elem.grid_y2;
 
-    if ( !elem.anchor_x_defined ) {
-      if ( elem.grid_x1 == 0 && elem.grid_x2 < grid.max_x ) {
-        elem.anchor_x = SVG::AnchorX::Min;
+      if ( !elem.anchor_x_defined ) {
+        if ( elem.grid_x1 == 0 && elem.grid_x2 < grid.max_x ) {
+          elem.anchor_x = SVG::AnchorX::Min;
+        }
+        if ( elem.grid_x1 > 0 && elem.grid_x2 == grid.max_x ) {
+          elem.anchor_x = SVG::AnchorX::Max;
+        }
       }
-      if ( elem.grid_x1 > 0 && elem.grid_x2 == grid.max_x ) {
-        elem.anchor_x = SVG::AnchorX::Max;
-      }
-    }
 
-    if ( !elem.anchor_y_defined ) {
-      if ( elem.grid_y1 == 0 && elem.grid_y2 < grid.max_y ) {
-        elem.anchor_y = SVG::AnchorY::Min;
+      if ( !elem.anchor_y_defined ) {
+        if ( elem.grid_y1 == 0 && elem.grid_y2 < grid.max_y ) {
+          elem.anchor_y = SVG::AnchorY::Min;
+        }
+        if ( elem.grid_y1 > 0 && elem.grid_y2 == grid.max_y ) {
+          elem.anchor_y = SVG::AnchorY::Max;
+        }
+        elem.anchor_y_defined = true;
       }
-      if ( elem.grid_y1 > 0 && elem.grid_y2 == grid.max_y ) {
-        elem.anchor_y = SVG::AnchorY::Max;
-      }
-      elem.anchor_y_defined = true;
     }
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::ComputeGrid( void )
+void Ensemble::SolveGrid( void )
 {
-  InitGrid();
   grid.Solve( grid.cell_list_x );
   grid.Solve( grid.cell_list_y );
 }
@@ -220,14 +269,16 @@ SVG::BoundaryBox Ensemble::TopBB( void )
 {
   BoundaryBox bb = top_g->GetBB();
   for ( auto& elem : grid.element_list ) {
-    bb.Update(
-      elem.area_bb.min.x + elem.chart->g_dx - max_area_pad,
-      elem.area_bb.min.y + elem.chart->g_dy - max_area_pad
-    );
-    bb.Update(
-      elem.area_bb.max.x + elem.chart->g_dx + max_area_pad,
-      elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
-    );
+    if ( elem.chart ) {
+      bb.Update(
+        elem.area_bb.min.x + elem.chart->g_dx - max_area_pad,
+        elem.area_bb.min.y + elem.chart->g_dy - max_area_pad
+      );
+      bb.Update(
+        elem.area_bb.max.x + elem.chart->g_dx + max_area_pad,
+        elem.area_bb.max.y + elem.chart->g_dy + max_area_pad
+      );
+    }
   }
   return bb;
 }
@@ -522,14 +573,16 @@ void Ensemble::BuildBackground( void )
 
     if ( enable_html ) {
       for ( auto& elem : grid.element_list ) {
-        bb.Update(
-          elem.area_bb.min.x + elem.chart->g_dx - snap_point_radius,
-          elem.area_bb.min.y + elem.chart->g_dy - snap_point_radius
-        );
-        bb.Update(
-          elem.area_bb.max.x + elem.chart->g_dx + snap_point_radius,
-          elem.area_bb.max.y + elem.chart->g_dy + snap_point_radius
-        );
+        if ( elem.chart ) {
+          bb.Update(
+            elem.area_bb.min.x + elem.chart->g_dx - snap_point_radius,
+            elem.area_bb.min.y + elem.chart->g_dy - snap_point_radius
+          );
+          bb.Update(
+            elem.area_bb.max.x + elem.chart->g_dx + snap_point_radius,
+            elem.area_bb.max.y + elem.chart->g_dy + snap_point_radius
+          );
+        }
       }
     }
 
@@ -563,6 +616,31 @@ void Ensemble::BuildBackground( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Ensemble::MoveCharts( void )
+{
+  for ( auto& elem : grid.element_list ) {
+    if ( elem.chart ) {
+      U gx1 = grid.cell_list_x[ elem.grid_x1 ].e1.coor;
+      U gx2 = grid.cell_list_x[ elem.grid_x2 ].e2.coor;
+      U gy1 = grid.cell_list_y[ elem.grid_y1 ].e1.coor;
+      U gy2 = grid.cell_list_y[ elem.grid_y2 ].e2.coor;
+
+      U mx = (gx1 + gx2) / 2 - (elem.area_bb.min.x + elem.area_bb.max.x) / 2;
+      U my = (gy1 + gy2) / 2 - (elem.area_bb.min.y + elem.area_bb.max.y) / 2;
+
+      if ( elem.anchor_x == SVG::AnchorX::Min ) mx = gx1 - elem.area_bb.min.x;
+      if ( elem.anchor_x == SVG::AnchorX::Max ) mx = gx2 - elem.area_bb.max.x;
+
+      if ( elem.anchor_y == SVG::AnchorY::Min ) my = gy1 - elem.area_bb.min.y;
+      if ( elem.anchor_y == SVG::AnchorY::Max ) my = gy2 - elem.area_bb.max.y;
+
+      elem.chart->Move( mx, my );
+    }
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 std::string Ensemble::Build( void )
 {
   if ( Empty() ) {
@@ -583,32 +661,23 @@ std::string Ensemble::Build( void )
 
   max_area_pad = 0;
   for ( auto& elem : grid.element_list ) {
-    elem.chart->Build();
-    U area_pad = elem.chart->GetAreaPadding();
-    max_area_pad = std::max( max_area_pad, area_pad );
+    if ( elem.chart ) {
+      elem.chart->Build();
+      U area_pad = elem.chart->GetAreaPadding();
+      max_area_pad = std::max( max_area_pad, area_pad );
+    }
   }
 
-  ComputeGrid();
+  InitGrid();
 
-  for ( auto& elem : grid.element_list ) {
-    U gx1 = grid.cell_list_x[ elem.grid_x1 ].e1.coor;
-    U gx2 = grid.cell_list_x[ elem.grid_x2 ].e2.coor;
-    U gy1 = grid.cell_list_y[ elem.grid_y1 ].e1.coor;
-    U gy2 = grid.cell_list_y[ elem.grid_y2 ].e2.coor;
-
-    U mx = (gx1 + gx2) / 2 - (elem.area_bb.min.x + elem.area_bb.max.x) / 2;
-    U my = (gy1 + gy2) / 2 - (elem.area_bb.min.y + elem.area_bb.max.y) / 2;
-
-    if ( elem.anchor_x == SVG::AnchorX::Min ) mx = gx1 - elem.area_bb.min.x;
-    if ( elem.anchor_x == SVG::AnchorX::Max ) mx = gx2 - elem.area_bb.max.x;
-
-    if ( elem.anchor_y == SVG::AnchorY::Min ) my = gy1 - elem.area_bb.min.y;
-    if ( elem.anchor_y == SVG::AnchorY::Max ) my = gy2 - elem.area_bb.max.y;
-
-    elem.chart->Move( mx, my );
+  if ( legend_obj->grid_coor_specified ) {
+    BuildLegends();     // Solves grid when grid_coor_specified.
+    MoveCharts();
+  } else {
+    SolveGrid();
+    MoveCharts();
+    BuildLegends();
   }
-
-  BuildLegends();
 
   BuildHeading();
   BuildFootnotes();

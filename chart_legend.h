@@ -32,6 +32,7 @@ public:
   std::vector< Series* > series_list;
   std::string heading;
   Pos pos = Pos::Auto;
+  bool grid_coor_specified = false;
   float size = 1.0;
 
   void Add( Series* series );
