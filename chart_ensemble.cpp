@@ -308,9 +308,12 @@ void Ensemble::BuildLegends( void )
     for ( auto& e : grid.element_list ) {
       if ( !e.chart ) elem = &e;
     }
+    if ( !elem ) return;        // Shouldn't happen.
 
     BoundaryBox avail_bb;
-    auto UpdateAvailBB = [&]( void )
+    U avail_w;
+    U avail_h;
+    auto UpdateAvail = [&]( void )
     {
       avail_bb.Reset();
       avail_bb.Update(
@@ -321,10 +324,17 @@ void Ensemble::BuildLegends( void )
         grid.cell_list_x[ elem->grid_x2 ].e2.coor,
         grid.cell_list_y[ elem->grid_y2 ].e2.coor
       );
+      avail_w = avail_bb.max.x - avail_bb.min.x;
+      avail_h = avail_bb.max.y - avail_bb.min.y;
     };
 
+    bool best_defined = false;
+    uint32_t best_nx = 1;
+    U best_slack = 0;
+    bool best_found = false;
+
     uint32_t nx;
-    legend_obj->GetBestFit( legend_dims, nx, framed, 15, 10 );
+    legend_obj->GetBestFit( legend_dims, nx, framed, 1.5, 1.0 );
 
     while ( 1 ) {
       U legend_w;
@@ -335,8 +345,45 @@ void Ensemble::BuildLegends( void )
       elem->full_bb.Update( legend_w + 2 * margin, legend_h + 2 * margin );
       elem->area_bb = elem->full_bb;
       SolveGrid();
-      UpdateAvailBB();
-      break;
+      UpdateAvail();
+      if ( best_found ) break;
+
+      bool snug_x = avail_w * 0.95 < legend_w;
+      bool snug_y = avail_h * 0.95 < legend_h;
+      if ( snug_x == snug_y ) break;
+
+      if ( snug_x ) {
+        U slack = avail_h - legend_h;
+        if ( !best_defined || slack < best_slack ) {
+          best_nx = nx;
+          best_slack = slack;
+          best_defined = true;
+          if ( nx == 1 ) break;
+          while ( 1 ) {
+            --nx;
+            if ( legend_obj->Cnt() % nx == 0 ) break;
+          }
+        } else {
+          nx = best_nx;
+          best_found = true;
+        }
+      }
+      if ( snug_y ) {
+        U slack = avail_w - legend_w;
+        if ( !best_defined || slack < best_slack ) {
+          best_nx = nx;
+          best_slack = slack;
+          best_defined = true;
+          if ( nx == legend_obj->Cnt() ) break;
+          while ( 1 ) {
+            ++nx;
+            if ( legend_obj->Cnt() % nx == 0 ) break;
+          }
+        } else {
+          nx = best_nx;
+          best_found = true;
+        }
+      }
     }
 
     legend_obj->BuildLegends(

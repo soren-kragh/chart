@@ -265,6 +265,8 @@ bool Legend::GetBestFit(
   SVG::U avail_x, SVG::U avail_y
 )
 {
+  bool ignore_fit_x = avail_x <= 0;
+  bool ignore_fit_y = avail_y <= 0;
   avail_x = std::max( 1.0, +avail_x );
   avail_y = std::max( 1.0, +avail_y );
   double avail_aspect = avail_x / avail_y;
@@ -279,8 +281,8 @@ bool Legend::GetBestFit(
     U need_y;
     GetDims( need_x, need_y, legend_dims, framed, nx );
     bool fits =
-      (avail_x == 0 || need_x <= avail_x) &&
-      (avail_y == 0 || need_y <= avail_y);
+      (ignore_fit_x || need_x <= avail_x) &&
+      (ignore_fit_y || need_y <= avail_y);
     uint32_t rem = Cnt() % nx;
     if ( rem > 0 ) rem = nx - rem;
     double aspect = need_x / need_y;
