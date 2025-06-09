@@ -152,7 +152,8 @@ void Ensemble::SetLegendPos( Pos pos )
 
 bool Ensemble::SetLegendPos(
   uint32_t grid_row1, uint32_t grid_col1,
-  uint32_t grid_row2, uint32_t grid_col2
+  uint32_t grid_row2, uint32_t grid_col2,
+  Chart::Pos align_hor, Chart::Pos align_ver
 )
 {
   SetLegendPos( Pos::Auto );
@@ -180,6 +181,10 @@ bool Ensemble::SetLegendPos(
   elem.anchor_y_defined = true;
   elem.anchor_x = AnchorX::Mid;
   elem.anchor_y = AnchorY::Mid;
+  if ( align_hor == Pos::Left   ) elem.anchor_x = AnchorX::Min;
+  if ( align_hor == Pos::Right  ) elem.anchor_x = AnchorX::Max;
+  if ( align_ver == Pos::Bottom ) elem.anchor_y = AnchorY::Min;
+  if ( align_ver == Pos::Top    ) elem.anchor_y = AnchorY::Max;
 
   grid.element_list.push_back( elem );
 
@@ -392,11 +397,13 @@ void Ensemble::BuildLegends( void )
     );
     Object* legend = legend_g->Last();
     build_bb = legend->GetBB();
-    legend->MoveTo(
-      AnchorX::Mid, AnchorY::Mid,
-      (avail_bb.min.x + avail_bb.max.x) / 2,
-      (avail_bb.min.y + avail_bb.max.y) / 2
-    );
+    U x = (avail_bb.min.x + avail_bb.max.x) / 2;
+    U y = (avail_bb.min.y + avail_bb.max.y) / 2;
+    if ( elem->anchor_x == AnchorX::Min ) x = avail_bb.min.x;
+    if ( elem->anchor_x == AnchorX::Max ) x = avail_bb.max.x;
+    if ( elem->anchor_y == AnchorY::Min ) y = avail_bb.min.y;
+    if ( elem->anchor_y == AnchorY::Max ) y = avail_bb.max.y;
+    legend->MoveTo( elem->anchor_x, elem->anchor_y, x, y );
     moved_bb = legend->GetBB();
   }
 
