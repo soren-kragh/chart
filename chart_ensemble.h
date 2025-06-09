@@ -116,7 +116,6 @@ public:
   SVG::U max_area_pad = 0;
 
   Grid grid;
-  bool grid_solved = false;
 
   void InitGrid( void );
   void SolveGrid( void );

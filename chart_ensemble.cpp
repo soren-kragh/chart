@@ -136,15 +136,6 @@ void Ensemble::SetLegendFrame( bool enable )
 
 void Ensemble::SetLegendPos( Pos pos )
 {
-  legend_obj->pos = pos;
-  legend_obj->grid_coor_specified = false;
-}
-
-bool Ensemble::SetLegendPos(
-  uint32_t grid_row1, uint32_t grid_col1,
-  uint32_t grid_row2, uint32_t grid_col2
-)
-{
   // Shared legend grid elements are identified by chart == nullptr; start
   // by removing if already specified earlier.
   grid.element_list.erase(
@@ -154,6 +145,17 @@ bool Ensemble::SetLegendPos(
     ),
     grid.element_list.end()
   );
+
+  legend_obj->pos = pos;
+  legend_obj->grid_coor_specified = false;
+}
+
+bool Ensemble::SetLegendPos(
+  uint32_t grid_row1, uint32_t grid_col1,
+  uint32_t grid_row2, uint32_t grid_col2
+)
+{
+  SetLegendPos( Pos::Auto );
 
   for ( auto& elem : grid.element_list ) {
     if (
@@ -181,7 +183,6 @@ bool Ensemble::SetLegendPos(
 
   grid.element_list.push_back( elem );
 
-  legend_obj->pos = Pos::Auto;
   legend_obj->grid_coor_specified = true;
 
   return true;
@@ -260,7 +261,6 @@ void Ensemble::SolveGrid( void )
 {
   grid.Solve( grid.cell_list_x );
   grid.Solve( grid.cell_list_y );
-  grid_solved = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -309,7 +309,6 @@ void Ensemble::BuildLegends( void )
     for ( auto& e : grid.element_list ) {
       if ( !e.chart ) elem = &e;
     }
-    if ( !elem ) return;        // Shouldn't happen.
 
     BoundaryBox avail_bb;
     U avail_w;
@@ -757,6 +756,10 @@ std::string Ensemble::Build( void )
   top_g->Attr()->LineColor()->Set( ForegroundColor() );
   top_g->Attr()->FillColor()->Set( BackgroundColor() );
 
+  if ( legend_obj->Cnt() == 0 ) {
+    SetLegendPos( Pos::Auto );
+  }
+
   max_area_pad = 0;
   for ( auto& elem : grid.element_list ) {
     if ( elem.chart ) {
@@ -770,9 +773,6 @@ std::string Ensemble::Build( void )
 
   if ( legend_obj->grid_coor_specified ) {
     BuildLegends();     // Solves grid when grid_coor_specified.
-    if ( !grid_solved ) {
-      SolveGrid();
-    }
     MoveCharts();
   } else {
     SolveGrid();
