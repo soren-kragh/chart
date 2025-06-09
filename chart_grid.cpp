@@ -54,8 +54,6 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
 
   for ( auto& cell : cell_list ) cell = {};
 
-  U min_pad = std::max( cell_margin, area_padding );
-
   // Phase 1: Unconstrained solve.
   // Phase 2: Minimize occupied cell widths.
   // Phase 3: Expand empty cell sides to allow shared legends to be
@@ -204,16 +202,16 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
           U a2 = is_x ? elem.area_bb.max.x : elem.area_bb.max.y;
 
           U d = cell_list[ g1 ].e1.coor + (a2 - a1) - cell_list[ g2 ].e2.coor;
-          if ( d > epsilon ) {
+          if ( d > 0 ) {
             cell_list[ g2 ].e1.coor += d;
             cell_list[ g2 ].e2.coor += d;
-            moved = true;
+            moved = d > epsilon;
           }
         }
 
         for ( auto& cell : cell_list ) {
-          cell.e1.pad = min_pad;
-          cell.e2.pad = min_pad;
+          cell.e1.pad = cell_margin;
+          cell.e2.pad = cell_margin;
         }
         update_pad();
 
@@ -222,13 +220,19 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
         for ( auto& cell : cell_list ) {
           cur_cell = &cell;
           if ( prv_cell ) {
-            U d =
-              (prv_cell->e2.coor + (prv_cell->e2.pad_use ? +prv_cell->e2.pad : 0)) -
-              (cur_cell->e1.coor - (cur_cell->e1.pad_use ? +cur_cell->e1.pad : 0));
-            if ( d > epsilon ) {
-              cur_cell->e1.coor += d;
-              cur_cell->e2.coor += d;
-              moved = true;
+            U gap_area =
+              (cur_cell->e1.coor - area_padding) -
+              (prv_cell->e2.coor + area_padding);
+            U pad1 = cur_cell->e1.pad_use ? +cur_cell->e1.pad : 0.0;
+            U pad2 = prv_cell->e2.pad_use ? +prv_cell->e2.pad : 0.0;
+            U gap_full =
+              (cur_cell->e1.coor - pad1) -
+              (prv_cell->e2.coor + pad2);
+            U gap = std::min( gap_area, gap_full );
+            if ( gap < 0 ) {
+              cur_cell->e1.coor -= gap;
+              cur_cell->e2.coor -= gap;
+              moved = gap < -epsilon;
             }
           }
           prv_cell = cur_cell;
@@ -252,8 +256,8 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
       tot_iter++;
 
       for ( auto& cell : cell_list ) {
-        cell.e1.pad   = min_pad;
-        cell.e2.pad   = min_pad;
+        cell.e1.pad   = cell_margin;
+        cell.e2.pad   = cell_margin;
         cell.e1.adj   = (phase == 3) ? 0.0 : ((cell.e2.coor - cell.e1.coor) / 2);
         cell.e2.adj   = (phase == 3) ? 0.0 : ((cell.e1.coor - cell.e2.coor) / 2);
         cell.e1.slack = +num_hi;
@@ -294,10 +298,16 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
             cur_cell->e2.adj += cur_cell->e2.slack;
           }
           if ( prv_cell ) {
-            U p1 = cur_cell->e1.pad_use ? +cur_cell->e1.pad : 0;
-            U p2 = prv_cell->e2.pad_use ? +prv_cell->e2.pad : 0;
-            U adj = (cur_cell->e1.coor - p1) - (prv_cell->e2.coor + p2);
-            adj = adj / 2;
+            U gap_area =
+              (cur_cell->e1.coor - area_padding) -
+              (prv_cell->e2.coor + area_padding);
+            U pad1 = cur_cell->e1.pad_use ? +cur_cell->e1.pad : 0.0;
+            U pad2 = prv_cell->e2.pad_use ? +prv_cell->e2.pad : 0.0;
+            U gap_full =
+              (cur_cell->e1.coor - pad1) -
+              (prv_cell->e2.coor + pad2);
+            U gap = std::min( gap_area, gap_full );
+            U adj = gap / 2;
             if ( phase == 3 ) {
               U prv_w = prv_cell->e2.coor - prv_cell->e1.coor;
               U cur_w = cur_cell->e2.coor - cur_cell->e1.coor;
