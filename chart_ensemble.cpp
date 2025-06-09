@@ -260,6 +260,7 @@ void Ensemble::SolveGrid( void )
 {
   grid.Solve( grid.cell_list_x );
   grid.Solve( grid.cell_list_y );
+  grid_solved = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -769,6 +770,9 @@ std::string Ensemble::Build( void )
 
   if ( legend_obj->grid_coor_specified ) {
     BuildLegends();     // Solves grid when grid_coor_specified.
+    if ( !grid_solved ) {
+      SolveGrid();
+    }
     MoveCharts();
   } else {
     SolveGrid();
