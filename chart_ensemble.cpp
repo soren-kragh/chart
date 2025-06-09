@@ -456,10 +456,11 @@ void Ensemble::BuildLegends( void )
 
 
     for ( auto& hole : holes ) {
-      U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * margin;
       U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * margin;
+      U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * margin;
       uint32_t nx;
       bool fits =
+        avail_w > 0 && avail_h > 0 &&
         legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, avail_h );
       if ( fits ) {
         legend_obj->BuildLegends(
@@ -756,10 +757,6 @@ std::string Ensemble::Build( void )
   top_g->Attr()->LineColor()->Set( ForegroundColor() );
   top_g->Attr()->FillColor()->Set( BackgroundColor() );
 
-  if ( legend_obj->Cnt() == 0 ) {
-    SetLegendPos( Pos::Auto );
-  }
-
   max_area_pad = 0;
   for ( auto& elem : grid.element_list ) {
     if ( elem.chart ) {
@@ -767,6 +764,10 @@ std::string Ensemble::Build( void )
       U area_pad = elem.chart->GetAreaPadding();
       max_area_pad = std::max( max_area_pad, area_pad );
     }
+  }
+
+  if ( legend_obj->Cnt() == 0 ) {
+    SetLegendPos( Pos::Auto );
   }
 
   InitGrid();

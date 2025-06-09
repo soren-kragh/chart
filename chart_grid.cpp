@@ -412,6 +412,17 @@ void Grid::GetHoles( std::vector< Grid::hole_t >& holes )
     }
   }
 
+/*
+  for ( uint32_t y = max_y; y >= 0; --y ) {
+    std::string s;
+    for ( uint32_t x = 0; x <= max_x; ++x ) {
+      s += grid[ x ][ y ] ? '#' : '-';
+    }
+    SVG_DBG( s );
+    if ( y == 0 ) break;
+  }
+*/
+
   auto BarLen = [&]( uint32_t x, uint32_t y )
   {
     uint32_t len = 0;
