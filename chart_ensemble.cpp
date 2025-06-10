@@ -502,16 +502,8 @@ void Ensemble::BuildLegends( void )
         anchor_x = AnchorX::Min;
       }
       U avail_h = all_bb.max.y - all_bb.min.y;
-      uint32_t nx = 1;
-      while ( 1 ) {
-        uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
-        U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-        if ( need_h > avail_h && ny > 1 ) {
-          nx++;
-          continue;
-        }
-        break;
-      }
+      uint32_t nx;
+      legend_obj->GetBestFit( legend_dims, nx, framed, 0, avail_h );
       legend_obj->BuildLegends(
         framed, ForegroundColor(), LegendColor(),
         legend_g->AddNewGroup(), nx
@@ -532,17 +524,8 @@ void Ensemble::BuildLegends( void )
         anchor_y = AnchorY::Min;
       }
       U avail_w = all_bb.max.x - all_bb.min.x;
-      uint32_t nx = legend_obj->Cnt();
-      uint32_t ny = 1;
-      while ( 1 ) {
-        nx = (legend_obj->Cnt() + ny - 1) / ny;
-        U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-        if ( need_w > avail_w && nx > 1 ) {
-          ny++;
-          continue;
-        }
-        break;
-      }
+      uint32_t nx;
+      legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, 0 );
       legend_obj->BuildLegends(
         framed, ForegroundColor(), LegendColor(),
         legend_g->AddNewGroup(), nx

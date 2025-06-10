@@ -402,17 +402,8 @@ void Main::PlaceLegends(
     U mx = legend_obj->MarginX( framed );
     U my = legend_obj->MarginY( framed );
 
-    U avail_h = chart_h;
-    uint32_t nx = 1;
-    while ( 1 ) {
-      uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
-      U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-      if ( need_h > avail_h && ny > 1 ) {
-        nx++;
-        continue;
-      }
-      break;
-    }
+    uint32_t nx;
+    legend_obj->GetBestFit( legend_dims, nx, framed, 0, chart_h );
     legend_obj->BuildLegends(
       framed, AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
@@ -467,18 +458,8 @@ void Main::PlaceLegends(
     U mx = 40;
     U my = legend_obj->MarginY( framed );
 
-    U avail_w = chart_w;
-    uint32_t nx = legend_obj->Cnt();
-    uint32_t ny = 1;
-    while ( 1 ) {
-      nx = (legend_obj->Cnt() + ny - 1) / ny;
-      U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-      if ( need_w > avail_w && nx > 1 ) {
-        ny++;
-        continue;
-      }
-      break;
-    }
+    uint32_t nx;
+    legend_obj->GetBestFit( legend_dims, nx, framed, chart_w, 0 );
     legend_obj->BuildLegends(
       framed, AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
