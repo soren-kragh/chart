@@ -397,8 +397,8 @@ void Main::PlaceLegends(
 
   if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
 
-    U mx = framed ? +box_spacing : 20;
-    U my = box_spacing;
+    U mx = legend_obj->MarginX( framed );
+    U my = legend_obj->MarginY( framed );
 
     U avail_h = chart_h;
     uint32_t nx = 1;
@@ -463,7 +463,7 @@ void Main::PlaceLegends(
   } else {
 
     U mx = 40;
-    U my = box_spacing;
+    U my = legend_obj->MarginY( framed );
 
     U avail_w = chart_w;
     uint32_t nx = legend_obj->Cnt();

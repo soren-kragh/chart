@@ -306,8 +306,9 @@ void Ensemble::BuildLegends( void )
   Legend::LegendDims legend_dims;
   legend_obj->CalcLegendDims( framed, legend_g, legend_dims );
 
-  U margin = 2 * std::max( grid_padding, area_padding );
-  margin = std::max( 0.0,  box_spacing - margin );
+  U padding = 2 * std::max( grid_padding, area_padding );
+  U in_grid_mx = std::max( 0.0, legend_obj->MarginX( framed ) - padding );
+  U in_grid_my = std::max( 0.0, legend_obj->MarginY( framed ) - padding );
 
   if ( legend_obj->grid_coor_specified ) {
     Grid::element_t* elem = nullptr;
@@ -347,7 +348,7 @@ void Ensemble::BuildLegends( void )
       legend_obj->GetDims( legend_w, legend_h, legend_dims, framed, nx );
       elem->full_bb.Reset();
       elem->full_bb.Update( 0, 0 );
-      elem->full_bb.Update( legend_w + 2 * margin, legend_h + 2 * margin );
+      elem->full_bb.Update( legend_w + 2 * in_grid_mx, legend_h + 2 * in_grid_my );
       elem->area_bb = elem->full_bb;
       SolveGrid();
       UpdateAvail();
@@ -463,8 +464,8 @@ void Ensemble::BuildLegends( void )
 
 
     for ( auto& hole : holes ) {
-      U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * margin;
-      U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * margin;
+      U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * in_grid_mx;
+      U avail_h = hole.bb.max.y - hole.bb.min.y - 2 * in_grid_my;
       uint32_t nx;
       bool fits =
         avail_w > 0 && avail_h > 0 &&
@@ -492,7 +493,7 @@ void Ensemble::BuildLegends( void )
 
     if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
 
-      U mx = framed ? +box_spacing : 20;
+      U mx = legend_obj->MarginX( framed );
       U x = all_bb.min.x - mx;
       U y = all_bb.max.y;
       AnchorX anchor_x = AnchorX::Max;
@@ -522,7 +523,7 @@ void Ensemble::BuildLegends( void )
 
     } else {
 
-      U my = box_spacing;
+      U my = legend_obj->MarginY( framed );
       U x = (all_bb.min.x + all_bb.max.x) / 2;
       U y = all_bb.min.y - my;
       AnchorY anchor_y = AnchorY::Max;

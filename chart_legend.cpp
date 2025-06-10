@@ -50,6 +50,18 @@ uint32_t Legend::Cnt( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+SVG::U Legend::MarginX( bool framed )
+{
+  return framed ? +box_spacing : 20;
+}
+
+SVG::U Legend::MarginY( bool framed )
+{
+  return box_spacing;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Legend::CalcLegendDims(
   bool framed,
   Group* g, Legend::LegendDims& legend_dims
