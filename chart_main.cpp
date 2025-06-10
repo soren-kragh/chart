@@ -172,6 +172,8 @@ void Main::CalcLegendBoxes(
   );
   uint32_t lc = legend_obj->Cnt();
 
+  bool framed = legend_frame_specified ? legend_frame : true;
+
   auto add_lbs = [&](
     AnchorX anchor_x, AnchorY anchor_y, bool can_move = true
   )
@@ -180,11 +182,11 @@ void Main::CalcLegendBoxes(
     uint32_t ny = (anchor_x == AnchorX::Mid) ?  1 : lc;
     while ( nx > 0 && ny > 0 ) {
       {
-        U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-        U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-        w = std::max( w + legend_dims.lx + legend_dims.rx, +legend_dims.hx );
-        w += 2 * legend_dims.mx;
-        h += 2 * legend_dims.my + legend_dims.hy;
+        U w;
+        U h;
+        legend_obj->GetDims( w, h, legend_dims, framed, nx );
+        w += 2 * box_spacing;
+        h += 2 * box_spacing;
         g->Add( new Rect( 0, 0, w, h ) );
       }
       Object* obj = g->Last();

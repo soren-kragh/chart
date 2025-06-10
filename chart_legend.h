@@ -53,8 +53,6 @@ public:
     SVG::U dy;  // Delta between individual legends in Y direction.
     SVG::U sx;  // Size in X direction.
     SVG::U sy;  // Size in Y direction.
-    SVG::U mx;  // Legend box margin in X direction.
-    SVG::U my;  // Legend box margin in Y direction.
     SVG::U hx;  // Heading X width.
     SVG::U hy;  // Heading Y width.
   } LegendDims;

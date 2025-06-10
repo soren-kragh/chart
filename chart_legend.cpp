@@ -80,8 +80,6 @@ void Legend::CalcLegendDims(
   legend_dims.dy = 4;
   legend_dims.sx = 0;
   legend_dims.sy = 0;
-  legend_dims.mx = framed ? (2 * box_spacing) : (1 * box_spacing); // TBD
-  legend_dims.my = framed ? (2 * box_spacing) : (1 * box_spacing); // TBD
   legend_dims.hx = 0;
   legend_dims.hy = 0;
 
@@ -334,20 +332,20 @@ void Legend::BuildLegends(
   int ny = (Cnt() + nx - 1) / nx;
 
   {
-    U mx = framed ? legend_dims.mx : U( 0 );
-    U my = framed ? legend_dims.my : U( 0 );
+    U mx = framed ? box_spacing : U( 0 );
+    U my = framed ? box_spacing : U( 0 );
     U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
     U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
     w += legend_dims.lx + legend_dims.rx;
     U ey = legend_dims.hy;
     U ex = std::max( 0.0, legend_dims.hx - w );
     Point r1{
-      -mx / 2 - legend_dims.lx - ex / 2,
-      +my / 2 + ey
+      -mx - legend_dims.lx - ex / 2,
+      +my + ey
     };
     Point r2{
-      r1.x + w + ex + mx,
-      r1.y - h - ey - my
+      r1.x + w + ex + 2 * mx,
+      r1.y - h - ey - 2 * my
     };
     g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
     if ( framed ) {
@@ -363,7 +361,7 @@ void Legend::BuildLegends(
     }
     if ( !heading.empty() ) {
       Object* obj = Label::CreateLabel( g, heading, legend_dims.ch * 1.2 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my );
     }
   }
 
