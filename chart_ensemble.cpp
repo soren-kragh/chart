@@ -89,6 +89,7 @@ bool Ensemble::NewChart(
   }
 
   grid.element_list.push_back( elem );
+  last_chart = elem.chart;
 
   return true;
 }

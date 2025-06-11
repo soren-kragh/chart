@@ -26,9 +26,11 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
-  bool Empty( void ) { return grid.element_list.empty(); }
+  Main* last_chart = nullptr;
 
-  Main* LastChart( void ) { return grid.element_list.back().chart; }
+  bool Empty( void ) { return last_chart == nullptr; }
+
+  Main* LastChart( void ) { return last_chart; }
 
   bool NewChart(
     uint32_t grid_row1, uint32_t grid_col1,

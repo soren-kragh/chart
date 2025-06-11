@@ -52,7 +52,7 @@ uint32_t Legend::Cnt( void )
 
 SVG::U Legend::MarginX( bool framed )
 {
-  return framed ? +box_spacing : 20;
+  return (framed ? 1 : 2) * box_spacing;
 }
 
 SVG::U Legend::MarginY( bool framed )
@@ -295,6 +295,7 @@ bool Legend::GetBestFit(
       (ignore_fit_y || need_y <= avail_y);
     uint32_t rem = Cnt() % nx;
     if ( rem > 0 ) rem = nx - rem;
+    if ( ignore_fit_x || ignore_fit_y ) rem = 0;
     double aspect = need_x / need_y;
     double aspfit = std::max( avail_aspect / aspect, aspect / avail_aspect);
 
