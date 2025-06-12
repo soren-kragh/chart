@@ -366,10 +366,12 @@ void Ensemble::BuildLegends( void )
           best_slack = slack;
           best_defined = true;
           if ( nx == 1 ) break;
-          while ( 1 ) {
+          --nx;
+          if (
+            legend_obj->Cnt() % nx > 0 &&
+            legend_obj->Cnt() % (nx - 1) == 0
+          )
             --nx;
-            if ( legend_obj->Cnt() % nx == 0 ) break;
-          }
         } else {
           nx = best_nx;
           best_found = true;
@@ -382,10 +384,12 @@ void Ensemble::BuildLegends( void )
           best_slack = slack;
           best_defined = true;
           if ( nx == legend_obj->Cnt() ) break;
-          while ( 1 ) {
+          ++nx;
+          if (
+            legend_obj->Cnt() % nx > 0 &&
+            legend_obj->Cnt() % (nx + 1) == 0
+          )
             ++nx;
-            if ( legend_obj->Cnt() % nx == 0 ) break;
-          }
         } else {
           nx = best_nx;
           best_found = true;
