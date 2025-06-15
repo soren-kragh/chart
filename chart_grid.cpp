@@ -402,7 +402,7 @@ uint32_t Grid::Solve( std::vector< cell_t >& cell_list )
 */
   }
 
-  SVG_DBG( "tot_iter = " << tot_iter );
+//  SVG_DBG( "tot_iter = " << tot_iter );
 
   return tot_iter;
 }

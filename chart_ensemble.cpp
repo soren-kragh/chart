@@ -358,7 +358,6 @@ void Ensemble::BuildLegends( void )
       UpdateAvail();
     };
 
-    SolveGrid();
     UpdateAvail();
 
     bool no_space_x = avail_w < 1;
@@ -435,7 +434,7 @@ void Ensemble::BuildLegends( void )
       }
     );
 
-
+/*
     {
       uint32_t n = 1;
       for ( auto& h : holes ) {
@@ -456,7 +455,7 @@ void Ensemble::BuildLegends( void )
         ++n;
       }
     }
-
+*/
 
     for ( auto& hole : holes ) {
       U avail_w = hole.bb.max.x - hole.bb.min.x - 2 * in_grid_mx;
@@ -757,12 +756,12 @@ std::string Ensemble::Build( void )
   }
 
   InitGrid();
+  SolveGrid();
 
   if ( legend_obj->grid_coor_specified ) {
-    BuildLegends();     // Solves grid when grid_coor_specified.
+    BuildLegends();
     MoveCharts();
   } else {
-    SolveGrid();
     MoveCharts();
     BuildLegends();
   }
@@ -772,7 +771,7 @@ std::string Ensemble::Build( void )
 
   BuildBackground();
 
-
+/*
   {
     BoundaryBox bb = canvas->TopGroup()->GetBB();
 
@@ -796,7 +795,7 @@ std::string Ensemble::Build( void )
       g->Add( new Line( bb.min.x, s.e2.coor, bb.max.x, s.e2.coor ) );
     }
   }
-
+*/
 
   std::ostringstream oss;
   if ( enable_html ) {
