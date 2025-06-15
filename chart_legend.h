@@ -76,7 +76,7 @@ public:
   // Return value indicates if legends fit within the given available area.
   bool GetBestFit(
     Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
-    SVG::U avail_x, SVG::U avail_y
+    SVG::U avail_x, SVG::U avail_y, double aspect_dev = 0.0
   );
 
   void BuildLegends(

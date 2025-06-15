@@ -170,6 +170,8 @@ bool Ensemble::SetLegendPos(
   }
 
   Grid::element_t elem;
+  elem.full_bb.Update( 0, 0 );
+  elem.area_bb.Update( 0, 0 );
 
   // Note that the Y grid coordinates are in normal bottom to top "mathematical"
   // direction, whereas rows goes top to bottom. The InitGrid() will reorient
@@ -335,12 +337,53 @@ void Ensemble::BuildLegends( void )
       avail_h = avail_bb.max.y - avail_bb.min.y;
     };
 
+    uint32_t nx = 1;
+
+    {
+      U legend_w;
+      U legend_h;
+
+      auto update = [&]( void )
+      {
+        legend_obj->GetDims( legend_w, legend_h, legend_dims, framed, nx );
+        elem->full_bb.Reset();
+        elem->full_bb.Update( 0, 0 );
+        elem->full_bb.Update( legend_w + 2 * in_grid_mx, legend_h + 2 * in_grid_my );
+        elem->area_bb = elem->full_bb;
+        SolveGrid();
+        UpdateAvail();
+      };
+
+      SolveGrid();
+      UpdateAvail();
+
+      bool no_space_x = avail_w < 1;
+      bool no_space_y = avail_h < 1;
+
+      if ( no_space_x && no_space_y ) {
+        legend_obj->GetBestFit( legend_dims, nx, framed, 1.5, 1.0, 1.5 );
+        update();
+      } else
+      if ( no_space_x ) {
+        legend_obj->GetBestFit( legend_dims, nx, framed, 0, avail_h * 1.5, 1.5 );
+        update();
+      } else
+      if ( no_space_y ) {
+        legend_obj->GetBestFit( legend_dims, nx, framed, avail_w * 1.5, 0, 1.5 );
+        update();
+      } else
+      {
+        legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, avail_h, 1.5 );
+        update();
+      }
+    }
+
+/*
     bool best_defined = false;
     uint32_t best_nx = 1;
     U best_slack = 0;
     bool best_found = false;
 
-    uint32_t nx;
     legend_obj->GetBestFit( legend_dims, nx, framed, 1.5, 1.0 );
 
     while ( 1 ) {
@@ -396,6 +439,7 @@ void Ensemble::BuildLegends( void )
         }
       }
     }
+*/
 
     legend_obj->BuildLegends(
       framed, ForegroundColor(), LegendColor(),

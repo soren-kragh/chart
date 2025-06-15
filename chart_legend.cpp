@@ -272,45 +272,80 @@ void Legend::GetDims(
 
 bool Legend::GetBestFit(
   Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
-  SVG::U avail_x, SVG::U avail_y
+  SVG::U avail_x, SVG::U avail_y, double aspect_dev
 )
 {
-  bool ignore_fit_x = avail_x <= 0;
-  bool ignore_fit_y = avail_y <= 0;
-  avail_x = std::max( 1.0, +avail_x );
-  avail_y = std::max( 1.0, +avail_y );
-  double avail_aspect = avail_x / avail_y;
+  U need_x;
+  U need_y;
 
-  bool best_fits = false;
+  auto CalcAspect = [&]( void )
+  {
+    double a = 1.0;
+    double b = 1.0;
+    if ( avail_x > 0 && avail_y > 0 )
+    {
+      a = need_x / need_y;
+      b = avail_x / avail_y;
+    } else
+    if ( avail_x > 0 )
+    {
+      a = need_x;
+      b = avail_x;
+    } else
+    if ( avail_y > 0 )
+    {
+      a = need_y;
+      b = avail_y;
+    }
+    return std::max( a / b, b / a );
+  };
+
   uint32_t best_nx = 0;
   uint32_t best_rem = 0;
-  double best_aspfit = 0;
+  bool best_fits = false;
+  double best_exceed = num_hi;
+  double best_aspect = num_hi;
 
   for ( uint32_t nx = 1; nx <= Cnt(); ++nx ) {
-    U need_x;
-    U need_y;
     GetDims( need_x, need_y, legend_dims, framed, nx );
-    bool fits =
-      (ignore_fit_x || need_x <= avail_x) &&
-      (ignore_fit_y || need_y <= avail_y);
     uint32_t rem = Cnt() % nx;
     if ( rem > 0 ) rem = nx - rem;
-    if ( ignore_fit_x || ignore_fit_y ) rem = 0;
-    double aspect = need_x / need_y;
-    double aspfit = std::max( avail_aspect / aspect, aspect / avail_aspect);
+    bool fits =
+      (avail_x <= 0 || avail_x >= need_x) &&
+      (avail_y <= 0 || avail_y >= need_y);
+    double exceed =
+      std::max(
+        std::max( 0.0, need_x - avail_x ),
+        std::max( 0.0, need_y - avail_y )
+      );
+    double aspect = CalcAspect();
 
     bool better = best_nx == 0 || (fits && !best_fits);
     if ( fits == best_fits ) {
-      if ( rem < best_rem ) better = true;
-      if ( rem == best_rem ) {
-        if ( aspfit < best_aspfit ) better = true;
+      if ( exceed < best_exceed ) better = true;
+      if ( exceed == best_exceed ) {
+        if ( aspect < aspect_dev ) {
+          if ( rem < best_rem ) better = true;
+          if ( rem == best_rem ) {
+            if ( aspect < best_aspect ) better = true;
+          }
+        } else {
+          if ( aspect < best_aspect ) better = true;
+        }
       }
     }
+
+    SVG_DBG(
+      nx << "  " << (fits ? "Fits" : "NoFit") << "  " << exceed << "  " << aspect << "  " <<
+      (better ? "Better" : "")
+    );
+
     if ( better ) {
-      best_fits = fits;
       best_nx = nx;
       best_rem = rem;
-      best_aspfit = aspfit;
+      best_fits = fits;
+      best_exceed = exceed;
+      best_aspect = aspect;
     }
   }
 
