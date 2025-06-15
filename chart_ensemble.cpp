@@ -339,8 +339,13 @@ void Ensemble::BuildLegends( void )
 
     uint32_t nx = 1;
 
+    U min_w;
+    U min_h;
     U legend_w;
     U legend_h;
+
+    legend_obj->GetDims( min_w, legend_h, legend_dims, framed, 1 );
+    legend_obj->GetDims( legend_w, min_h, legend_dims, framed, legend_obj->Cnt() );
 
     auto update = [&]( void )
     {
@@ -367,13 +372,13 @@ void Ensemble::BuildLegends( void )
     } else
     if ( no_space_x ) {
       legend_obj->GetBestFit(
-        legend_dims, nx, framed, 0, avail_h * 1.5, 0, avail_h
+        legend_dims, nx, framed, 0, avail_h * 1.5, min_w, avail_h
       );
       update();
     } else
     if ( no_space_y ) {
       legend_obj->GetBestFit(
-        legend_dims, nx, framed, avail_w * 1.5, 0, avail_w, 0
+        legend_dims, nx, framed, avail_w * 1.5, 0, avail_w, min_h
       );
       update();
     } else
