@@ -272,9 +272,13 @@ void Legend::GetDims(
 
 bool Legend::GetBestFit(
   Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
-  SVG::U avail_x, SVG::U avail_y, double aspect_dev
+  SVG::U avail_x, SVG::U avail_y,
+  SVG::U soft_x, SVG::U soft_y
 )
 {
+  if ( soft_x <= 0.0 ) soft_x = avail_x;
+  if ( soft_y <= 0.0 ) soft_y = avail_y;
+
   U need_x;
   U need_y;
 
@@ -315,8 +319,8 @@ bool Legend::GetBestFit(
       (avail_y <= 0 || avail_y >= need_y);
     double exceed =
       std::max(
-        std::max( 0.0, need_x - avail_x ),
-        std::max( 0.0, need_y - avail_y )
+        std::max( 0.0, need_x - soft_x ),
+        std::max( 0.0, need_y - soft_y )
       );
     double aspect = CalcAspect();
 
@@ -324,21 +328,12 @@ bool Legend::GetBestFit(
     if ( fits == best_fits ) {
       if ( exceed < best_exceed ) better = true;
       if ( exceed == best_exceed ) {
-        if ( aspect < aspect_dev ) {
-          if ( rem < best_rem ) better = true;
-          if ( rem == best_rem ) {
-            if ( aspect < best_aspect ) better = true;
-          }
-        } else {
+        if ( fits && rem < best_rem ) better = true;
+        if ( !fits || rem == best_rem ) {
           if ( aspect < best_aspect ) better = true;
         }
       }
     }
-
-    SVG_DBG(
-      nx << "  " << (fits ? "Fits" : "NoFit") << "  " << exceed << "  " << aspect << "  " <<
-      (better ? "Better" : "")
-    );
 
     if ( better ) {
       best_nx = nx;

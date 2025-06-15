@@ -339,56 +339,11 @@ void Ensemble::BuildLegends( void )
 
     uint32_t nx = 1;
 
+    U legend_w;
+    U legend_h;
+
+    auto update = [&]( void )
     {
-      U legend_w;
-      U legend_h;
-
-      auto update = [&]( void )
-      {
-        legend_obj->GetDims( legend_w, legend_h, legend_dims, framed, nx );
-        elem->full_bb.Reset();
-        elem->full_bb.Update( 0, 0 );
-        elem->full_bb.Update( legend_w + 2 * in_grid_mx, legend_h + 2 * in_grid_my );
-        elem->area_bb = elem->full_bb;
-        SolveGrid();
-        UpdateAvail();
-      };
-
-      SolveGrid();
-      UpdateAvail();
-
-      bool no_space_x = avail_w < 1;
-      bool no_space_y = avail_h < 1;
-
-      if ( no_space_x && no_space_y ) {
-        legend_obj->GetBestFit( legend_dims, nx, framed, 1.5, 1.0, 1.5 );
-        update();
-      } else
-      if ( no_space_x ) {
-        legend_obj->GetBestFit( legend_dims, nx, framed, 0, avail_h * 1.5, 1.5 );
-        update();
-      } else
-      if ( no_space_y ) {
-        legend_obj->GetBestFit( legend_dims, nx, framed, avail_w * 1.5, 0, 1.5 );
-        update();
-      } else
-      {
-        legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, avail_h, 1.5 );
-        update();
-      }
-    }
-
-/*
-    bool best_defined = false;
-    uint32_t best_nx = 1;
-    U best_slack = 0;
-    bool best_found = false;
-
-    legend_obj->GetBestFit( legend_dims, nx, framed, 1.5, 1.0 );
-
-    while ( 1 ) {
-      U legend_w;
-      U legend_h;
       legend_obj->GetDims( legend_w, legend_h, legend_dims, framed, nx );
       elem->full_bb.Reset();
       elem->full_bb.Update( 0, 0 );
@@ -396,50 +351,36 @@ void Ensemble::BuildLegends( void )
       elem->area_bb = elem->full_bb;
       SolveGrid();
       UpdateAvail();
-      if ( best_found ) break;
+    };
 
-      bool snug_x = avail_w * 0.95 < legend_w;
-      bool snug_y = avail_h * 0.95 < legend_h;
-      if ( snug_x == snug_y ) break;
+    SolveGrid();
+    UpdateAvail();
 
-      if ( snug_x ) {
-        U slack = avail_h - legend_h;
-        if ( !best_defined || slack < best_slack ) {
-          best_nx = nx;
-          best_slack = slack;
-          best_defined = true;
-          if ( nx == 1 ) break;
-          --nx;
-          if (
-            legend_obj->Cnt() % nx > 0 &&
-            legend_obj->Cnt() % (nx - 1) == 0
-          )
-            --nx;
-        } else {
-          nx = best_nx;
-          best_found = true;
-        }
-      }
-      if ( snug_y ) {
-        U slack = avail_w - legend_w;
-        if ( !best_defined || slack < best_slack ) {
-          best_nx = nx;
-          best_slack = slack;
-          best_defined = true;
-          if ( nx == legend_obj->Cnt() ) break;
-          ++nx;
-          if (
-            legend_obj->Cnt() % nx > 0 &&
-            legend_obj->Cnt() % (nx + 1) == 0
-          )
-            ++nx;
-        } else {
-          nx = best_nx;
-          best_found = true;
-        }
-      }
+    bool no_space_x = avail_w < 1;
+    bool no_space_y = avail_h < 1;
+
+    if ( no_space_x && no_space_y ) {
+      legend_obj->GetBestFit(
+        legend_dims, nx, framed, 1.0, 1.0, num_hi, num_hi
+      );
+      update();
+    } else
+    if ( no_space_x ) {
+      legend_obj->GetBestFit(
+        legend_dims, nx, framed, 0, avail_h * 1.5, 0, avail_h
+      );
+      update();
+    } else
+    if ( no_space_y ) {
+      legend_obj->GetBestFit(
+        legend_dims, nx, framed, avail_w * 1.5, 0, avail_w, 0
+      );
+      update();
+    } else
+    {
+      legend_obj->GetBestFit( legend_dims, nx, framed, avail_w, avail_h );
+      update();
     }
-*/
 
     legend_obj->BuildLegends(
       framed, ForegroundColor(), LegendColor(),
