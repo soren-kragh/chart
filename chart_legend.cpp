@@ -50,6 +50,18 @@ uint32_t Legend::Cnt( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+SVG::U Legend::MarginX( bool framed )
+{
+  return (framed ? 1 : 2) * box_spacing;
+}
+
+SVG::U Legend::MarginY( bool framed )
+{
+  return box_spacing;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Legend::CalcLegendDims(
   bool framed,
   Group* g, Legend::LegendDims& legend_dims
@@ -68,8 +80,6 @@ void Legend::CalcLegendDims(
   legend_dims.dy = 4;
   legend_dims.sx = 0;
   legend_dims.sy = 0;
-  legend_dims.mx = framed ? (2 * box_spacing) : (1 * box_spacing);
-  legend_dims.my = framed ? (2 * box_spacing) : (1 * box_spacing);
   legend_dims.hx = 0;
   legend_dims.hy = 0;
 
@@ -241,6 +251,105 @@ void Legend::CalcLegendDims(
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Legend::GetDims(
+  SVG::U& w, SVG::U& h,
+  Legend::LegendDims& legend_dims, bool framed, uint32_t nx
+)
+{
+  uint32_t ny = (Cnt() + nx - 1) / nx;
+  w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
+  h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
+  w += legend_dims.lx + legend_dims.rx;
+  h += legend_dims.hy;
+  w = std::max( w, legend_dims.hx );
+  if ( framed ) {
+    w += 2 * box_spacing;
+    h += 2 * box_spacing;
+  }
+}
+
+//------------------------------------------------------------------------------
+
+bool Legend::GetBestFit(
+  Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
+  SVG::U avail_x, SVG::U avail_y,
+  SVG::U soft_x, SVG::U soft_y
+)
+{
+  if ( soft_x <= 0.0 ) soft_x = avail_x;
+  if ( soft_y <= 0.0 ) soft_y = avail_y;
+
+  U need_x;
+  U need_y;
+
+  auto CalcAspect = [&]( void )
+  {
+    double a = 1.0;
+    double b = 1.0;
+    if ( avail_x > 0 && avail_y > 0 )
+    {
+      a = need_x / need_y;
+      b = avail_x / avail_y;
+    } else
+    if ( avail_x > 0 )
+    {
+      a = need_x;
+      b = avail_x;
+    } else
+    if ( avail_y > 0 )
+    {
+      a = need_y;
+      b = avail_y;
+    }
+    return std::max( a / b, b / a );
+  };
+
+  uint32_t best_nx = 0;
+  uint32_t best_rem = 0;
+  bool best_fits = false;
+  double best_exceed = num_hi;
+  double best_aspect = num_hi;
+
+  for ( uint32_t nx = 1; nx <= Cnt(); ++nx ) {
+    GetDims( need_x, need_y, legend_dims, framed, nx );
+    uint32_t rem = Cnt() % nx;
+    if ( rem > 0 ) rem = nx - rem;
+    bool fits =
+      (avail_x <= 0 || avail_x >= need_x) &&
+      (avail_y <= 0 || avail_y >= need_y);
+    double exceed =
+      std::max(
+        std::max( 0.0, need_x - soft_x ),
+        std::max( 0.0, need_y - soft_y )
+      );
+    double aspect = CalcAspect();
+
+    bool better = best_nx == 0 || (fits && !best_fits);
+    if ( fits == best_fits ) {
+      if ( exceed < best_exceed ) better = true;
+      if ( exceed == best_exceed ) {
+        if ( fits && rem < best_rem ) better = true;
+        if ( !fits || rem == best_rem ) {
+          if ( aspect < best_aspect ) better = true;
+        }
+      }
+    }
+
+    if ( better ) {
+      best_nx = nx;
+      best_rem = rem;
+      best_fits = fits;
+      best_exceed = exceed;
+      best_aspect = aspect;
+    }
+  }
+
+  nx = best_nx;
+  return best_fits;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Legend::BuildLegends(
   bool framed,
   SVG::Color* frame_line_color,
@@ -254,20 +363,20 @@ void Legend::BuildLegends(
   int ny = (Cnt() + nx - 1) / nx;
 
   {
-    U mx = framed ? legend_dims.mx : U( 0 );
-    U my = framed ? legend_dims.my : U( 0 );
+    U mx = framed ? box_spacing : U( 0 );
+    U my = framed ? box_spacing : U( 0 );
     U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
     U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
     w += legend_dims.lx + legend_dims.rx;
     U ey = legend_dims.hy;
     U ex = std::max( 0.0, legend_dims.hx - w );
     Point r1{
-      -mx / 2 - legend_dims.lx - ex / 2,
-      +my / 2 + ey
+      -mx - legend_dims.lx - ex / 2,
+      +my + ey
     };
     Point r2{
-      r1.x + w + ex + mx,
-      r1.y - h - ey - my
+      r1.x + w + ex + 2 * mx,
+      r1.y - h - ey - 2 * my
     };
     g->Add( new Rect( r1, r2, framed ? box_spacing : U( 0 ) ) );
     if ( framed ) {
@@ -283,7 +392,7 @@ void Legend::BuildLegends(
     }
     if ( !heading.empty() ) {
       Object* obj = Label::CreateLabel( g, heading, legend_dims.ch * 1.2 );
-      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my/2 );
+      obj->MoveTo( AnchorX::Mid, AnchorY::Max, (r1.x + r2.x)/2, r1.y - my );
     }
   }
 

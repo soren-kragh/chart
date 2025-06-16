@@ -26,9 +26,11 @@ public:
   Ensemble( void );
   ~Ensemble( void );
 
-  bool Empty( void ) { return grid.element_list.empty(); }
+  Main* last_chart = nullptr;
 
-  Main* LastChart( void ) { return grid.element_list.back().chart; }
+  bool Empty( void ) { return last_chart == nullptr; }
+
+  Main* LastChart( void ) { return last_chart; }
 
   bool NewChart(
     uint32_t grid_row1, uint32_t grid_col1,
@@ -61,13 +63,23 @@ public:
   // Padding around all elements.
   void SetPadding( SVG::U padding ) { this->padding = padding; }
 
-  // Padding around elements in the grid; a negative value means that
-  // only the core chart areas are considered when laying out the grid.
-  void SetGridPadding( SVG::U padding ) { grid_padding = padding; }
+  // Padding around elements in the grid; a negative value for the grid_padding
+  // means that only the core chart areas are considered when laying out the
+  // grid.
+  void SetGridPadding( SVG::U grid_padding, SVG::U area_padding )
+  {
+    this->grid_padding = grid_padding;
+    this->area_padding = area_padding;
+  }
 
   void SetLegendHeading( const std::string& txt );
   void SetLegendFrame( bool enable = true );
   void SetLegendPos( Pos pos );
+  bool SetLegendPos(
+    uint32_t grid_row1, uint32_t grid_col1,
+    uint32_t grid_row2, uint32_t grid_col2,
+    Chart::Pos align_hor, Chart::Pos align_ver
+  );
   void SetLegendSize( float size );
   SVG::Color* LegendColor( void ) { return &legend_color; }
 
@@ -82,6 +94,7 @@ public:
   // Footnote size scaling factor.
   void SetFootnoteSize( float size ) { footnote_size = size; }
 
+  void MoveCharts( void );
   std::string Build( void );
 
   SVG::Canvas* canvas;
@@ -101,13 +114,14 @@ public:
   SVG::U margin       = 0;
   SVG::U padding      = 8;
   SVG::U grid_padding = 4;
+  SVG::U area_padding = 0;
 
   SVG::U max_area_pad = 0;
 
   Grid grid;
 
   void InitGrid( void );
-  void ComputeGrid( void );
+  void SolveGrid( void );
 
   std::string heading;
   std::string sub_heading;

@@ -32,6 +32,7 @@ public:
   std::vector< Series* > series_list;
   std::string heading;
   Pos pos = Pos::Auto;
+  bool grid_coor_specified = false;
   float size = 1.0;
 
   void Add( Series* series );
@@ -52,15 +53,31 @@ public:
     SVG::U dy;  // Delta between individual legends in Y direction.
     SVG::U sx;  // Size in X direction.
     SVG::U sy;  // Size in Y direction.
-    SVG::U mx;  // Legend box margin in X direction.
-    SVG::U my;  // Legend box margin in Y direction.
     SVG::U hx;  // Heading X width.
     SVG::U hy;  // Heading Y width.
   } LegendDims;
 
+  SVG::U MarginX( bool framed );
+  SVG::U MarginY( bool framed );
+
   void CalcLegendDims(
     bool framed,
     SVG::Group* g, Legend::LegendDims& legend_dims
+  );
+
+  // Get dimensions of legends when nx legends in the X direction.
+  void GetDims(
+    SVG::U& w, SVG::U& h,
+    Legend::LegendDims& legend_dims, bool framed, uint32_t nx
+  );
+
+  // Compute the number (nx) of legends in the X direction that best fits
+  // the available area.
+  // Return value indicates if legends fit within the given available area.
+  bool GetBestFit(
+    Legend::LegendDims& legend_dims, uint32_t& nx, bool framed,
+    SVG::U avail_x, SVG::U avail_y,
+    SVG::U soft_x = 0.0, SVG::U soft_y = 0.0
   );
 
   void BuildLegends(

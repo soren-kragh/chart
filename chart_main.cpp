@@ -172,6 +172,8 @@ void Main::CalcLegendBoxes(
   );
   uint32_t lc = legend_obj->Cnt();
 
+  bool framed = legend_frame_specified ? legend_frame : true;
+
   auto add_lbs = [&](
     AnchorX anchor_x, AnchorY anchor_y, bool can_move = true
   )
@@ -180,11 +182,11 @@ void Main::CalcLegendBoxes(
     uint32_t ny = (anchor_x == AnchorX::Mid) ?  1 : lc;
     while ( nx > 0 && ny > 0 ) {
       {
-        U w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-        U h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-        w = std::max( w + legend_dims.lx + legend_dims.rx, +legend_dims.hx );
-        w += 2 * legend_dims.mx;
-        h += 2 * legend_dims.my + legend_dims.hy;
+        U w;
+        U h;
+        legend_obj->GetDims( w, h, legend_dims, framed, nx );
+        w += 2 * box_spacing;
+        h += 2 * box_spacing;
         g->Add( new Rect( 0, 0, w, h ) );
       }
       Object* obj = g->Last();
@@ -397,20 +399,11 @@ void Main::PlaceLegends(
 
   if ( legend_obj->pos == Pos::Left || legend_obj->pos == Pos::Right ) {
 
-    U mx = framed ? +box_spacing : 20;
-    U my = box_spacing;
+    U mx = legend_obj->MarginX( framed );
+    U my = legend_obj->MarginY( framed );
 
-    U avail_h = chart_h;
-    uint32_t nx = 1;
-    while ( 1 ) {
-      uint32_t ny = (legend_obj->Cnt() + nx - 1) / nx;
-      U need_h = ny * legend_dims.sy + (ny - 1) * legend_dims.dy;
-      if ( need_h > avail_h && ny > 1 ) {
-        nx++;
-        continue;
-      }
-      break;
-    }
+    uint32_t nx;
+    legend_obj->GetBestFit( legend_dims, nx, framed, 0, chart_h );
     legend_obj->BuildLegends(
       framed, AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
@@ -463,20 +456,10 @@ void Main::PlaceLegends(
   } else {
 
     U mx = 40;
-    U my = box_spacing;
+    U my = legend_obj->MarginY( framed );
 
-    U avail_w = chart_w;
-    uint32_t nx = legend_obj->Cnt();
-    uint32_t ny = 1;
-    while ( 1 ) {
-      nx = (legend_obj->Cnt() + ny - 1) / ny;
-      U need_w = nx * legend_dims.sx + (nx - 1) * legend_dims.dx;
-      if ( need_w > avail_w && nx > 1 ) {
-        ny++;
-        continue;
-      }
-      break;
-    }
+    uint32_t nx;
+    legend_obj->GetBestFit( legend_dims, nx, framed, chart_w, 0 );
     legend_obj->BuildLegends(
       framed, AxisColor(), FrameColor(),
       legend_g->AddNewGroup(), nx
