@@ -820,12 +820,6 @@ svg_snap.addEventListener("mousemove", (event) => {
             atPoint = true;
           }
         });
-        if (atPoint) {
-          let anchor = {anchorX: -1, anchorY: -1};
-          if (x > (chart.area.x2 + chart.area.x1)/2) anchor.anchorX = 1;
-          if (y > (chart.area.y2 + chart.area.y1)/2) anchor.anchorY = 1;
-          createInfoBox(snapPoint, x, y, anchor);
-        }
       }
 
       if (inCat) {
@@ -845,6 +839,12 @@ svg_snap.addEventListener("mousemove", (event) => {
         if (showX[1]) createAxisBox(x, y, chart.axisX[1]);
         if (showY[0]) createAxisBox(x, y, chart.axisY[0]);
         if (showY[1]) createAxisBox(x, y, chart.axisY[1]);
+        if (atPoint) {
+          let anchor = {anchorX: -1, anchorY: -1};
+          if (x > (chart.area.x2 + chart.area.x1)/2) anchor.anchorX = 1;
+          if (y > (chart.area.y2 + chart.area.y1)/2) anchor.anchorY = 1;
+          createInfoBox(snapPoint, x, y, anchor);
+        }
       }
     } else {
       chart = undefined;
