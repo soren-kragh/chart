@@ -38,8 +38,9 @@ public:
     this-> anonymous_snap = anonymous_snap;
   }
 
-  // Indicate if legend should be shared with other charts.
-  void SetSharedLegend( bool shared = true ) { shared_legend = shared; }
+  // Indicate if legend should be global and potentially shared with other
+  // charts.
+  void SetGlobalLegend( bool global = true ) { global_legend = global; }
 
   // Specify if line style legends are shown with an outline around the legend
   // text, or with a small line segment in front of the legend text.
@@ -192,7 +193,7 @@ public:
   Axis* axis_y;
   int axis_y_n;
 
-  bool shared_legend = false;
+  bool global_legend = false;
   bool legend_outline = false;
 
   SeriesType type;

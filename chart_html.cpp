@@ -287,7 +287,7 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
     oss << "{";
     if ( series_legend_map.count( series ) > 0 ) {
       BoundaryBox bb = series_legend_map[ series ];
-      if ( !series->shared_legend ) {
+      if ( !series->global_legend ) {
         bb.min.x += main->g_dx; bb.min.y += main->g_dy;
         bb.max.x += main->g_dx; bb.max.y += main->g_dy;
       }

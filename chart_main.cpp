@@ -1063,7 +1063,7 @@ void Main::SeriesPrepare(
     series->DetermineVisualProperties();
 
     if ( !series->name.empty() ) {
-      if ( series->shared_legend ) {
+      if ( series->global_legend ) {
         ensemble->legend_obj->Add( series );
       } else {
         legend_obj->Add( series );
