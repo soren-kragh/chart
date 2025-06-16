@@ -45,14 +45,14 @@ public:
 
   void EnableHTML( bool enable = true ) { enable_html = enable; }
 
-  void SetHeading( const std::string& txt );
-  void SetSubHeading( const std::string& txt );
-  void SetSubSubHeading( const std::string& txt );
-  void SetHeadingPos( Pos pos ) { heading_pos = pos; }
-  void SetHeadingSize( float size ) { heading_size = size; }
+  void SetTitle( const std::string& txt );
+  void SetSubTitle( const std::string& txt );
+  void SetSubSubTitle( const std::string& txt );
+  void SetTitlePos( Pos pos ) { title_pos = pos; }
+  void SetTitleSize( float size ) { title_size = size; }
 
-  // A line below the heading.
-  void SetHeadingLine( bool line = true ) { heading_line = line; }
+  // A line below the title.
+  void SetTitleLine( bool line = true ) { title_line = line; }
 
   void SetMargin( SVG::U margin ) { this->margin = margin; }
   void SetBorderWidth( SVG::U width ) { border_width = width; }
@@ -123,12 +123,12 @@ public:
   void InitGrid( void );
   void SolveGrid( void );
 
-  std::string heading;
-  std::string sub_heading;
-  std::string sub_sub_heading;
-  Pos         heading_pos  = Pos::Center;
-  bool        heading_line = false;
-  float       heading_size = 1.0;
+  std::string title;
+  std::string sub_title;
+  std::string sub_sub_title;
+  Pos         title_pos  = Pos::Center;
+  bool        title_line = false;
+  float       title_size = 1.0;
 
   Legend*    legend_obj;
   bool       legend_frame;
@@ -146,7 +146,7 @@ public:
   SVG::BoundaryBox TopBB( void );
 
   void BuildLegends( void );
-  void BuildHeading( void );
+  void BuildTitle( void );
   void BuildFootnotes( void );
   void BuildBackground( void );
 

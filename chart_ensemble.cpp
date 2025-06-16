@@ -107,19 +107,19 @@ void Ensemble::SetLetterSpacing(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::SetHeading( const std::string& txt )
+void Ensemble::SetTitle( const std::string& txt )
 {
-  heading = txt;
+  title = txt;
 }
 
-void Ensemble::SetSubHeading( const std::string& txt )
+void Ensemble::SetSubTitle( const std::string& txt )
 {
-  sub_heading = txt;
+  sub_title = txt;
 }
 
-void Ensemble::SetSubSubHeading( const std::string& txt )
+void Ensemble::SetSubSubTitle( const std::string& txt )
 {
-  sub_sub_heading = txt;
+  sub_sub_title = txt;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -544,11 +544,11 @@ void Ensemble::BuildLegends( void )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Ensemble::BuildHeading( void )
+void Ensemble::BuildTitle( void )
 {
   U dx = 0;
   U dy = 16;
-  U spacing = 4 * heading_size;
+  U spacing = 4 * title_size;
 
   BoundaryBox bb = TopBB();
 
@@ -556,36 +556,36 @@ void Ensemble::BuildHeading( void )
 
   U x = (bb.min.x + bb.max.x) / 2;
   AnchorX a = AnchorX::Mid;
-  if ( heading_pos == Pos::Left ) {
+  if ( title_pos == Pos::Left ) {
     x = bb.min.x + dx;
     a = AnchorX::Min;
   }
-  if ( heading_pos == Pos::Right ) {
+  if ( title_pos == Pos::Right ) {
     x = bb.max.x - dx;
     a = AnchorX::Max;
   }
 
   U y = bb.max.y + dy;
-  if ( !sub_sub_heading.empty() ) {
+  if ( !sub_sub_title.empty() ) {
     Object* obj =
-      Label::CreateLabel( top_g, sub_sub_heading, 14 * heading_size );
+      Label::CreateLabel( top_g, sub_sub_title, 14 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + spacing;
   }
-  if ( !sub_heading.empty() ) {
-    Object* obj = Label::CreateLabel( top_g, sub_heading, 20 * heading_size );
+  if ( !sub_title.empty() ) {
+    Object* obj = Label::CreateLabel( top_g, sub_title, 20 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     bb = obj->GetBB();
     y += bb.max.y - bb.min.y + spacing;
   }
-  if ( !heading.empty() ) {
-    Object* obj = Label::CreateLabel( top_g, heading, 36 * heading_size );
+  if ( !title.empty() ) {
+    Object* obj = Label::CreateLabel( top_g, title, 36 * title_size );
     obj->MoveTo( a, AnchorY::Min, x, y );
     bb = obj->GetBB();
   }
 
-  if ( heading_line ) {
+  if ( title_line ) {
     bb = TopBB();
     top_g->Add( new Line( bb.min.x + dx, line_y, bb.max.x - dx, line_y ) );
     top_g->Last()->Attr()->LineColor()->Set( ForegroundColor() );
@@ -601,7 +601,7 @@ void Ensemble::BuildFootnotes( void )
 {
   U dx = 0;
   U dy = 16;
-  U spacing = 2 * heading_size;
+  U spacing = 2 * footnote_size;
 
   BoundaryBox bb = TopBB();
 
@@ -766,7 +766,7 @@ std::string Ensemble::Build( void )
     BuildLegends();
   }
 
-  BuildHeading();
+  BuildTitle();
   BuildFootnotes();
 
   BuildBackground();
