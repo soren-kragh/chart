@@ -8,8 +8,7 @@ oss << R"EOF(
   <title>Chartus</title>
   <style>
     text {
-      font-family: "Noto Mono", "Lucida Console", "Courier New", monospace;
-      font-size: 12;
+      font-family: monospace;
     }
     html, body {
       margin: 0;
