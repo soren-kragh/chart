@@ -259,6 +259,78 @@ void Series::ApplyTagStyle( SVG::Object* obj )
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void Series::Prune( std::vector< Point >& points )
+{
+  if ( points.empty() ) return;
+
+  double prune_dist = 1.0;
+
+  std::vector< Point > pruned_points;
+
+  // p1 and p2 are the start and end points of the collection, which is all
+  // points from p1 to p2 both inclusive.
+  std::vector< Point >::const_iterator p1;
+  std::vector< Point >::const_iterator p2;
+
+  // e1 and e2 are the extremities of the collection. All points in the
+  // collection are spaced less than prune_dist from the line from e1 to e2.
+  std::vector< Point >::const_iterator e1;
+  std::vector< Point >::const_iterator e2;
+
+  // d1/d2 is the distance of furthest point to the left/right from the e1-to-e2
+  // line.
+  U d1;
+  U d2;
+
+  auto prune = [&]( std::vector< Point >::const_iterator p )
+  {
+    auto new_e1 = e1;
+    auto new_e2 = e2;
+
+
+
+    p2 = p;
+    return false;
+  };
+
+  auto fst_p = points.cbegin();
+  auto lst_p = std::prev( points.cend() );
+
+  for ( auto p = points.cbegin(); p != points.cend(); ++p ) {
+    if ( p == fst_p ) {
+      p1 = e1 = p;
+      p2 = e2 = p;
+      d1 = d2 = 0;
+      if ( p == lst_p ) pruned_points.push_back( *p );
+      continue;
+    }
+    if ( p2 == p1 ) {
+      p2 = e2 = p;
+      if ( p == lst_p ) {
+        pruned_points.push_back( *p1 );
+        pruned_points.push_back( *p2 );
+      }
+      continue;
+    }
+    bool pruned = prune( p );
+    if ( p == lst_p || !pruned ) {
+      pruned_points.push_back( *p1 );
+      if ( e1 != p1 ) pruned_points.push_back( *e1 );
+      if ( e2 != p2 ) pruned_points.push_back( *e2 );
+      pruned_points.push_back( *p2 );
+      p1 = e1 = p;
+      p2 = e2 = p;
+      d1 = d2 = 0;
+      if ( p == lst_p && !pruned ) pruned_points.push_back( *p );
+    }
+  }
+
+  points = pruned_points;
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 void Series::Add( double x, double y )
 {
   datum_list.emplace_back( x, y );
