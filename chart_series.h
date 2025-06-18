@@ -100,6 +100,8 @@ public:
     const std::string_view tag_y
   );
 
+  void SetPruneDist( SVG::U dist ) { prune_dist = dist; }
+
   uint32_t Size( void ) { return datum_list.size(); }
 
   Main* main = nullptr;
@@ -109,6 +111,11 @@ public:
   void ApplyMarkStyle( SVG::Object* obj );
   void ApplyHoleStyle( SVG::Object* obj );
   void ApplyTagStyle ( SVG::Object* obj );
+
+  // Remove data points that do not contribute significantly to the overall
+  // rendering of the SVG.
+  void PrunePoly( std::vector< SVG::Point >& points );
+  void PrunePoints( std::vector< SVG::Point >& points );
 
   bool Inside( const SVG::Point p, const SVG::BoundaryBox& bb );
   bool Inside( const SVG::Point p )
@@ -240,6 +247,8 @@ public:
   float bar_all_width = 0.85;
 
   std::vector< Datum > datum_list;
+
+  SVG::U prune_dist = 0.0;
 
   SVG::U      marker_size;
   MarkerShape marker_shape;

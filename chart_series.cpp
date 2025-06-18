@@ -14,6 +14,8 @@
 #include <chart_series.h>
 #include <chart_axis.h>
 
+#include <unordered_set>
+
 using namespace SVG;
 using namespace Chart;
 
@@ -255,6 +257,168 @@ void Series::ApplyTagStyle( SVG::Object* obj )
   obj->Attr()->SetLineWidth( 1 );
   obj->Attr()->TextFont()->SetSize( 12 * tag_size );
   obj->Attr()->TextFont()->SetBold();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Series::PrunePoly( std::vector< Point >& points )
+{
+  using PI = std::vector< Point >::const_iterator;
+
+  if ( points.size() < 2 || prune_dist < 0.001 ) return;
+
+  size_t idx = 0;
+
+  // p1 and p2 are the start and end points of the collection, which is all
+  // points from p1 to p2 both inclusive.
+  PI p1;
+  PI p2;
+
+  // e1 and e2 are the start/end points of the line making up collection. All
+  // points in the collection are spaced less than prune_dist from the line from
+  // e1 to e2. Having e1/e2 enables us to prune points even when there is a lot
+  // of zigzagging back and forth along (or almost along as dictated by
+  // prune_dist) the e1/e2 line, as would be the case for example with noisy
+  // sensor data etc.
+  PI e1;
+  PI e2;
+
+  // d1/d2 is the distance of furthest point in the collection to the left/right
+  // from the e1-to-e2 line.
+  U d1;
+  U d2;
+
+  // Returns the distance from p to the line going from e1 to e2. The sign of
+  // the returned distance indicates if p lies to the left (positive) or the
+  // right (negative) of the line.
+  auto dist2line = []( PI e1, PI e2, PI p )
+  {
+    double dx = e2->x - e1->x;
+    double dy = e2->y - e1->y;
+    double px = p->x - e1->x;
+    double py = p->y - e1->y;
+
+    double cross = dx * py - dy * px;
+
+    return cross / std::sqrt( dx * dx + dy * dy );
+  };
+
+  // Returns true if p was integrated into the p1 to p2 collection thereby
+  // causing the previous point (p2) to be pruned.
+  auto prune = [&]( PI p )
+  {
+    auto new_e1 = e1;
+    auto new_e2 = e2;
+
+    double vex = e2->x - e1->x;
+    double vey = e2->y - e1->y;
+
+    bool vex_tiny = std::abs( vex ) < epsilon;
+    bool vey_tiny = std::abs( vey ) < epsilon;
+
+    if ( vex_tiny && vey_tiny ) {
+      new_e2 = p;
+    } else {
+      double dot1 = (p->x - e1->x) * vex + (p->y - e1->y) * vey;
+      double dot2 = (p->x - e2->x) * vex + (p->y - e2->y) * vey;
+      double d;
+      if ( dot1 < 0 || dot2 > 0 ) {
+        // p is before/after the current e1 to e2 line, so extend e1 or e2.
+        if ( dot2 > 0 ) {
+          // Extend e2.
+          d = dist2line( e1, p, e2 );
+        } else {
+          // Swap e1/e2 direction and extend new e2 (previous e1).
+          d = dist2line( e2, p, e1 );
+          std::swap( d1, d2 );
+          new_e1 = e2;
+        }
+        new_e2 = p;
+        // Do not accept pruning that causes vertical/horizontal lines to become
+        // slightly skewed, as this is a much more visible artifact:
+        if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
+        // We use the distance form the old e2 to the new extended e1/e2 line
+        // and update d1/d2 accordingly. This is not mathematically correct,
+        // ideally all points from p1 to p2 should be reexamined. But this
+        // heuristic is judged to be a good enough to avoid O(n^2) complexity.
+        if ( d > 0 ) {
+          d1 = d1 + d;
+          d2 = std::max( 0.0, d2 - d );
+        } else {
+          d1 = std::max( 0.0, d1 + d );
+          d2 = d2 - d;
+        }
+      } else {
+        d = dist2line( e1, e2, p );
+        if ( d > 0 ) {
+          d1 = std::max( +d1, +d );
+        } else {
+          d2 = std::max( +d2, -d );
+        }
+      }
+      if ( d1 > prune_dist || d2 > prune_dist ) return false;
+    }
+
+    e1 = new_e1;
+    e2 = new_e2;
+    p2 = p;
+    return true;
+  };
+
+  PI p = points.cbegin();
+  p1 = e1 = p++;
+  p2 = e2 = p++;
+  d1 = d2 = 0;
+
+  while ( p != points.cend() ) {
+    if ( !prune( p ) ) {
+      points[ idx++ ] = *p1;
+      if ( e1 != p1 ) points[ idx++ ] = *e1;
+      if ( e2 != p2 ) points[ idx++ ] = *e2;
+      p1 = e1 = p2;
+      p2 = e2 = p;
+      d1 = d2 = 0;
+    }
+    ++p;
+  }
+
+  points[ idx++ ] = *p1;
+  if ( e1 != p1 ) points[ idx++ ] = *e1;
+  if ( e2 != p2 ) points[ idx++ ] = *e2;
+  points[ idx++ ] = *p2;
+
+//  SVG_DBG( "PrunePoly> " << points.size() << " => " << idx );
+
+  points.resize( idx );
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Series::PrunePoints( std::vector< Point >& points )
+{
+  if ( points.size() < 1 || prune_dist < 0.001 ) return;
+
+  std::unordered_set< uint64_t > existing;
+
+  size_t idx = 0;
+
+  double f = 1.0 / prune_dist;
+
+  for ( auto& p : points ) {
+    uint64_t key =
+      (static_cast< uint64_t >( p.y * f ) << 32) |
+      (static_cast< uint64_t >( p.x * f ) <<  0);
+    if ( existing.find( key ) == existing.end() ) {
+      existing.insert( key );
+      points[ idx++ ] = p;
+    }
+  }
+
+//  SVG_DBG( "PrunePoints> " << points.size() << " => " << idx );
+
+  points.resize( idx );
+  return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -805,6 +969,10 @@ void Series::BuildArea(
   std::vector< SVG::Point >* pts_neg
 )
 {
+  std::vector< Point > fill_points;
+  std::vector< Point > line_points;
+  std::vector< Point > mark_points;
+
   int stack_dir = GetStackDir();
 
   Pos tag_direction;
@@ -849,23 +1017,18 @@ void Series::BuildArea(
     it->y = num_invalid;
   }
 
-  Poly* fill_obj = nullptr;
-  Poly* line_obj = nullptr;
-
   bool first_in_stack = (stack_dir < 0) ? pts_neg->empty() : pts_pos->empty();
 
   // Initialize the fill polygon with the points from the top of the previous
   // polygon, which are contained in pts_pos/pts_neg.
   if ( has_fill ) {
-    fill_g->Add( fill_obj = new Poly() );
-    fill_obj->Close();
     if ( stack_dir < 0 ) {
       for ( auto it = pts_neg->rbegin(); it != pts_neg->rend(); ++it ) {
-        fill_obj->Add( *it );
+        fill_points.push_back( *it );
       }
     } else {
       for ( auto it = pts_pos->rbegin(); it != pts_pos->rend(); ++it ) {
-        fill_obj->Add( *it );
+        fill_points.push_back( *it );
       }
     }
   }
@@ -874,6 +1037,27 @@ void Series::BuildArea(
   } else {
     pts_pos->clear();
   }
+
+  auto commit_line = [&]( void )
+  {
+    if ( !line_points.empty() ) {
+      PrunePoly( line_points );
+      auto it = line_points.cbegin();
+      uint64_t max_poly = 1024;
+      uint64_t d = (line_points.size() + max_poly - 1) / max_poly;
+      uint64_t n = 0;
+      for ( uint64_t i = 1; i <= d; ++i ) {
+        uint64_t m = line_points.size() * i / d;
+        Poly* poly = new Poly();
+        line_g->Add( poly );
+        while ( n < m ) {
+          poly->Add( *(it++) );
+          ++n;
+        }
+      }
+      line_points.clear();
+    }
+  };
 
   Point ap_prv_p;
   size_t ap_line_cnt = 0;
@@ -891,15 +1075,13 @@ void Series::BuildArea(
       pts_pos->push_back( p );
     }
     if ( has_fill ) {
-      fill_obj->Add( p );
+      fill_points.push_back( p );
     }
     if ( has_line && on_line ) {
-      if ( ap_line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
-      line_obj->Add( p );
+      line_points.push_back( p );
     }
     if ( is_datum ) {
-      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
-      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      if ( marker_show ) mark_points.push_back( p );
       if ( html_db ) {
         html_db->AddSnapPoint( this, p, datum.x, datum.tag_y );
       }
@@ -913,6 +1095,7 @@ void Series::BuildArea(
     if ( on_line && (is_datum || ap_line_cnt == 0) ) {
       ap_line_cnt++;
     } else {
+      commit_line();
       ap_line_cnt = 0;
     }
     ap_prv_p = p;
@@ -1012,6 +1195,26 @@ void Series::BuildArea(
       first = false;
     }
     if ( first_in_stack ) do_point( end_p, dummy_datum, false );
+  }
+
+  if ( !fill_points.empty() ) {
+    PrunePoly( fill_points );
+    Poly* poly = new Poly();
+    fill_g->Add( poly );
+    for ( auto& p : fill_points ) {
+      poly->Add( p );
+    }
+    poly->Close();
+  }
+
+  commit_line();
+
+  if ( !mark_points.empty() ) {
+    PrunePoints( mark_points );
+    for ( auto& p : mark_points ) {
+      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
+      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+    }
   }
 
   return;
@@ -1267,7 +1470,9 @@ void Series::BuildLine(
   Group* tag_g
 )
 {
-  Poly* poly = nullptr;
+  std::vector< Point > line_points;
+  std::vector< Point > mark_points;
+
   bool adding_segments = false;
 
   Pos tag_direction;
@@ -1282,8 +1487,7 @@ void Series::BuildLine(
     [&]( Point p, const Datum& datum, bool clipped = false )
   {
     if ( has_line ) {
-      if ( !adding_segments ) line_g->Add( poly = new Poly() );
-      poly->Add( p );
+      line_points.push_back( p );
       if ( adding_segments ) {
         UpdateLegendBoxes( prv, p );
       }
@@ -1291,8 +1495,7 @@ void Series::BuildLine(
       UpdateLegendBoxes( p, p, true, false );
     }
     if ( !clipped ) {
-      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
-      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      if ( marker_show ) mark_points.push_back( p );
       if ( html_db ) {
         if ( axis_x->category_axis ) {
           html_db->AddSnapPoint( this, p, datum.x, datum.tag_y );
@@ -1312,7 +1515,31 @@ void Series::BuildLine(
   };
   auto end_point = [&]( void )
   {
-    poly = nullptr;
+    if ( !line_points.empty() ) {
+      PrunePoly( line_points );
+      auto it = line_points.cbegin();
+      uint64_t max_poly = 1024;
+      uint64_t d = (line_points.size() + max_poly - 1) / max_poly;
+      uint64_t n = 0;
+      for ( uint64_t i = 1; i <= d; ++i ) {
+        uint64_t m = line_points.size() * i / d;
+        Poly* poly = new Poly();
+        line_g->Add( poly );
+        while ( n < m ) {
+          poly->Add( *(it++) );
+          ++n;
+        }
+      }
+      line_points.clear();
+    }
+    if ( !mark_points.empty() ) {
+      PrunePoints( mark_points );
+      for ( auto& p : mark_points ) {
+        if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
+        if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      }
+      mark_points.clear();
+    }
     adding_segments = false;
     tag_db->EndLineTag();
   };
