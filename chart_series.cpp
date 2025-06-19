@@ -261,36 +261,92 @@ void Series::ApplyTagStyle( SVG::Object* obj )
 
 void Series::Prune( std::vector< Point >& points )
 {
-  if ( points.empty() ) return;
+  using PI = std::vector< Point >::const_iterator;
 
   double prune_dist = 1.0;
+
+  if ( points.empty() || prune_dist <= 0.0 ) return;
 
   std::vector< Point > pruned_points;
 
   // p1 and p2 are the start and end points of the collection, which is all
   // points from p1 to p2 both inclusive.
-  std::vector< Point >::const_iterator p1;
-  std::vector< Point >::const_iterator p2;
+  PI p1;
+  PI p2;
 
   // e1 and e2 are the extremities of the collection. All points in the
   // collection are spaced less than prune_dist from the line from e1 to e2.
-  std::vector< Point >::const_iterator e1;
-  std::vector< Point >::const_iterator e2;
+  PI e1;
+  PI e2;
 
   // d1/d2 is the distance of furthest point to the left/right from the e1-to-e2
   // line.
   U d1;
   U d2;
 
-  auto prune = [&]( std::vector< Point >::const_iterator p )
+  // Returns the distance from p to the line going from e1 to e2. The sign of
+  // the returned distance indicates if p lies to the left (positive) or the
+  // right (negative) of the line.
+  auto dist2line = []( PI e1, PI e2, PI p )
+  {
+    double dx = e2->x - e1->x;
+    double dy = e2->y - e1->y;
+    double px = p->x - e1->x;
+    double py = p->y - e1->y;
+
+    double cross = dx * py - dy * px;
+
+    return cross / std::sqrt( dx * dx + dy * dy );
+  };
+
+  auto prune = [&]( PI p )
   {
     auto new_e1 = e1;
     auto new_e2 = e2;
 
+    double vex = e2->x - e1->x;
+    double vey = e2->y - e1->y;
 
+    bool vex_tiny = std::abs( vex ) < epsilon;
+    bool vey_tiny = std::abs( vey ) < epsilon;
 
+    if ( vex_tiny && vey_tiny ) {
+      new_e2 = p;
+    } else {
+      double dot1 = (p->x - e1->x) * vex + (p->y - e1->y) * vey;
+      double dot2 = (p->x - e2->x) * vex + (p->y - e2->y) * vey;
+      double d;
+      if ( dot1 < 0 || dot2 > 0 ) {
+        if ( dot1 < 0 ) {
+          new_e1 = p;
+          d = dist2line( p, e2, e1 );
+        } else {
+          new_e2 = p;
+          d = dist2line( e1, p, e2 );
+        }
+        if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
+        if ( d > 0 ) {
+          d1 = d1 + d;
+          d2 = std::max( 0.0, d2 - d );
+        } else {
+          d1 = std::max( 0.0, d1 + d );
+          d2 = d2 - d;
+        }
+      } else {
+        d = dist2line( e1, e2, p );
+        if ( d > 0 ) {
+          d1 = std::max( +d1, +d );
+        } else {
+          d2 = std::max( +d2, -d );
+        }
+      }
+      if ( d1 > prune_dist || d2 > prune_dist ) return false;
+    }
+
+    e1 = new_e1;
+    e2 = new_e2;
     p2 = p;
-    return false;
+    return true;
   };
 
   auto fst_p = points.cbegin();
