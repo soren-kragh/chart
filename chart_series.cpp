@@ -259,7 +259,7 @@ void Series::ApplyTagStyle( SVG::Object* obj )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::Prune( std::vector< Point >& points )
+void Series::PrunePoly( std::vector< Point >& points )
 {
   using PI = std::vector< Point >::const_iterator;
 
@@ -370,7 +370,40 @@ void Series::Prune( std::vector< Point >& points )
   if ( e2 != p2 ) pruned_points.push_back( *e2 );
   pruned_points.push_back( *p2 );
 
-//  SVG_DBG( "> " << points.size() << " => " << pruned_points.size() );
+  SVG_DBG( "PrunePoly> " << points.size() << " => " << pruned_points.size() );
+
+  points = pruned_points;
+  return;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Series::PrunePoints( std::vector< Point >& points )
+{
+  using PI = std::vector< Point >::const_iterator;
+
+  if ( points.size() <= 1 || prune_dist <= 0.0 ) return;
+
+  std::vector< Point > pruned_points;
+
+  PI p0;
+
+  PI p = points.cbegin();
+  p0 = p++;
+
+  while ( p != points.cend() ) {
+    double dx = p->x - p0->x;
+    double dy = p->y - p0->y;
+    if ( std::sqrt( dx * dx + dy * dy ) > prune_dist ) {
+      pruned_points.push_back( *p0 );
+      p0 = p;
+    }
+    ++p;
+  }
+
+  pruned_points.push_back( *p0 );
+
+  SVG_DBG( "PrunePoints> " << points.size() << " => " << pruned_points.size() );
 
   points = pruned_points;
   return;
@@ -1386,7 +1419,8 @@ void Series::BuildLine(
   Group* tag_g
 )
 {
-  std::vector< Point > line_points;
+  std::vector< Point > poly_points;
+  std::vector< Point > mark_points;
 
   bool adding_segments = false;
 
@@ -1402,7 +1436,7 @@ void Series::BuildLine(
     [&]( Point p, const Datum& datum, bool clipped = false )
   {
     if ( has_line ) {
-      line_points.push_back( p );
+      poly_points.push_back( p );
       if ( adding_segments ) {
         UpdateLegendBoxes( prv, p );
       }
@@ -1410,8 +1444,7 @@ void Series::BuildLine(
       UpdateLegendBoxes( p, p, true, false );
     }
     if ( !clipped ) {
-      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
-      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      if ( marker_show ) mark_points.push_back( p );
       if ( html_db ) {
         if ( axis_x->category_axis ) {
           html_db->AddSnapPoint( this, p, datum.x, datum.tag_y );
@@ -1431,14 +1464,22 @@ void Series::BuildLine(
   };
   auto end_point = [&]( void )
   {
-    if ( !line_points.empty() ) {
-      Prune( line_points );
+    if ( !poly_points.empty() ) {
+      PrunePoly( poly_points );
       Poly* poly = new Poly();
       line_g->Add( poly );
-      for ( auto& p : line_points ) {
+      for ( auto& p : poly_points ) {
         poly->Add( p );
       }
-      line_points.clear();
+      poly_points.clear();
+    }
+    if ( !mark_points.empty() ) {
+      PrunePoints( mark_points );
+      for ( auto& p : mark_points ) {
+        if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
+        if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      }
+      mark_points.clear();
     }
     adding_segments = false;
     tag_db->EndLineTag();

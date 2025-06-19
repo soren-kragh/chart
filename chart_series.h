@@ -114,7 +114,8 @@ public:
 
   // Remove data points that do not contribute significantly to the overall
   // rendering of the SVG.
-  void Prune( std::vector< SVG::Point >& points );
+  void PrunePoly( std::vector< SVG::Point >& points );
+  void PrunePoints( std::vector< SVG::Point >& points );
 
   bool Inside( const SVG::Point p, const SVG::BoundaryBox& bb );
   bool Inside( const SVG::Point p )
