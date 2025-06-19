@@ -370,6 +370,8 @@ void Series::Prune( std::vector< Point >& points )
   if ( e2 != p2 ) pruned_points.push_back( *e2 );
   pruned_points.push_back( *p2 );
 
+//  SVG_DBG( "> " << points.size() << " => " << pruned_points.size() );
+
   points = pruned_points;
   return;
 }
@@ -1384,7 +1386,8 @@ void Series::BuildLine(
   Group* tag_g
 )
 {
-  Poly* poly = nullptr;
+  std::vector< Point > line_points;
+
   bool adding_segments = false;
 
   Pos tag_direction;
@@ -1399,8 +1402,7 @@ void Series::BuildLine(
     [&]( Point p, const Datum& datum, bool clipped = false )
   {
     if ( has_line ) {
-      if ( !adding_segments ) line_g->Add( poly = new Poly() );
-      poly->Add( p );
+      line_points.push_back( p );
       if ( adding_segments ) {
         UpdateLegendBoxes( prv, p );
       }
@@ -1429,7 +1431,15 @@ void Series::BuildLine(
   };
   auto end_point = [&]( void )
   {
-    poly = nullptr;
+    if ( !line_points.empty() ) {
+      Prune( line_points );
+      Poly* poly = new Poly();
+      line_g->Add( poly );
+      for ( auto& p : line_points ) {
+        poly->Add( p );
+      }
+      line_points.clear();
+    }
     adding_segments = false;
     tag_db->EndLineTag();
   };
