@@ -263,8 +263,6 @@ void Series::Prune( std::vector< Point >& points )
 {
   using PI = std::vector< Point >::const_iterator;
 
-  double prune_dist = 1.0;
-
   if ( points.size() <= 2 || prune_dist <= 0.0 ) return;
 
   std::vector< Point > pruned_points;
@@ -317,13 +315,14 @@ void Series::Prune( std::vector< Point >& points )
       double dot2 = (p->x - e2->x) * vex + (p->y - e2->y) * vey;
       double d;
       if ( dot1 < 0 || dot2 > 0 ) {
-        if ( dot1 < 0 ) {
-          new_e1 = p;
-          d = dist2line( p, e2, e1 );
-        } else {
-          new_e2 = p;
+        if ( dot2 > 0 ) {
           d = dist2line( e1, p, e2 );
+        } else {
+          d = dist2line( e2, p, e1 );
+          std::swap( d1, d2 );
+          new_e1 = e2;
         }
+        new_e2 = p;
         if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
         if ( d > 0 ) {
           d1 = d1 + d;

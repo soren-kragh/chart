@@ -100,6 +100,8 @@ public:
     const std::string_view tag_y
   );
 
+  void SetPruneDist( SVG::U dist ) { prune_dist = dist; }
+
   uint32_t Size( void ) { return datum_list.size(); }
 
   Main* main = nullptr;
@@ -244,6 +246,8 @@ public:
   float bar_all_width = 0.85;
 
   std::vector< Datum > datum_list;
+
+  SVG::U prune_dist = 0.0;
 
   SVG::U      marker_size;
   MarkerShape marker_shape;
