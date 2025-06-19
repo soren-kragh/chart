@@ -265,7 +265,7 @@ void Series::Prune( std::vector< Point >& points )
 
   double prune_dist = 1.0;
 
-  if ( points.empty() || prune_dist <= 0.0 ) return;
+  if ( points.size() <= 2 || prune_dist <= 0.0 ) return;
 
   std::vector< Point > pruned_points;
 
@@ -349,37 +349,27 @@ void Series::Prune( std::vector< Point >& points )
     return true;
   };
 
-  auto fst_p = points.cbegin();
-  auto lst_p = std::prev( points.cend() );
+  PI p = points.cbegin();
+  p1 = e1 = p++;
+  p2 = e2 = p++;
+  d1 = d2 = 0;
 
-  for ( auto p = points.cbegin(); p != points.cend(); ++p ) {
-    if ( p == fst_p ) {
-      p1 = e1 = p;
-      p2 = e2 = p;
-      d1 = d2 = 0;
-      if ( p == lst_p ) pruned_points.push_back( *p );
-      continue;
-    }
-    if ( p2 == p1 ) {
-      p2 = e2 = p;
-      if ( p == lst_p ) {
-        pruned_points.push_back( *p1 );
-        pruned_points.push_back( *p2 );
-      }
-      continue;
-    }
-    bool pruned = prune( p );
-    if ( p == lst_p || !pruned ) {
+  while ( p != points.cend() ) {
+    if ( !prune( p ) ) {
       pruned_points.push_back( *p1 );
       if ( e1 != p1 ) pruned_points.push_back( *e1 );
       if ( e2 != p2 ) pruned_points.push_back( *e2 );
-      pruned_points.push_back( *p2 );
-      p1 = e1 = p;
+      p1 = e1 = p2;
       p2 = e2 = p;
       d1 = d2 = 0;
-      if ( p == lst_p && !pruned ) pruned_points.push_back( *p );
     }
+    ++p;
   }
+
+  pruned_points.push_back( *p1 );
+  if ( e1 != p1 ) pruned_points.push_back( *e1 );
+  if ( e2 != p2 ) pruned_points.push_back( *e2 );
+  pruned_points.push_back( *p2 );
 
   points = pruned_points;
   return;
