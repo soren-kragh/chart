@@ -954,6 +954,9 @@ void Series::BuildArea(
   std::vector< SVG::Point >* pts_neg
 )
 {
+  std::vector< Point > fill_points;
+  std::vector< Point > line_points;
+
   int stack_dir = GetStackDir();
 
   Pos tag_direction;
@@ -998,23 +1001,18 @@ void Series::BuildArea(
     it->y = num_invalid;
   }
 
-  Poly* fill_obj = nullptr;
-  Poly* line_obj = nullptr;
-
   bool first_in_stack = (stack_dir < 0) ? pts_neg->empty() : pts_pos->empty();
 
   // Initialize the fill polygon with the points from the top of the previous
   // polygon, which are contained in pts_pos/pts_neg.
   if ( has_fill ) {
-    fill_g->Add( fill_obj = new Poly() );
-    fill_obj->Close();
     if ( stack_dir < 0 ) {
       for ( auto it = pts_neg->rbegin(); it != pts_neg->rend(); ++it ) {
-        fill_obj->Add( *it );
+        fill_points.push_back( *it );
       }
     } else {
       for ( auto it = pts_pos->rbegin(); it != pts_pos->rend(); ++it ) {
-        fill_obj->Add( *it );
+        fill_points.push_back( *it );
       }
     }
   }
@@ -1023,6 +1021,19 @@ void Series::BuildArea(
   } else {
     pts_pos->clear();
   }
+
+  auto commit_line = [&]( void )
+  {
+    if ( !line_points.empty() ) {
+      PrunePoly( line_points );
+      Poly* poly = new Poly();
+      line_g->Add( poly );
+      for ( auto& p : line_points ) {
+        poly->Add( p );
+      }
+      line_points.clear();
+    }
+  };
 
   Point ap_prv_p;
   size_t ap_line_cnt = 0;
@@ -1040,11 +1051,10 @@ void Series::BuildArea(
       pts_pos->push_back( p );
     }
     if ( has_fill ) {
-      fill_obj->Add( p );
+      fill_points.push_back( p );
     }
     if ( has_line && on_line ) {
-      if ( ap_line_cnt == 0 ) line_g->Add( line_obj = new Poly() );
-      line_obj->Add( p );
+      line_points.push_back( p );
     }
     if ( is_datum ) {
       if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
@@ -1062,6 +1072,7 @@ void Series::BuildArea(
     if ( on_line && (is_datum || ap_line_cnt == 0) ) {
       ap_line_cnt++;
     } else {
+      commit_line();
       ap_line_cnt = 0;
     }
     ap_prv_p = p;
@@ -1162,6 +1173,18 @@ void Series::BuildArea(
     }
     if ( first_in_stack ) do_point( end_p, dummy_datum, false );
   }
+
+  if ( !fill_points.empty() ) {
+    PrunePoly( fill_points );
+    Poly* poly = new Poly();
+    fill_g->Add( poly );
+    for ( auto& p : fill_points ) {
+      poly->Add( p );
+    }
+    poly->Close();
+  }
+
+  commit_line();
 
   return;
 }
