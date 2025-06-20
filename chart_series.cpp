@@ -14,6 +14,8 @@
 #include <chart_series.h>
 #include <chart_axis.h>
 
+#include <unordered_set>
+
 using namespace SVG;
 using namespace Chart;
 
@@ -263,7 +265,7 @@ void Series::PrunePoly( std::vector< Point >& points )
 {
   using PI = std::vector< Point >::const_iterator;
 
-  if ( points.size() <= 2 || prune_dist <= 0.0 ) return;
+  if ( points.size() <= 2 || prune_dist < 0.001 ) return;
 
   std::vector< Point > pruned_points;
 
@@ -380,28 +382,21 @@ void Series::PrunePoly( std::vector< Point >& points )
 
 void Series::PrunePoints( std::vector< Point >& points )
 {
-  using PI = std::vector< Point >::const_iterator;
+  if ( points.size() <= 1 || prune_dist < 0.001 ) return;
 
-  if ( points.size() <= 1 || prune_dist <= 0.0 ) return;
+  std::unordered_set< uint64_t > existing;
 
   std::vector< Point > pruned_points;
 
-  PI p0;
-
-  PI p = points.cbegin();
-  p0 = p++;
-
-  while ( p != points.cend() ) {
-    double dx = p->x - p0->x;
-    double dy = p->y - p0->y;
-    if ( std::sqrt( dx * dx + dy * dy ) > prune_dist ) {
-      pruned_points.push_back( *p0 );
-      p0 = p;
+  for ( auto& p : points ) {
+    uint64_t key =
+      (static_cast< uint64_t >(p.y / prune_dist) << 32) |
+      (static_cast< uint64_t >(p.x / prune_dist) <<  0);
+    if ( existing.find( key ) == existing.end() ) {
+      existing.insert( key );
+      pruned_points.push_back( p );
     }
-    ++p;
   }
-
-  pruned_points.push_back( *p0 );
 
   SVG_DBG( "PrunePoints> " << points.size() << " => " << pruned_points.size() );
 
