@@ -265,7 +265,7 @@ void Series::PrunePoly( std::vector< Point >& points )
 {
   using PI = std::vector< Point >::const_iterator;
 
-  if ( points.size() <= 2 || prune_dist < 0.001 ) return;
+  if ( points.size() < 100 || prune_dist < 0.001 ) return;
 
   std::vector< Point > pruned_points;
 
@@ -372,7 +372,7 @@ void Series::PrunePoly( std::vector< Point >& points )
   if ( e2 != p2 ) pruned_points.push_back( *e2 );
   pruned_points.push_back( *p2 );
 
-  SVG_DBG( "PrunePoly> " << points.size() << " => " << pruned_points.size() );
+//  SVG_DBG( "PrunePoly> " << points.size() << " => " << pruned_points.size() );
 
   points = pruned_points;
   return;
@@ -382,7 +382,7 @@ void Series::PrunePoly( std::vector< Point >& points )
 
 void Series::PrunePoints( std::vector< Point >& points )
 {
-  if ( points.size() <= 1 || prune_dist < 0.001 ) return;
+  if ( points.size() < 100 || prune_dist < 0.001 ) return;
 
   std::unordered_set< uint64_t > existing;
 
@@ -400,7 +400,7 @@ void Series::PrunePoints( std::vector< Point >& points )
     }
   }
 
-  SVG_DBG( "PrunePoints> " << points.size() << " => " << pruned_points.size() );
+//  SVG_DBG( "PrunePoints> " << points.size() << " => " << pruned_points.size() );
 
   points = pruned_points;
   return;
