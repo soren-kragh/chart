@@ -956,6 +956,7 @@ void Series::BuildArea(
 {
   std::vector< Point > fill_points;
   std::vector< Point > line_points;
+  std::vector< Point > mark_points;
 
   int stack_dir = GetStackDir();
 
@@ -1057,8 +1058,7 @@ void Series::BuildArea(
       line_points.push_back( p );
     }
     if ( is_datum ) {
-      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
-      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+      if ( marker_show ) mark_points.push_back( p );
       if ( html_db ) {
         html_db->AddSnapPoint( this, p, datum.x, datum.tag_y );
       }
@@ -1185,6 +1185,14 @@ void Series::BuildArea(
   }
 
   commit_line();
+
+  if ( !mark_points.empty() ) {
+    PrunePoints( mark_points );
+    for ( auto& p : mark_points ) {
+      if ( marker_show_out ) BuildMarker( mark_g, marker_out, p );
+      if ( marker_show_int ) BuildMarker( hole_g, marker_int, p );
+    }
+  }
 
   return;
 }
