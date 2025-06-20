@@ -388,10 +388,12 @@ void Series::PrunePoints( std::vector< Point >& points )
 
   std::vector< Point > pruned_points;
 
+  double f = 1.0 / prune_dist;
+
   for ( auto& p : points ) {
     uint64_t key =
-      (static_cast< uint64_t >(p.y / prune_dist) << 32) |
-      (static_cast< uint64_t >(p.x / prune_dist) <<  0);
+      (static_cast< uint64_t >( p.y * f ) << 32) |
+      (static_cast< uint64_t >( p.x * f ) <<  0);
     if ( existing.find( key ) == existing.end() ) {
       existing.insert( key );
       pruned_points.push_back( p );
