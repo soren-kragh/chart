@@ -337,6 +337,11 @@ void Series::PrunePoly( std::vector< Point >& points )
         // Do not accept pruning that causes vertical/horizontal lines to become
         // slightly skewed, as this is a much more visible artifact:
         if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
+        // We use the distance form the old e2 to the new extended e1/e2 line
+        // and update d1/d2 accordingly. This is not mathematically correct as
+        // it is both too optimistic and too pessimistic, ideally all points
+        // from p1 to p2 should be reexamined. But the heuristic is judged to be
+        // a good enough to avoid O(n^2) complexity.
         if ( d > 0 ) {
           d1 = d1 + d;
           d2 = std::max( 0.0, d2 - d );
