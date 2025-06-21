@@ -277,7 +277,9 @@ void Series::PrunePoly( std::vector< Point >& points )
   // e1 and e2 are the start/end points of the line making up collection. All
   // points in the collection are spaced less than prune_dist from the line from
   // e1 to e2. Having e1/e2 enables us to prune points even when there is a lot
-  // of zigzagging.
+  // of zigzagging back and forth along (or almost along as dictated by
+  // prune_dist) the e1/e2 line, as would be the case for example with noisy
+  // sensor data etc.
   PI e1;
   PI e2;
 
