@@ -265,7 +265,7 @@ void Series::PrunePoly( std::vector< Point >& points )
 {
   using PI = std::vector< Point >::const_iterator;
 
-  if ( points.size() < 100 || prune_dist < 0.001 ) return;
+  if ( points.size() < 2 || prune_dist < 0.001 ) return;
 
   std::vector< Point > pruned_points;
 
@@ -397,7 +397,7 @@ void Series::PrunePoly( std::vector< Point >& points )
 
 void Series::PrunePoints( std::vector< Point >& points )
 {
-  if ( points.size() < 100 || prune_dist < 0.001 ) return;
+  if ( points.size() < 1 || prune_dist < 0.001 ) return;
 
   std::unordered_set< uint64_t > existing;
 
@@ -1042,10 +1042,18 @@ void Series::BuildArea(
   {
     if ( !line_points.empty() ) {
       PrunePoly( line_points );
-      Poly* poly = new Poly();
-      line_g->Add( poly );
-      for ( auto& p : line_points ) {
-        poly->Add( p );
+      auto it = line_points.cbegin();
+      uint64_t max_poly = 1024;
+      uint64_t d = (line_points.size() + max_poly - 1) / max_poly;
+      uint64_t n = 0;
+      for ( uint64_t i = 1; i <= d; ++i ) {
+        uint64_t m = line_points.size() * i / d;
+        Poly* poly = new Poly();
+        line_g->Add( poly );
+        while ( n < m ) {
+          poly->Add( *(it++) );
+          ++n;
+        }
       }
       line_points.clear();
     }
@@ -1462,7 +1470,7 @@ void Series::BuildLine(
   Group* tag_g
 )
 {
-  std::vector< Point > poly_points;
+  std::vector< Point > line_points;
   std::vector< Point > mark_points;
 
   bool adding_segments = false;
@@ -1479,7 +1487,7 @@ void Series::BuildLine(
     [&]( Point p, const Datum& datum, bool clipped = false )
   {
     if ( has_line ) {
-      poly_points.push_back( p );
+      line_points.push_back( p );
       if ( adding_segments ) {
         UpdateLegendBoxes( prv, p );
       }
@@ -1507,14 +1515,22 @@ void Series::BuildLine(
   };
   auto end_point = [&]( void )
   {
-    if ( !poly_points.empty() ) {
-      PrunePoly( poly_points );
-      Poly* poly = new Poly();
-      line_g->Add( poly );
-      for ( auto& p : poly_points ) {
-        poly->Add( p );
+    if ( !line_points.empty() ) {
+      PrunePoly( line_points );
+      auto it = line_points.cbegin();
+      uint64_t max_poly = 1024;
+      uint64_t d = (line_points.size() + max_poly - 1) / max_poly;
+      uint64_t n = 0;
+      for ( uint64_t i = 1; i <= d; ++i ) {
+        uint64_t m = line_points.size() * i / d;
+        Poly* poly = new Poly();
+        line_g->Add( poly );
+        while ( n < m ) {
+          poly->Add( *(it++) );
+          ++n;
+        }
       }
-      poly_points.clear();
+      line_points.clear();
     }
     if ( !mark_points.empty() ) {
       PrunePoints( mark_points );
