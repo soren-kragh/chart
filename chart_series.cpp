@@ -267,7 +267,7 @@ void Series::PrunePoly( std::vector< Point >& points )
 
   if ( points.size() < 2 || prune_dist < 0.001 ) return;
 
-  std::vector< Point > pruned_points;
+  size_t idx = 0;
 
   // p1 and p2 are the start and end points of the collection, which is all
   // points from p1 to p2 both inclusive.
@@ -372,9 +372,9 @@ void Series::PrunePoly( std::vector< Point >& points )
 
   while ( p != points.cend() ) {
     if ( !prune( p ) ) {
-      pruned_points.push_back( *p1 );
-      if ( e1 != p1 ) pruned_points.push_back( *e1 );
-      if ( e2 != p2 ) pruned_points.push_back( *e2 );
+      points[ idx++ ] = *p1;
+      if ( e1 != p1 ) points[ idx++ ] = *e1;
+      if ( e2 != p2 ) points[ idx++ ] = *e2;
       p1 = e1 = p2;
       p2 = e2 = p;
       d1 = d2 = 0;
@@ -382,14 +382,14 @@ void Series::PrunePoly( std::vector< Point >& points )
     ++p;
   }
 
-  pruned_points.push_back( *p1 );
-  if ( e1 != p1 ) pruned_points.push_back( *e1 );
-  if ( e2 != p2 ) pruned_points.push_back( *e2 );
-  pruned_points.push_back( *p2 );
+  points[ idx++ ] = *p1;
+  if ( e1 != p1 ) points[ idx++ ] = *e1;
+  if ( e2 != p2 ) points[ idx++ ] = *e2;
+  points[ idx++ ] = *p2;
 
-//  SVG_DBG( "PrunePoly> " << points.size() << " => " << pruned_points.size() );
+//  SVG_DBG( "PrunePoly> " << points.size() << " => " << idx );
 
-  points = pruned_points;
+  points.resize( idx );
   return;
 }
 
@@ -401,7 +401,7 @@ void Series::PrunePoints( std::vector< Point >& points )
 
   std::unordered_set< uint64_t > existing;
 
-  std::vector< Point > pruned_points;
+  size_t idx = 0;
 
   double f = 1.0 / prune_dist;
 
@@ -411,13 +411,13 @@ void Series::PrunePoints( std::vector< Point >& points )
       (static_cast< uint64_t >( p.x * f ) <<  0);
     if ( existing.find( key ) == existing.end() ) {
       existing.insert( key );
-      pruned_points.push_back( p );
+      points[ idx++ ] = p;
     }
   }
 
-//  SVG_DBG( "PrunePoints> " << points.size() << " => " << pruned_points.size() );
+//  SVG_DBG( "PrunePoints> " << points.size() << " => " << idx );
 
-  points = pruned_points;
+  points.resize( idx );
   return;
 }
 
