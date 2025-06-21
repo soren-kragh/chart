@@ -274,13 +274,15 @@ void Series::PrunePoly( std::vector< Point >& points )
   PI p1;
   PI p2;
 
-  // e1 and e2 are the extremities of the collection. All points in the
-  // collection are spaced less than prune_dist from the line from e1 to e2.
+  // e1 and e2 are the start/end points of the line making up collection. All
+  // points in the collection are spaced less than prune_dist from the line from
+  // e1 to e2. Having e1/e2 enables us to prune points even when there is a lot
+  // of zigzagging.
   PI e1;
   PI e2;
 
-  // d1/d2 is the distance of furthest point to the left/right from the e1-to-e2
-  // line.
+  // d1/d2 is the distance of furthest point in the collection to the left/right
+  // from the e1-to-e2 line.
   U d1;
   U d2;
 
@@ -299,6 +301,8 @@ void Series::PrunePoly( std::vector< Point >& points )
     return cross / std::sqrt( dx * dx + dy * dy );
   };
 
+  // Returns true if p was integrated into the p1 to p2 collection thereby
+  // causing the previous point (p2) to be pruned.
   auto prune = [&]( PI p )
   {
     auto new_e1 = e1;
@@ -317,14 +321,19 @@ void Series::PrunePoly( std::vector< Point >& points )
       double dot2 = (p->x - e2->x) * vex + (p->y - e2->y) * vey;
       double d;
       if ( dot1 < 0 || dot2 > 0 ) {
+        // p is before/after the current e1 to e2 line, so extend e1 or e2.
         if ( dot2 > 0 ) {
+          // Extend e2.
           d = dist2line( e1, p, e2 );
         } else {
+          // Swap e1/e2 direction and extend new e2 (previous e1).
           d = dist2line( e2, p, e1 );
           std::swap( d1, d2 );
           new_e1 = e2;
         }
         new_e2 = p;
+        // Do not accept pruning that causes vertical/horizontal lines to become
+        // slightly skewed, as this is a much more visible artifact:
         if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
         if ( d > 0 ) {
           d1 = d1 + d;
