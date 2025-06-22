@@ -456,6 +456,8 @@ function resolveOverlaps(boxes, sx, sy) {
 function createCategoryBoxes(x, y, axis) {
   showCursor();
 
+  if ( !chart.categories ) return;
+
   let horizontal = false;
   let coor = x;
   if (axis.id === "axisY_0" || axis.id === "axisY_1") {
