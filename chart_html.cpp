@@ -357,13 +357,17 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
 
   oss << "snapPoints : [\n";
   for ( const auto& sp : main->html.snap_points ) {
+    U X = +(sp.p.x + main->g_dx);
+    U Y = -(sp.p.y + main->g_dy);
     oss << "{s:" << sp.series_id << ',';
     if ( sp.tag_x.empty() ) {
       oss << "x:" << sp.cat_idx << ',';
     } else {
       oss << "x:" << quoteJS( sp.tag_x ) << ',';
     }
-    oss << "y:" << quoteJS( sp.tag_y ) << "},\n";
+    oss << "y:" << quoteJS( sp.tag_y ) << ",";
+    oss << "X:" << X.SVG( false ) << ',';
+    oss << "Y:" << Y.SVG( false ) << "},\n";
   }
   oss << "],\n";
 

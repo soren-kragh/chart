@@ -5,6 +5,7 @@ const keepAwayFromCursor = 24;
 const lineWidth = 1;
 const dotSize = 10;
 const infoSpacing = 8;
+const snapRadius = 15;
 
 ////////////////////////////////////////////////////////////////////////////////
 
