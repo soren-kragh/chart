@@ -5,6 +5,7 @@ const keepAwayFromCursor = 24;
 const lineWidth = 1;
 const dotSize = 10;
 const infoSpacing = 8;
+const snapRadius = 15;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -13,19 +14,23 @@ const svg_cursor = document.getElementById("svgCursor");
 const svg_snap = document.getElementById("svgSnap");
 
 let chart;
-let chart_idx;
 
 ///////////////////////////////////////////////////////////////////////////////
 
 let cursorTimer;
+let cursorHidden = false;
 
 const hideCursor = () => {
   document.body.classList.add('hide-cursor');
+  cursorHidden = true;
 };
 
 const showCursor = () => {
   clearTimeout(cursorTimer);
-  document.body.classList.remove('hide-cursor');
+  if ( cursorHidden ) {
+    document.body.classList.remove('hide-cursor');
+  }
+  cursorHidden = false;
 };
 
 let idList = [];
@@ -51,6 +56,58 @@ function newObj(type, addId = false)
   const obj = document.createElementNS(SVG_NS, type);
   if (addId) obj.setAttribute("id", genId());
   return obj;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+const snapKeyFactor = 0.5 / snapRadius;
+
+const coorToSnapKey = (x, y) => {
+  const ix = Math.floor(x * snapKeyFactor);
+  const iy = Math.floor(y * snapKeyFactor);
+  return (ix + 8e6) * 16e6 + (iy + 8e6);
+};
+
+function snapMapAdd(snapMap, x, y, snapIdx) {
+  const key = coorToSnapKey(x, y);
+  let list = snapMap.get(key);
+  if (!list) {
+    list = [];
+    snapMap.set(key, list);
+  }
+  list.push(snapIdx);
+}
+
+function snapMapGet(snapMap, x, y) {
+  const cx = Math.round(x * snapKeyFactor) / snapKeyFactor;
+  const cy = Math.round(y * snapKeyFactor) / snapKeyFactor;
+
+  const lx = [cx - snapRadius, cx + snapRadius];
+  const ly = [cy - snapRadius, cy + snapRadius];
+
+  let minIdx = -1;
+  let minDist = snapRadius * snapRadius;
+
+  lx.forEach(bx => {
+    ly.forEach(by => {
+      const key = coorToSnapKey(bx, by);
+      const list = snapMap.get(key);
+      if (list) {
+        list.forEach(snapIdx => {
+          const sp = chart.snapPoints[snapIdx];
+          const dx = sp.X - x;
+          const dy = sp.Y - y;
+          const dist = dx * dx + dy * dy;
+          if (dist <= minDist) {
+            minIdx = snapIdx;
+            minDist = dist;
+          }
+        });
+      }
+    });
+  });
+
+  return minIdx;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -81,6 +138,46 @@ function coorToVal(coor, axis) {
       );
   }
   return val;
+}
+
+
+//------------------------------------------------------------------------------
+
+function getCatIdx(coor, axis, catValues) {
+  const min = 0;
+  const max = catValues.length - 1;
+  if (min > max) return 0;
+  let i = Math.round(coorToVal(coor, axis));
+  i = Math.min(Math.max(i, 0), chart.catCnt - 1);
+  let j1 = min;
+  let j2 = max;
+  while (j1 + 1 < j2) {
+    let i1 = catValues[j1];
+    let jm = Math.floor((j1 + j2) / 2);
+    let im = catValues[jm];
+    if (im < i) {
+      j1 = jm;
+    } else {
+      j2 = jm;
+    }
+  }
+  let candidates = [j1-1, j1, j2, j2+1];
+  let bestDist = Infinity;
+  candidates.forEach(j => {
+    if (j >= min && j <= max) {
+      const k = catValues[j];
+      const dist =
+        Math.abs(
+          coor -
+          getLinAxisValue(k, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2)
+        );
+      if (dist < bestDist) {
+        bestDist = dist;
+        i = k;
+      }
+    }
+  });
+  return i;
 }
 
 //------------------------------------------------------------------------------
@@ -159,21 +256,27 @@ function toEngineering(num, decimals) {
   return coefS + "e" + expS;
 }
 
-function buildAxisLabel(val, axis) {
+function buildAxisLabel(coor, axis) {
   let group = newObj("g", true);
   group.setAttribute("fill", chart.axisBoxLineColor);
   group.setAttribute("stroke", "none");
   group.setAttribute("font-size", chart.axisFontSize);
   svg_cursor.appendChild(group);
 
+  let val = coorToVal(coor, axis);
+
   if (axis.isCategory) {
-    const i = Math.round(val);
-    if (
-      chart.categories && i >= 0 &&
-      i < chart.categories.length && chart.categories[i]
-    ) {
+    let i = Math.round(val);
+    let txt = chart.catMapToText.get(i);
+    if (!txt && chart.catTxtValues.length > 0) {
+      i = getCatIdx(coor, axis, chart.catTxtValues);
+      const cat_coor =
+        getLinAxisValue(i, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
+      if (Math.abs(coor - cat_coor) < 1.25) txt = chart.catMapToText.get(i);
+    }
+    if (txt) {
       const text = newObj("text");
-      text.textContent = chart.categories[i];
+      text.textContent = txt;
       group.appendChild(text);
     } else {
       svg_cursor.removeChild(group);
@@ -328,9 +431,7 @@ function createAxisBox(x, y, axis, {isMulti = false} = {}) {
   if (axis.id === "axisY_0" || axis.id === "axisY_1") {
     coor = y;
   }
-  const val = coorToVal(coor, axis);
-
-  const group = buildAxisLabel(val, axis);
+  const group = buildAxisLabel(coor, axis);
   if ( !group ) return;
 
   let bbox = group.getBBox();
@@ -456,7 +557,7 @@ function resolveOverlaps(boxes, sx, sy) {
 function createCategoryBoxes(x, y, axis) {
   showCursor();
 
-  if ( !chart.categories ) return;
+  if (chart.catBoxValues.length == 0) return;
 
   let horizontal = false;
   let coor = x;
@@ -466,47 +567,20 @@ function createCategoryBoxes(x, y, axis) {
   }
   let sx = horizontal ? (axis.id == "axisY_0" ? 1 : -1) : 0;
   let sy = horizontal ? 0 : (axis.id == "axisX_0" ? 1 : -1);
-  let i = Math.round(coorToVal(coor, axis));
-  let r1 = 0;
-  let r2 = chart.categories.length - 1;
-  if (r1 > r2) return;
-  i = Math.min(Math.max(i, r1), r2);
 
-  {
-    let i1 = i;
-    while (i1 > r1 && chart.catList[i1].length == 0) i1--;
-    let i2 = i;
-    while (i2 < r2 && chart.catList[i2].length == 0) i2++;
-    if (chart.catList[i1].length == 0) {
-      i = i2;
-    } else
-    if (chart.catList[i2].length == 0) {
-      i = i1;
-    } else {
-      let c1 =
-        getLinAxisValue(i1, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
-      let c2 =
-        getLinAxisValue(i2, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
-      if (Math.abs(coor - c1) < Math.abs(coor - c2)) {
-        i = i1;
-      } else {
-        i = i2;
-      }
-    }
-  }
+  let i = getCatIdx(coor, axis, chart.catBoxValues);
 
   let snapped_coor =
     getLinAxisValue(i, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
 
+  const snapIdxList = chart.catMapToSnap.get(i);
   let lst = [];
-  chart.catList[i].forEach(({serId, id}) => {
-    const sp = svg_snap.getElementById(`${chart_idx}_${id}`);
-    if (sp) {
-      const x = Number(sp.getAttribute("cx"));
-      const y = Number(sp.getAttribute("cy"));
-      lst.push({serId, id, x, y});
-    }
-  });
+  if (snapIdxList) {
+    snapIdxList.forEach(snapIdx => {
+      const sp = chart.snapPoints[ snapIdx ];
+      lst.push({serIdx : sp.s, snapIdx : snapIdx, x : sp.X, y : sp.Y});
+    });
+  }
   if (lst.length == 0) return;
   if (sx > 0 || sy > 0) {
     lst.sort((a, b) => horizontal ? (a.x - b.x) : (a.y - b.y));
@@ -539,7 +613,7 @@ function createCategoryBoxes(x, y, axis) {
     line_g.setAttribute("stroke-dasharray", "12 8");
     lst.forEach(e => {
       let line = newObj("line");
-      let series = chart.seriesList[e.serId];
+      let series = chart.seriesList[e.serIdx];
       let x = e.x;
       let y = e.y;
       if (horizontal) {
@@ -600,7 +674,7 @@ function createCategoryBoxes(x, y, axis) {
       anchor.anchorX = hx ? +1 : -1;
     }
     lst.forEach(e => {
-      const snapPoint = chart.snapPoints[e.id];
+      const snapPoint = chart.snapPoints[e.snapIdx];
       const res = createInfoBox(snapPoint, e.x, e.y, anchor, false);
       boxes.push({
         cx: res.cx, cy: res.cy,
@@ -753,23 +827,18 @@ svg_snap.addEventListener("mousemove", (event) => {
   const mouseY = svgPoint.y;
 
   chart = undefined;
-  chart_idx = undefined;
   for (let i = 0; i < chart_list.length; i++) {
     const c = chart_list[i];
     if (
       mouseX >= c.chart.x1 && mouseX <= c.chart.x2 &&
       mouseY >= c.chart.y1 && mouseY <= c.chart.y2
     ) {
-      chart_idx = i;
       chart = c;
       break;
     }
   }
 
   if (chart != undefined) {
-    const chart_snap = svg_snap.getElementById(`snapPoints${chart_idx}`);
-    const elems = document.elementsFromPoint(event.clientX, event.clientY);
-    const snapCandidates = elems.filter(el => el.parentNode === chart_snap);
     const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;
@@ -798,30 +867,19 @@ svg_snap.addEventListener("mousemove", (event) => {
       catAxis = chart.axisY[1];
     }
 
-    if (snapCandidates.length > 0 || inArea || inCat) {
+    const snapIdx = snapMapGet(chart.snapMap, mouseX, mouseY);
+
+    if (snapIdx >= 0 || inArea || inCat) {
       let x = mouseX;
       let y = mouseY;
-      let minDist = Infinity;
       let snapPoint;
       let atPoint = false;
 
-      if (snapCandidates.length > 0 && !inCat) {
-        snapCandidates.forEach(circle => {
-          const id = circle.getAttribute("id");
-          const [chartNum, snapNum] = id.split('_').map(Number);
-          const cx = parseFloat(circle.getAttribute("cx"));
-          const cy = parseFloat(circle.getAttribute("cy"));
-          const dx = mouseX - cx;
-          const dy = mouseY - cy;
-          const dist = dx * dx + dy * dy;
-          if (chartNum == chart_idx && dist < minDist) {
-            minDist = dist;
-            snapPoint = chart.snapPoints[ snapNum ];
-            x = cx;
-            y = cy;
-            atPoint = true;
-          }
-        });
+      if (!inCat && snapIdx >= 0) {
+        snapPoint = chart.snapPoints[ snapIdx ];
+        x = snapPoint.X;
+        y = snapPoint.Y;
+        atPoint = true;
       }
 
       if (inCat) {
@@ -884,16 +942,55 @@ svg_snap.addEventListener("mouseleave", () => {
       determineDecimals( axis );
     });
 
-    if (chart.categories) {
-      chart.catList = Array(chart.categories.length).fill().map(() => []);
-      let id = 0;
-      chart.snapPoints.forEach(sp => {
-        if (typeof sp.x === "number") {
-          chart.catList[sp.x].push({serId: sp.s, id});
+    // Create mapping from category X-value to the category text.
+    chart.catMapToText = new Map();
+    if (chart.catCnt) {
+      let i = 0;
+      chart.categories.forEach(cat => {
+        if (typeof cat === "number") {
+          i = cat;
+        } else {
+          chart.catMapToText.set(i++, cat);
         }
-        id++;
       });
     }
+
+    // Maps a category X-value to a list of associated snap points.
+    chart.catMapToSnap = new Map();
+    if (chart.catCnt) {
+      let snapIdx = 0;
+      chart.snapPoints.forEach(sp => {
+        if (typeof sp.x === "number") {
+          let list = chart.catMapToSnap.get(sp.x);
+          if (!list) {
+            list = [];
+            chart.catMapToSnap.set(sp.x, list);
+          }
+          list.push(snapIdx);
+        }
+        snapIdx++;
+      });
+    }
+
+    // Make a sorted list of category X-values, and a sorted list of category
+    // X-values which have at least one associated snap point.
+    chart.catTxtValues = [];
+    chart.catBoxValues = [];
+    for (let i = 0; i < chart.catCnt; i++) {
+      if (chart.catMapToText.has(i)) chart.catTxtValues.push(i);
+      if (chart.catMapToSnap.has(i)) chart.catBoxValues.push(i);
+    }
+
+    // Add all snap points to spatial map.
+    {
+      chart.snapMap = new Map();
+      let snapIdx = 0;
+      chart.snapPoints.forEach(sp => {
+        snapMapAdd(chart.snapMap, sp.X, sp.Y, snapIdx);
+        snapIdx++;
+      });
+    }
+
   });
 }
 

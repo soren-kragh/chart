@@ -111,6 +111,11 @@ void HTML::AddSnapPoint(
   series->has_snap = true;
 }
 
+void HTML::DontPruneSnapPoint( SVG::Point p )
+{
+  dont_prune_set.insert( p );
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 std::string quoteJS( std::string_view s ) {
@@ -154,7 +159,8 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
 
   oss << "{\n";
 
-  bool hide_mouse_cursor = true;
+  // Never hide the mouse cursor as it causes stuttering for large SVGs.
+  bool hide_mouse_cursor = false;
   {
     Color crosshairLineColor{ main->AxisColor() };
     MakeColorVisible( &crosshairLineColor, &bg_color );
@@ -257,14 +263,6 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "hideMouseCursor : " << hide_mouse_cursor << ",\n";
   oss << "inLine : " << main->html.all_inline << ",\n";
 
-  if ( !main->category_list.empty() ) {
-    oss << "categories : [\n";
-    for ( const auto& s : main->category_list ) {
-      oss << quoteJS( s ) << ",\n";
-    }
-    oss << "],\n";
-  }
-
   for ( auto s1 : main->series_list ) {
     if ( !s1->has_snap ) continue;
     for ( auto s2 : main->series_list ) {
@@ -355,17 +353,107 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   }
   oss << "],\n";
 
-  oss << "snapPoints : [\n";
-  for ( const auto& sp : main->html.snap_points ) {
-    oss << "{s:" << sp.series_id << ',';
-    if ( sp.tag_x.empty() ) {
-      oss << "x:" << sp.cat_idx << ',';
-    } else {
-      oss << "x:" << quoteJS( sp.tag_x ) << ',';
+  // Resolution of snap points in points, i.e. how close the snap points are
+  // placed (to reduce HTML size). Mouse events are in SVG point unit steps, so
+  // a finer (smaller) resolution than 1.0 does not make much sense.
+  double snap_resolution = 1.0;
+  double snap_f = 1.0 / snap_resolution;
+
+  // When there are relatively few snap point, there is no need to prune them.
+  bool few_snaps = main->html.snap_points.size() <= 1000;
+
+  std::unordered_set< uint64_t > snap_set;
+  std::unordered_set< uint32_t > cat_set;
+
+  // Returns true if point did not exist and was added to the set.
+  auto SnapAdd = [&]( Point p ) {
+    uint64_t key =
+      (static_cast< uint64_t >( p.y * snap_f ) << 32) |
+      (static_cast< uint64_t >( p.x * snap_f ) <<  0);
+    return snap_set.insert( key ).second;
+  };
+
+  if ( !main->category_list.empty() ) {
+    auto base_it = main->html.snap_points.begin();
+    while ( base_it != main->html.snap_points.end() ) {
+      auto it = base_it;
+      auto id = base_it->series_id;
+      while ( it != main->html.snap_points.end() && it->series_id == id ) {
+        if ( cat_set.count( it->cat_idx ) > 0 ) {
+          SnapAdd( it->p );
+        }
+        ++it;
+      }
+      it = base_it;
+      while ( it != main->html.snap_points.end() && it->series_id == id ) {
+        bool added = SnapAdd( it->p );
+        bool dont_prune = dont_prune_set.count( it->p ) > 0;
+        if ( added || dont_prune ) {
+          cat_set.insert( it->cat_idx );
+        }
+        ++it;
+      }
+      base_it = it;
     }
-    oss << "y:" << quoteJS( sp.tag_y ) << "},\n";
+  }
+
+  if ( !main->category_list.empty() ) {
+    std::unordered_set< int32_t > snap_cat_set;
+    for ( uint32_t i = 0; i < main->category_list.size(); ++i ) {
+      U coor = main->axis_x->Coor( i );
+      int32_t key = static_cast< int32_t >( std::floor( coor * snap_f ) );
+      if ( snap_cat_set.insert( key ).second ) {
+        cat_set.insert( i );
+      }
+    }
+  }
+
+  oss << "snapPoints : [\n";
+  for (
+    auto it = main->html.snap_points.rbegin();
+    it != main->html.snap_points.rend(); ++it
+  ) {
+    const auto& sp = *it;
+    bool add = few_snaps;
+    if ( sp.tag_x.empty() ) {
+      add = add || cat_set.count( sp.cat_idx ) > 0;
+    } else {
+      add = add || SnapAdd( sp.p );
+    }
+    if ( add ) {
+      U X = +(sp.p.x + main->g_dx);
+      U Y = -(sp.p.y + main->g_dy);
+      oss << "{s:" << sp.series_id << ',';
+      if ( sp.tag_x.empty() ) {
+        oss << "x:" << sp.cat_idx << ',';
+      } else {
+        oss << "x:" << quoteJS( sp.tag_x ) << ',';
+      }
+      oss << "y:" << quoteJS( sp.tag_y ) << ",";
+      oss << "X:" << X.SVG( false ) << ',';
+      oss << "Y:" << Y.SVG( false ) << "},\n";
+    }
   }
   oss << "],\n";
+
+  if ( !main->category_list.empty() ) {
+    oss << "catCnt : " << main->category_list.size() << ",\n";
+    oss << "categories : [\n";
+    uint32_t i = 0;
+    uint32_t j = 0;
+    for ( const auto& s : main->category_list ) {
+      if ( !s.empty() && (few_snaps || cat_set.count( i ) > 0) ) {
+        if ( j < i ) {
+          oss << i << ',';
+          j = i;
+        }
+        oss << quoteJS( s ) << ",\n";
+        ++j;
+      }
+      ++i;
+    }
+    oss << "],\n";
+  }
 
   oss << "},\n";
 
@@ -411,31 +499,6 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     g->Attr()->SetLineWidth( 0 );
     g->Attr()->LineColor()->Clear();
     g->Attr()->FillColor()->Clear();
-
-    uint32_t main_id = 0;
-    for ( auto main : main_list ) {
-      Group* snap_g = g->AddNewGroup();
-      uint32_t snap_id = 0;
-      for ( const auto& sp : main->html.snap_points ) {
-        std::ostringstream oss;
-        oss << "id=\"" << main_id << '_' << snap_id << '"';
-        snap_g->Add(
-          new Circle(
-            sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
-          )
-        );
-        snap_g->Last()->Attr()->AddCustom( oss.str() );
-        ++snap_id;
-      }
-      {
-        std::ostringstream oss;
-        oss << "fill=\"transparent\" style=\"pointer-events: all;\"";
-        oss << " id=\"snapPoints" << main_id << '"';
-        snap_g->Attr()->AddCustom( oss.str() );
-      }
-      ++main_id;
-    }
-
     oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
   }
 

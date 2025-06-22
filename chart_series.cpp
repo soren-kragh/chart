@@ -261,135 +261,139 @@ void Series::ApplyTagStyle( SVG::Object* obj )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Series::PrunePoly( std::vector< Point >& points )
+void Series::PrunePoly( std::vector< Point >& points, bool no_html )
 {
   using PI = std::vector< Point >::const_iterator;
 
-  if ( points.size() < 2 || prune_dist < 0.001 ) return;
+  if ( points.size() > 2 && prune_dist >= 0.001 ) {
 
-  size_t idx = 0;
+    size_t idx = 0;
 
-  // p1 and p2 are the start and end points of the collection, which is all
-  // points from p1 to p2 both inclusive.
-  PI p1;
-  PI p2;
+    // p1 and p2 are the start and end points of the collection, which is all
+    // points from p1 to p2 both inclusive.
+    PI p1;
+    PI p2;
 
-  // e1 and e2 are the start/end points of the line making up collection. All
-  // points in the collection are spaced less than prune_dist from the line from
-  // e1 to e2. Having e1/e2 enables us to prune points even when there is a lot
-  // of zigzagging back and forth along (or almost along as dictated by
-  // prune_dist) the e1/e2 line, as would be the case for example with noisy
-  // sensor data etc.
-  PI e1;
-  PI e2;
+    // e1 and e2 are the start/end points of the line making up collection. All
+    // points in the collection are spaced less than prune_dist from the line
+    // from e1 to e2. Having e1/e2 enables us to prune points even when there is
+    // a lot of zigzagging back and forth along (or almost along as dictated by
+    // prune_dist) the e1/e2 line, as would be the case for example with noisy
+    // sensor data etc.
+    PI e1;
+    PI e2;
 
-  // d1/d2 is the distance of furthest point in the collection to the left/right
-  // from the e1-to-e2 line.
-  U d1;
-  U d2;
+    // d1/d2 is the distance of furthest point in the collection to the
+    // left/right from the e1-to-e2 line.
+    U d1;
+    U d2;
 
-  // Returns the distance from p to the line going from e1 to e2. The sign of
-  // the returned distance indicates if p lies to the left (positive) or the
-  // right (negative) of the line.
-  auto dist2line = []( PI e1, PI e2, PI p )
-  {
-    double dx = e2->x - e1->x;
-    double dy = e2->y - e1->y;
-    double px = p->x - e1->x;
-    double py = p->y - e1->y;
+    // Returns the distance from p to the line going from e1 to e2. The sign of
+    // the returned distance indicates if p lies to the left (positive) or the
+    // right (negative) of the line.
+    auto dist2line = []( PI e1, PI e2, PI p )
+    {
+      double dx = e2->x - e1->x;
+      double dy = e2->y - e1->y;
+      double px = p->x - e1->x;
+      double py = p->y - e1->y;
 
-    double cross = dx * py - dy * px;
+      double cross = dx * py - dy * px;
 
-    return cross / std::sqrt( dx * dx + dy * dy );
-  };
+      return cross / std::sqrt( dx * dx + dy * dy );
+    };
 
-  // Returns true if p was integrated into the p1 to p2 collection thereby
-  // causing the previous point (p2) to be pruned.
-  auto prune = [&]( PI p )
-  {
-    auto new_e1 = e1;
-    auto new_e2 = e2;
+    // Returns true if p was integrated into the p1 to p2 collection thereby
+    // causing the previous point (p2) to be pruned.
+    auto prune = [&]( PI p )
+    {
+      auto new_e1 = e1;
+      auto new_e2 = e2;
 
-    double vex = e2->x - e1->x;
-    double vey = e2->y - e1->y;
+      double vex = e2->x - e1->x;
+      double vey = e2->y - e1->y;
 
-    bool vex_tiny = std::abs( vex ) < epsilon;
-    bool vey_tiny = std::abs( vey ) < epsilon;
+      bool vex_tiny = std::abs( vex ) < epsilon;
+      bool vey_tiny = std::abs( vey ) < epsilon;
 
-    if ( vex_tiny && vey_tiny ) {
-      new_e2 = p;
-    } else {
-      double dot1 = (p->x - e1->x) * vex + (p->y - e1->y) * vey;
-      double dot2 = (p->x - e2->x) * vex + (p->y - e2->y) * vey;
-      double d;
-      if ( dot1 < 0 || dot2 > 0 ) {
-        // p is before/after the current e1 to e2 line, so extend e1 or e2.
-        if ( dot2 > 0 ) {
-          // Extend e2.
-          d = dist2line( e1, p, e2 );
-        } else {
-          // Swap e1/e2 direction and extend new e2 (previous e1).
-          d = dist2line( e2, p, e1 );
-          std::swap( d1, d2 );
-          new_e1 = e2;
-        }
+      if ( vex_tiny && vey_tiny ) {
         new_e2 = p;
-        // Do not accept pruning that causes vertical/horizontal lines to become
-        // slightly skewed, as this is a much more visible artifact:
-        if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
-        // We use the distance form the old e2 to the new extended e1/e2 line
-        // and update d1/d2 accordingly. This is not mathematically correct,
-        // ideally all points from p1 to p2 should be reexamined. But this
-        // heuristic is judged to be a good enough to avoid O(n^2) complexity.
-        if ( d > 0 ) {
-          d1 = d1 + d;
-          d2 = std::max( 0.0, d2 - d );
-        } else {
-          d1 = std::max( 0.0, d1 + d );
-          d2 = d2 - d;
-        }
       } else {
-        d = dist2line( e1, e2, p );
-        if ( d > 0 ) {
-          d1 = std::max( +d1, +d );
+        double dot1 = (p->x - e1->x) * vex + (p->y - e1->y) * vey;
+        double dot2 = (p->x - e2->x) * vex + (p->y - e2->y) * vey;
+        double d;
+        if ( dot1 < 0 || dot2 > 0 ) {
+          // p is before/after the current e1 to e2 line, so extend e1 or e2.
+          if ( dot2 > 0 ) {
+            // Extend e2.
+            d = dist2line( e1, p, e2 );
+          } else {
+            // Swap e1/e2 direction and extend new e2 (previous e1).
+            d = dist2line( e2, p, e1 );
+            std::swap( d1, d2 );
+            new_e1 = e2;
+          }
+          new_e2 = p;
+          // Do not accept pruning that causes vertical/horizontal lines to
+          // become slightly skewed, as this is a much more visible artifact:
+          if ( (vex_tiny || vey_tiny) && std::abs( d ) > epsilon ) return false;
+          // We use the distance form the old e2 to the new extended e1/e2 line
+          // and update d1/d2 accordingly. This is not mathematically correct,
+          // ideally all points from p1 to p2 should be reexamined. But this
+          // heuristic is judged to be a good enough to avoid O(n^2) complexity.
+          if ( d > 0 ) {
+            d1 = d1 + d;
+            d2 = std::max( 0.0, d2 - d );
+          } else {
+            d1 = std::max( 0.0, d1 + d );
+            d2 = d2 - d;
+          }
         } else {
-          d2 = std::max( +d2, -d );
+          d = dist2line( e1, e2, p );
+          if ( d > 0 ) {
+            d1 = std::max( +d1, +d );
+          } else {
+            d2 = std::max( +d2, -d );
+          }
         }
+        if ( d1 > prune_dist || d2 > prune_dist ) return false;
       }
-      if ( d1 > prune_dist || d2 > prune_dist ) return false;
+
+      e1 = new_e1;
+      e2 = new_e2;
+      p2 = p;
+      return true;
+    };
+
+    PI p = points.cbegin();
+    p1 = e1 = p++;
+    p2 = e2 = p++;
+    d1 = d2 = 0;
+
+    while ( p != points.cend() ) {
+      if ( !prune( p ) ) {
+        points[ idx++ ] = *p1;
+        if ( e1 != p1 ) points[ idx++ ] = *e1;
+        if ( e2 != p2 ) points[ idx++ ] = *e2;
+        p1 = e1 = p2;
+        p2 = e2 = p;
+        d1 = d2 = 0;
+      }
+      ++p;
     }
 
-    e1 = new_e1;
-    e2 = new_e2;
-    p2 = p;
-    return true;
-  };
+    points[ idx++ ] = *p1;
+    if ( e1 != p1 ) points[ idx++ ] = *e1;
+    if ( e2 != p2 ) points[ idx++ ] = *e2;
+    points[ idx++ ] = *p2;
 
-  PI p = points.cbegin();
-  p1 = e1 = p++;
-  p2 = e2 = p++;
-  d1 = d2 = 0;
-
-  while ( p != points.cend() ) {
-    if ( !prune( p ) ) {
-      points[ idx++ ] = *p1;
-      if ( e1 != p1 ) points[ idx++ ] = *e1;
-      if ( e2 != p2 ) points[ idx++ ] = *e2;
-      p1 = e1 = p2;
-      p2 = e2 = p;
-      d1 = d2 = 0;
-    }
-    ++p;
+    points.resize( idx );
   }
 
-  points[ idx++ ] = *p1;
-  if ( e1 != p1 ) points[ idx++ ] = *e1;
-  if ( e2 != p2 ) points[ idx++ ] = *e2;
-  points[ idx++ ] = *p2;
+  if ( !no_html && html_db ) {
+    for ( const auto& p : points ) html_db->DontPruneSnapPoint( p );
+  }
 
-//  SVG_DBG( "PrunePoly> " << points.size() << " => " << idx );
-
-  points.resize( idx );
   return;
 }
 
@@ -397,27 +401,40 @@ void Series::PrunePoly( std::vector< Point >& points )
 
 void Series::PrunePoints( std::vector< Point >& points )
 {
-  if ( points.size() < 1 || prune_dist < 0.001 ) return;
+  if ( points.size() > 1 && prune_dist >= 0.001 ) {
 
-  std::unordered_set< uint64_t > existing;
+    std::unordered_set<
+      SVG::Point, HTML::PointHash, HTML::PointEqual
+    > mandatory;
 
-  size_t idx = 0;
-
-  double f = 1.0 / prune_dist;
-
-  for ( auto& p : points ) {
-    uint64_t key =
-      (static_cast< uint64_t >( p.y * f ) << 32) |
-      (static_cast< uint64_t >( p.x * f ) <<  0);
-    if ( existing.find( key ) == existing.end() ) {
-      existing.insert( key );
-      points[ idx++ ] = p;
+    // Make sure extremes are included; for Scatter plot this does not make
+    // sense as the points are totally random.
+    if ( type != SeriesType::Scatter ) {
+      auto pts = points;
+      PrunePoly( pts, true );
+      for ( auto& p : pts ) {
+        mandatory.insert( p );
+      }
     }
+
+    std::unordered_set< uint64_t > existing;
+    double f = 1.0 / prune_dist;
+    size_t idx = 0;
+    for ( const auto& p : points ) {
+      uint64_t key =
+        (static_cast< uint64_t >( p.y * f ) << 32) |
+        (static_cast< uint64_t >( p.x * f ) <<  0);
+      if ( existing.insert( key ).second || mandatory.count( p ) > 0 ) {
+        points[ idx++ ] = p;
+      }
+    }
+    points.resize( idx );
   }
 
-//  SVG_DBG( "PrunePoints> " << points.size() << " => " << idx );
+  if ( html_db ) {
+    for ( const auto& p : points ) html_db->DontPruneSnapPoint( p );
+  }
 
-  points.resize( idx );
   return;
 }
 
@@ -1330,6 +1347,7 @@ void Series::BuildBar(
 
     if ( html_db && p2_inside ) {
       html_db->AddSnapPoint( this, p2, datum.x, datum.tag_y );
+      html_db->DontPruneSnapPoint( p2 );
     }
 
     if ( tag_enable ) {
