@@ -420,6 +420,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     for ( auto main : main_list ) {
       Group* snap_g = g->AddNewGroup();
       uint32_t snap_id = 0;
+/*
       for ( const auto& sp : main->html.snap_points ) {
         std::ostringstream oss;
         oss << "id=\"" << main_id << '_' << snap_id << '"';
@@ -431,6 +432,7 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
         snap_g->Last()->Attr()->AddCustom( oss.str() );
         ++snap_id;
       }
+*/
       {
         std::ostringstream oss;
         oss << "fill=\"transparent\" style=\"pointer-events: all;\"";

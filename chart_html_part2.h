@@ -56,6 +56,58 @@ function newObj(type, addId = false)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+const snapKeyFactor = 0.5 / snapRadius;
+
+const coorToSnapKey = (x, y) => {
+  const ix = Math.floor(x * snapKeyFactor);
+  const iy = Math.floor(y * snapKeyFactor);
+  return (ix + 8e6) * 16e6 + (iy + 8e6);
+};
+
+function snapMapAdd(snapMap, x, y, snapIdx) {
+  const key = coorToSnapKey(x, y);
+  let list = snapMap.get(key);
+  if (!list) {
+    list = [];
+    snapMap.set(key, list);
+  }
+  list.push(snapIdx);
+}
+
+function snapMapGet(snapMap, x, y) {
+  const cx = Math.round(x * snapKeyFactor) / snapKeyFactor;
+  const cy = Math.round(y * snapKeyFactor) / snapKeyFactor;
+
+  const lx = [cx - snapRadius, cx + snapRadius];
+  const ly = [cy - snapRadius, cy + snapRadius];
+
+  let minIdx = -1;
+  let minDist = snapRadius * snapRadius;
+
+  lx.forEach(bx => {
+    ly.forEach(by => {
+      const key = coorToSnapKey(bx, by);
+      const list = snapMap.get(key);
+      if (list) {
+        list.forEach(snapIdx => {
+          const sp = chart.snapPoints[snapIdx];
+          const dx = sp.X - x;
+          const dy = sp.Y - y;
+          const dist = dx * dx + dy * dy;
+          if (dist <= minDist) {
+            minIdx = snapIdx;
+            minDist = dist;
+          }
+        });
+      }
+    });
+  });
+
+  return minIdx;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 function getLinAxisValue(x0, x1, x2, v1, v2) {
   if (x1 === x2) return NaN;
   const t = (x0 - x1) / (x2 - x1);
@@ -768,9 +820,11 @@ svg_snap.addEventListener("mousemove", (event) => {
   }
 
   if (chart != undefined) {
+
     const chart_snap = svg_snap.getElementById(`snapPoints${chart_idx}`);
     const elems = document.elementsFromPoint(event.clientX, event.clientY);
     const snapCandidates = elems.filter(el => el.parentNode === chart_snap);
+
     const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;
@@ -799,7 +853,10 @@ svg_snap.addEventListener("mousemove", (event) => {
       catAxis = chart.axisY[1];
     }
 
-    if (snapCandidates.length > 0 || inArea || inCat) {
+    const snapIdx = snapMapGet(chart.snapMap, mouseX, mouseY);
+
+//    if (snapCandidates.length > 0 || inArea || inCat) {
+    if (snapIdx >= 0 || inArea || inCat) {
       let x = mouseX;
       let y = mouseY;
       let minDist = Infinity;
@@ -825,8 +882,15 @@ svg_snap.addEventListener("mousemove", (event) => {
         });
       }
 
+      if (!inCat && snapIdx >= 0) {
+        snapPoint = chart.snapPoints[ snapIdx ];
+        x = snapPoint.X;
+        y = snapPoint.Y;
+        atPoint = true;
+      }
+
       if (inCat) {
-        createCategoryBoxes(x, y, catAxis);
+//TBD//        createCategoryBoxes(x, y, catAxis);
       } else {
         createCrosshair(x, y, atPoint);
         let showX = [true, true];
@@ -889,12 +953,24 @@ svg_snap.addEventListener("mouseleave", () => {
       chart.catList = Array(chart.categories.length).fill().map(() => []);
       let id = 0;
       chart.snapPoints.forEach(sp => {
+        sp.id = id;
         if (typeof sp.x === "number") {
           chart.catList[sp.x].push({serId: sp.s, id});
         }
         id++;
       });
     }
+
+    {
+      chart.snapMap = new Map();
+      let id = 0;
+      chart.snapPoints.forEach(sp => {
+        sp.id = id;
+        snapMapAdd(chart.snapMap, sp.X, sp.Y, id);
+        id++;
+      });
+    }
+
   });
 }
 
