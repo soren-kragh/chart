@@ -552,13 +552,9 @@ function createCategoryBoxes(x, y, axis) {
     getLinAxisValue(i, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
 
   let lst = [];
-  chart.catList[i].forEach(({serId, id}) => {
-    const sp = svg_snap.getElementById(`${chart_idx}_${id}`);
-    if (sp) {
-      const x = Number(sp.getAttribute("cx"));
-      const y = Number(sp.getAttribute("cy"));
-      lst.push({serId, id, x, y});
-    }
+  chart.catList[i].forEach(snapIdx => {
+    const sp = chart.snapPoints[ snapIdx ];
+    lst.push({serIdx : sp.s, id : snapIdx, x : sp.X, y : sp.Y});
   });
   if (lst.length == 0) return;
   if (sx > 0 || sy > 0) {
@@ -592,7 +588,7 @@ function createCategoryBoxes(x, y, axis) {
     line_g.setAttribute("stroke-dasharray", "12 8");
     lst.forEach(e => {
       let line = newObj("line");
-      let series = chart.seriesList[e.serId];
+      let series = chart.seriesList[e.serIdx];
       let x = e.x;
       let y = e.y;
       if (horizontal) {
@@ -848,8 +844,6 @@ svg_snap.addEventListener("mousemove", (event) => {
       catAxis = chart.axisY[1];
     }
 
-    inCat = false;
-
     const snapIdx = snapMapGet(chart.snapMap, mouseX, mouseY);
 
     if (snapIdx >= 0 || inArea || inCat) {
@@ -927,22 +921,21 @@ svg_snap.addEventListener("mouseleave", () => {
 
     if (chart.categories) {
       chart.catList = Array(chart.categories.length).fill().map(() => []);
-      let id = 0;
+      let snapIdx = 0;
       chart.snapPoints.forEach(sp => {
         if (typeof sp.x === "number") {
-          chart.catList[sp.x].push({serId: sp.s, id});
+          chart.catList[sp.x].push(snapIdx);
         }
-        id++;
+        snapIdx++;
       });
     }
 
     {
       chart.snapMap = new Map();
-      let id = 0;
+      let snapIdx = 0;
       chart.snapPoints.forEach(sp => {
-        sp.id = id;
-        snapMapAdd(chart.snapMap, sp.X, sp.Y, id);
-        id++;
+        snapMapAdd(chart.snapMap, sp.X, sp.Y, snapIdx);
+        snapIdx++;
       });
     }
 
