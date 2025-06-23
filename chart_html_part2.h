@@ -14,7 +14,6 @@ const svg_cursor = document.getElementById("svgCursor");
 const svg_snap = document.getElementById("svgSnap");
 
 let chart;
-let chart_idx;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -554,7 +553,7 @@ function createCategoryBoxes(x, y, axis) {
   let lst = [];
   chart.catList[i].forEach(snapIdx => {
     const sp = chart.snapPoints[ snapIdx ];
-    lst.push({serIdx : sp.s, id : snapIdx, x : sp.X, y : sp.Y});
+    lst.push({serIdx : sp.s, snapIdx : snapIdx, x : sp.X, y : sp.Y});
   });
   if (lst.length == 0) return;
   if (sx > 0 || sy > 0) {
@@ -649,7 +648,7 @@ function createCategoryBoxes(x, y, axis) {
       anchor.anchorX = hx ? +1 : -1;
     }
     lst.forEach(e => {
-      const snapPoint = chart.snapPoints[e.id];
+      const snapPoint = chart.snapPoints[e.snapIdx];
       const res = createInfoBox(snapPoint, e.x, e.y, anchor, false);
       boxes.push({
         cx: res.cx, cy: res.cy,
@@ -802,14 +801,12 @@ svg_snap.addEventListener("mousemove", (event) => {
   const mouseY = svgPoint.y;
 
   chart = undefined;
-  chart_idx = undefined;
   for (let i = 0; i < chart_list.length; i++) {
     const c = chart_list[i];
     if (
       mouseX >= c.chart.x1 && mouseX <= c.chart.x2 &&
       mouseY >= c.chart.y1 && mouseY <= c.chart.y2
     ) {
-      chart_idx = i;
       chart = c;
       break;
     }
