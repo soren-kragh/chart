@@ -415,33 +415,6 @@ std::string HTML::GenHTML( SVG::Canvas* canvas )
     g->Attr()->SetLineWidth( 0 );
     g->Attr()->LineColor()->Clear();
     g->Attr()->FillColor()->Clear();
-
-    uint32_t main_id = 0;
-    for ( auto main : main_list ) {
-      Group* snap_g = g->AddNewGroup();
-      uint32_t snap_id = 0;
-/*
-      for ( const auto& sp : main->html.snap_points ) {
-        std::ostringstream oss;
-        oss << "id=\"" << main_id << '_' << snap_id << '"';
-        snap_g->Add(
-          new Circle(
-            sp.p.x + main->g_dx, sp.p.y + main->g_dy, snap_point_radius
-          )
-        );
-        snap_g->Last()->Attr()->AddCustom( oss.str() );
-        ++snap_id;
-      }
-*/
-      {
-        std::ostringstream oss;
-        oss << "fill=\"transparent\" style=\"pointer-events: all;\"";
-        oss << " id=\"snapPoints" << main_id << '"';
-        snap_g->Attr()->AddCustom( oss.str() );
-      }
-      ++main_id;
-    }
-
     oss << snap_canvas.GenSVG( 0, "id=\"svgSnap\"" );
   }
 

@@ -820,11 +820,6 @@ svg_snap.addEventListener("mousemove", (event) => {
   }
 
   if (chart != undefined) {
-
-    const chart_snap = svg_snap.getElementById(`snapPoints${chart_idx}`);
-    const elems = document.elementsFromPoint(event.clientX, event.clientY);
-    const snapCandidates = elems.filter(el => el.parentNode === chart_snap);
-
     const inAreaX = mouseX >= chart.area.x1 && mouseX <= chart.area.x2;
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;
@@ -853,34 +848,15 @@ svg_snap.addEventListener("mousemove", (event) => {
       catAxis = chart.axisY[1];
     }
 
+    inCat = false;
+
     const snapIdx = snapMapGet(chart.snapMap, mouseX, mouseY);
 
-//    if (snapCandidates.length > 0 || inArea || inCat) {
     if (snapIdx >= 0 || inArea || inCat) {
       let x = mouseX;
       let y = mouseY;
-      let minDist = Infinity;
       let snapPoint;
       let atPoint = false;
-
-      if (snapCandidates.length > 0 && !inCat) {
-        snapCandidates.forEach(circle => {
-          const id = circle.getAttribute("id");
-          const [chartNum, snapNum] = id.split('_').map(Number);
-          const cx = parseFloat(circle.getAttribute("cx"));
-          const cy = parseFloat(circle.getAttribute("cy"));
-          const dx = mouseX - cx;
-          const dy = mouseY - cy;
-          const dist = dx * dx + dy * dy;
-          if (chartNum == chart_idx && dist < minDist) {
-            minDist = dist;
-            snapPoint = chart.snapPoints[ snapNum ];
-            x = cx;
-            y = cy;
-            atPoint = true;
-          }
-        });
-      }
 
       if (!inCat && snapIdx >= 0) {
         snapPoint = chart.snapPoints[ snapIdx ];
@@ -890,7 +866,7 @@ svg_snap.addEventListener("mousemove", (event) => {
       }
 
       if (inCat) {
-//TBD//        createCategoryBoxes(x, y, catAxis);
+        createCategoryBoxes(x, y, catAxis);
       } else {
         createCrosshair(x, y, atPoint);
         let showX = [true, true];
@@ -953,7 +929,6 @@ svg_snap.addEventListener("mouseleave", () => {
       chart.catList = Array(chart.categories.length).fill().map(() => []);
       let id = 0;
       chart.snapPoints.forEach(sp => {
-        sp.id = id;
         if (typeof sp.x === "number") {
           chart.catList[sp.x].push({serId: sp.s, id});
         }
