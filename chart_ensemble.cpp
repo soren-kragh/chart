@@ -658,12 +658,12 @@ void Ensemble::BuildBackground( void )
       for ( auto& elem : grid.element_list ) {
         if ( elem.chart ) {
           bb.Update(
-            elem.area_bb.min.x + elem.chart->g_dx - snap_point_radius,
-            elem.area_bb.min.y + elem.chart->g_dy - snap_point_radius
+            elem.area_bb.min.x + elem.chart->g_dx,
+            elem.area_bb.min.y + elem.chart->g_dy
           );
           bb.Update(
-            elem.area_bb.max.x + elem.chart->g_dx + snap_point_radius,
-            elem.area_bb.max.y + elem.chart->g_dy + snap_point_radius
+            elem.area_bb.max.x + elem.chart->g_dx,
+            elem.area_bb.max.y + elem.chart->g_dy
           );
         }
       }
