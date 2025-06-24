@@ -18,14 +18,19 @@ let chart;
 ///////////////////////////////////////////////////////////////////////////////
 
 let cursorTimer;
+let cursorHidden = false;
 
 const hideCursor = () => {
   document.body.classList.add('hide-cursor');
+  cursorHidden = true;
 };
 
 const showCursor = () => {
   clearTimeout(cursorTimer);
-  document.body.classList.remove('hide-cursor');
+  if ( cursorHidden ) {
+    document.body.classList.remove('hide-cursor');
+  }
+  cursorHidden = false;
 };
 
 let idList = [];

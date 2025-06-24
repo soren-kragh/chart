@@ -154,7 +154,8 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
 
   oss << "{\n";
 
-  bool hide_mouse_cursor = true;
+  // Never hide the mouse cursor as it causes stuttering for large SVGs.
+  bool hide_mouse_cursor = false;
   {
     Color crosshairLineColor{ main->AxisColor() };
     MakeColorVisible( &crosshairLineColor, &bg_color );
