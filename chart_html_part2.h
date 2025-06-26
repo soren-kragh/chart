@@ -511,7 +511,7 @@ function resolveOverlaps(boxes, sx, sy) {
 function createCategoryBoxes(x, y, axis) {
   showCursor();
 
-  if ( !chart.catCnt ) return;
+  if (chart.catValues.length == 0) return;
 
   let horizontal = false;
   let coor = x;
@@ -527,26 +527,36 @@ function createCategoryBoxes(x, y, axis) {
   i = Math.min(Math.max(i, r1), r2);
 
   {
-    let i1 = i;
-    while (i1 > r1 && chart.catList[i1].length == 0) i1--;
-    let i2 = i;
-    while (i2 < r2 && chart.catList[i2].length == 0) i2++;
-    if (chart.catList[i1].length == 0) {
-      i = i2;
-    } else
-    if (chart.catList[i2].length == 0) {
-      i = i1;
-    } else {
-      let c1 =
-        getLinAxisValue(i1, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
-      let c2 =
-        getLinAxisValue(i2, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
-      if (Math.abs(coor - c1) < Math.abs(coor - c2)) {
-        i = i1;
+    const min = 0;
+    const max = chart.catValues.length - 1;
+    let j1 = min;
+    let j2 = max;
+    while (j1 + 1 < j2) {
+      let i1 = chart.catValues[j1];
+      let jm = Math.floor((j1 + j2) / 2);
+      let im = chart.catValues[jm];
+      if (im < i) {
+        j1 = jm;
       } else {
-        i = i2;
+        j2 = jm;
       }
     }
+    let candidates = [j1-1, j1, j2, j2+1];
+    let bestDist = Infinity;
+    candidates.forEach(j => {
+      if (j >= min && j <= max) {
+        const k = chart.catValues[j];
+        const dist =
+          Math.abs(
+            coor -
+            getLinAxisValue(k, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2)
+          );
+        if (dist < bestDist) {
+          bestDist = dist;
+          i = k;
+        }
+      }
+    });
   }
 
   let snapped_coor =
@@ -918,6 +928,7 @@ svg_snap.addEventListener("mouseleave", () => {
       determineDecimals( axis );
     });
 
+    // Create mapping from category X-value to the category text.
     chart.catMapToTxt = new Map();
     if (chart.catCnt) {
       let i = 0;
@@ -939,6 +950,13 @@ svg_snap.addEventListener("mouseleave", () => {
         }
         snapIdx++;
       });
+    }
+
+    // catValues is a list of category X-values which have at least one
+    // associated snap point.
+    chart.catValues = [];
+    for (const [i, txt] of chart.catMapToTxt) {
+      if (chart.catList[i].length > 0) chart.catValues.push(i);
     }
 
     {
