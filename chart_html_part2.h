@@ -225,9 +225,10 @@ function buildAxisLabel(val, axis) {
 
   if (axis.isCategory) {
     const i = Math.round(val);
-    if (chart.catCnt && i >= 0 && i < chart.catCnt && chart.categories[i]) {
+    const txt = chart.catMapToTxt.get(i);
+    if (txt) {
       const text = newObj("text");
-      text.textContent = chart.categories[i];
+      text.textContent = txt;
       group.appendChild(text);
     } else {
       svg_cursor.removeChild(group);
@@ -917,6 +918,18 @@ svg_snap.addEventListener("mouseleave", () => {
       axis.coor2 = chart.area.y2;
       determineDecimals( axis );
     });
+
+    chart.catMapToTxt = new Map();
+    if (chart.catCnt) {
+      let i = 0;
+      chart.categories.forEach(cat => {
+        if (typeof cat === "number") {
+          i = cat;
+        } else {
+          chart.catMapToTxt.set(i++, cat);
+        }
+      });
+    }
 
     if (chart.catCnt) {
       chart.catList = Array(chart.catCnt).fill().map(() => []);
