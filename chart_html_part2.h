@@ -524,7 +524,6 @@ function createCategoryBoxes(x, y, axis) {
   let i = Math.round(coorToVal(coor, axis));
   let r1 = 0;
   let r2 = chart.catCnt - 1;
-  if (r1 > r2) return;
   i = Math.min(Math.max(i, r1), r2);
 
   {
