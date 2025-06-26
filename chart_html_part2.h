@@ -562,11 +562,14 @@ function createCategoryBoxes(x, y, axis) {
   let snapped_coor =
     getLinAxisValue(i, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
 
+  const snapIdxList = chart.catMapToSnap.get(i);
   let lst = [];
-  chart.catList[i].forEach(snapIdx => {
-    const sp = chart.snapPoints[ snapIdx ];
-    lst.push({serIdx : sp.s, snapIdx : snapIdx, x : sp.X, y : sp.Y});
-  });
+  if (snapIdxList) {
+    snapIdxList.forEach(snapIdx => {
+      const sp = chart.snapPoints[ snapIdx ];
+      lst.push({serIdx : sp.s, snapIdx : snapIdx, x : sp.X, y : sp.Y});
+    });
+  }
   if (lst.length == 0) return;
   if (sx > 0 || sy > 0) {
     lst.sort((a, b) => horizontal ? (a.x - b.x) : (a.y - b.y));
@@ -941,24 +944,31 @@ svg_snap.addEventListener("mouseleave", () => {
       });
     }
 
+    // Maps a category X-value to a list of associated snap points.
+    chart.catMapToSnap = new Map();
     if (chart.catCnt) {
-      chart.catList = Array(chart.catCnt).fill().map(() => []);
       let snapIdx = 0;
       chart.snapPoints.forEach(sp => {
         if (typeof sp.x === "number") {
-          chart.catList[sp.x].push(snapIdx);
+          let list = chart.catMapToSnap.get(sp.x);
+          if (!list) {
+            list = [];
+            chart.catMapToSnap.set(sp.x, list);
+          }
+          list.push(snapIdx);
         }
         snapIdx++;
       });
     }
 
-    // catValues is a list of category X-values which have at least one
+    // Make a sorted list of category X-values which have at least one
     // associated snap point.
     chart.catValues = [];
-    for (const [i, txt] of chart.catMapToTxt) {
-      if (chart.catList[i].length > 0) chart.catValues.push(i);
+    for (let i = 0; i < chart.catCnt; i++) {
+      if (chart.catMapToSnap.has(i)) chart.catValues.push(i);
     }
 
+    // Add all snap points to spatial map.
     {
       chart.snapMap = new Map();
       let snapIdx = 0;
