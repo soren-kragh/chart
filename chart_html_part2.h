@@ -225,10 +225,7 @@ function buildAxisLabel(val, axis) {
 
   if (axis.isCategory) {
     const i = Math.round(val);
-    if (
-      chart.categories && i >= 0 &&
-      i < chart.categories.length && chart.categories[i]
-    ) {
+    if (chart.catCnt && i >= 0 && i < chart.catCnt && chart.categories[i]) {
       const text = newObj("text");
       text.textContent = chart.categories[i];
       group.appendChild(text);
@@ -513,7 +510,7 @@ function resolveOverlaps(boxes, sx, sy) {
 function createCategoryBoxes(x, y, axis) {
   showCursor();
 
-  if ( !chart.categories ) return;
+  if ( !chart.catCnt ) return;
 
   let horizontal = false;
   let coor = x;
@@ -525,7 +522,7 @@ function createCategoryBoxes(x, y, axis) {
   let sy = horizontal ? 0 : (axis.id == "axisX_0" ? 1 : -1);
   let i = Math.round(coorToVal(coor, axis));
   let r1 = 0;
-  let r2 = chart.categories.length - 1;
+  let r2 = chart.catCnt - 1;
   if (r1 > r2) return;
   i = Math.min(Math.max(i, r1), r2);
 
@@ -921,8 +918,8 @@ svg_snap.addEventListener("mouseleave", () => {
       determineDecimals( axis );
     });
 
-    if (chart.categories) {
-      chart.catList = Array(chart.categories.length).fill().map(() => []);
+    if (chart.catCnt) {
+      chart.catList = Array(chart.catCnt).fill().map(() => []);
       let snapIdx = 0;
       chart.snapPoints.forEach(sp => {
         if (typeof sp.x === "number") {

@@ -259,6 +259,7 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "inLine : " << main->html.all_inline << ",\n";
 
   if ( !main->category_list.empty() ) {
+    oss << "catCnt : " << main->category_list.size() << ",\n";
     oss << "categories : [\n";
     for ( const auto& s : main->category_list ) {
       oss << quoteJS( s ) << ",\n";
