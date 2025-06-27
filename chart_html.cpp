@@ -14,6 +14,8 @@
 #include <chart_ensemble.h>
 #include <chart_html.h>
 
+#include <unordered_set>
+
 using namespace SVG;
 using namespace Chart;
 
@@ -258,15 +260,6 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   oss << "hideMouseCursor : " << hide_mouse_cursor << ",\n";
   oss << "inLine : " << main->html.all_inline << ",\n";
 
-  if ( !main->category_list.empty() ) {
-    oss << "catCnt : " << main->category_list.size() << ",\n";
-    oss << "categories : [\n";
-    for ( const auto& s : main->category_list ) {
-      oss << quoteJS( s ) << ",\n";
-    }
-    oss << "],\n";
-  }
-
   for ( auto s1 : main->series_list ) {
     if ( !s1->has_snap ) continue;
     for ( auto s2 : main->series_list ) {
@@ -357,21 +350,89 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   }
   oss << "],\n";
 
+  // Resolution of snap points in points, i.e. how close the snap points are
+  // placed (to reduce HTML size). Mouse events are in SVG point unit steps, so
+  // a finer (smaller) resolution than 1.0 does not make much sense.
+  double snap_resolution = 1.0;
+  double snap_f = 1.0 / snap_resolution;
+
+  std::unordered_set< uint64_t > snap_set;
+  std::unordered_set< uint32_t > cat_set;
+
+  // Returns true if point did not exist and was added to the set.
+  auto SnapAdd = [&]( Point p ) {
+    uint64_t key =
+      (static_cast< uint64_t >( p.y * snap_f ) << 32) |
+      (static_cast< uint64_t >( p.x * snap_f ) <<  0);
+    return snap_set.insert( key ).second;
+  };
+  auto SnapHas = [&]( Point p ) {
+    uint64_t key =
+      (static_cast< uint64_t >( p.y * snap_f ) << 32) |
+      (static_cast< uint64_t >( p.x * snap_f ) <<  0);
+    return snap_set.count( key ) > 0;
+  };
+
+  for ( const auto& sp : main->html.snap_points ) {
+    bool added = SnapAdd( sp.p );
+    if ( added && sp.tag_x.empty() ) {
+      cat_set.insert( sp.cat_idx );
+    }
+  }
+
+  if ( !main->category_list.empty() ) {
+    std::unordered_set< uint32_t > snap_cat_set;
+    for ( uint32_t i = 0; i < main->category_list.size(); ++i ) {
+      U coor = main->axis_x->Coor( i );
+      uint32_t key = static_cast< uint32_t >( coor * snap_f );
+      if ( snap_cat_set.insert( key ).second ) {
+        cat_set.insert( i );
+      }
+    }
+  }
+
   oss << "snapPoints : [\n";
   for ( const auto& sp : main->html.snap_points ) {
-    U X = +(sp.p.x + main->g_dx);
-    U Y = -(sp.p.y + main->g_dy);
-    oss << "{s:" << sp.series_id << ',';
+    bool add = false;
     if ( sp.tag_x.empty() ) {
-      oss << "x:" << sp.cat_idx << ',';
+      add = cat_set.count( sp.cat_idx ) > 0;
     } else {
-      oss << "x:" << quoteJS( sp.tag_x ) << ',';
+      add = SnapHas( sp.p );
     }
-    oss << "y:" << quoteJS( sp.tag_y ) << ",";
-    oss << "X:" << X.SVG( false ) << ',';
-    oss << "Y:" << Y.SVG( false ) << "},\n";
+    if ( add ) {
+      U X = +(sp.p.x + main->g_dx);
+      U Y = -(sp.p.y + main->g_dy);
+      oss << "{s:" << sp.series_id << ',';
+      if ( sp.tag_x.empty() ) {
+        oss << "x:" << sp.cat_idx << ',';
+      } else {
+        oss << "x:" << quoteJS( sp.tag_x ) << ',';
+      }
+      oss << "y:" << quoteJS( sp.tag_y ) << ",";
+      oss << "X:" << X.SVG( false ) << ',';
+      oss << "Y:" << Y.SVG( false ) << "},\n";
+    }
   }
   oss << "],\n";
+
+  if ( !main->category_list.empty() ) {
+    oss << "catCnt : " << main->category_list.size() << ",\n";
+    oss << "categories : [\n";
+    uint32_t i = 0;
+    uint32_t j = 0;
+    for ( const auto& s : main->category_list ) {
+      if ( !s.empty() && cat_set.count( i ) > 0 ) {
+        if ( j < i ) {
+          oss << i << ',';
+          j = i;
+        }
+        oss << quoteJS( s ) << ",\n";
+        ++j;
+      }
+      ++i;
+    }
+    oss << "],\n";
+  }
 
   oss << "},\n";
 

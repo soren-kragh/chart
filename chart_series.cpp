@@ -409,8 +409,7 @@ void Series::PrunePoints( std::vector< Point >& points )
     uint64_t key =
       (static_cast< uint64_t >( p.y * f ) << 32) |
       (static_cast< uint64_t >( p.x * f ) <<  0);
-    if ( existing.find( key ) == existing.end() ) {
-      existing.insert( key );
+    if ( existing.insert( key ).second ) {
       points[ idx++ ] = p;
     }
   }
