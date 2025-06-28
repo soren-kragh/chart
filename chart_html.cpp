@@ -359,6 +359,9 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   double snap_resolution = 1.0;
   double snap_f = 1.0 / snap_resolution;
 
+  // When there are relatively few snap point, there is no need to prune them.
+  bool few_snaps = main->html.snap_points.size() <= 1000;
+
   std::unordered_set< uint64_t > snap_set;
   std::unordered_set< uint32_t > cat_set;
 
@@ -394,11 +397,11 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
     it != main->html.snap_points.rend(); ++it
   ) {
     const auto& sp = *it;
-    bool add = false;
+    bool add = few_snaps;
     if ( sp.tag_x.empty() ) {
-      add = cat_set.count( sp.cat_idx ) > 0;
+      add = add || cat_set.count( sp.cat_idx ) > 0;
     } else {
-      add = SnapAdd( sp.p );
+      add = add || SnapAdd( sp.p );
     }
     if ( add ) {
       U X = +(sp.p.x + main->g_dx);
@@ -422,7 +425,7 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
     uint32_t i = 0;
     uint32_t j = 0;
     for ( const auto& s : main->category_list ) {
-      if ( !s.empty() && cat_set.count( i ) > 0 ) {
+      if ( !s.empty() && (few_snaps || cat_set.count( i ) > 0) ) {
         if ( j < i ) {
           oss << i << ',';
           j = i;
