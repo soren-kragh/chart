@@ -140,6 +140,46 @@ function coorToVal(coor, axis) {
   return val;
 }
 
+
+//------------------------------------------------------------------------------
+
+function getCatIdx(coor, axis, catValues) {
+  const min = 0;
+  const max = catValues.length - 1;
+  if (min > max) return 0;
+  let i = Math.round(coorToVal(coor, axis));
+  i = Math.min(Math.max(i, 0), chart.catCnt - 1);
+  let j1 = min;
+  let j2 = max;
+  while (j1 + 1 < j2) {
+    let i1 = catValues[j1];
+    let jm = Math.floor((j1 + j2) / 2);
+    let im = catValues[jm];
+    if (im < i) {
+      j1 = jm;
+    } else {
+      j2 = jm;
+    }
+  }
+  let candidates = [j1-1, j1, j2, j2+1];
+  let bestDist = Infinity;
+  candidates.forEach(j => {
+    if (j >= min && j <= max) {
+      const k = catValues[j];
+      const dist =
+        Math.abs(
+          coor -
+          getLinAxisValue(k, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2)
+        );
+      if (dist < bestDist) {
+        bestDist = dist;
+        i = k;
+      }
+    }
+  });
+  return i;
+}
+
 //------------------------------------------------------------------------------
 
 function determineDecimals( axis ) {
@@ -216,16 +256,24 @@ function toEngineering(num, decimals) {
   return coefS + "e" + expS;
 }
 
-function buildAxisLabel(val, axis) {
+function buildAxisLabel(coor, axis) {
   let group = newObj("g", true);
   group.setAttribute("fill", chart.axisBoxLineColor);
   group.setAttribute("stroke", "none");
   group.setAttribute("font-size", chart.axisFontSize);
   svg_cursor.appendChild(group);
 
+  let val = coorToVal(coor, axis);
+
   if (axis.isCategory) {
-    const i = Math.round(val);
-    const txt = chart.catMapToTxt.get(i);
+    let i = Math.round(val);
+    let txt = chart.catMapToText.get(i);
+    if (!txt && chart.catTxtValues.length > 0) {
+      i = getCatIdx(coor, axis, chart.catTxtValues);
+      const cat_coor =
+        getLinAxisValue(i, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
+      if (Math.abs(coor - cat_coor) < 1.25) txt = chart.catMapToText.get(i);
+    }
     if (txt) {
       const text = newObj("text");
       text.textContent = txt;
@@ -383,9 +431,7 @@ function createAxisBox(x, y, axis, {isMulti = false} = {}) {
   if (axis.id === "axisY_0" || axis.id === "axisY_1") {
     coor = y;
   }
-  const val = coorToVal(coor, axis);
-
-  const group = buildAxisLabel(val, axis);
+  const group = buildAxisLabel(coor, axis);
   if ( !group ) return;
 
   let bbox = group.getBBox();
@@ -511,7 +557,7 @@ function resolveOverlaps(boxes, sx, sy) {
 function createCategoryBoxes(x, y, axis) {
   showCursor();
 
-  if (chart.catValues.length == 0) return;
+  if (chart.catBoxValues.length == 0) return;
 
   let horizontal = false;
   let coor = x;
@@ -521,43 +567,8 @@ function createCategoryBoxes(x, y, axis) {
   }
   let sx = horizontal ? (axis.id == "axisY_0" ? 1 : -1) : 0;
   let sy = horizontal ? 0 : (axis.id == "axisX_0" ? 1 : -1);
-  let i = Math.round(coorToVal(coor, axis));
-  let r1 = 0;
-  let r2 = chart.catCnt - 1;
-  i = Math.min(Math.max(i, r1), r2);
 
-  {
-    const min = 0;
-    const max = chart.catValues.length - 1;
-    let j1 = min;
-    let j2 = max;
-    while (j1 + 1 < j2) {
-      let i1 = chart.catValues[j1];
-      let jm = Math.floor((j1 + j2) / 2);
-      let im = chart.catValues[jm];
-      if (im < i) {
-        j1 = jm;
-      } else {
-        j2 = jm;
-      }
-    }
-    let candidates = [j1-1, j1, j2, j2+1];
-    let bestDist = Infinity;
-    candidates.forEach(j => {
-      if (j >= min && j <= max) {
-        const k = chart.catValues[j];
-        const dist =
-          Math.abs(
-            coor -
-            getLinAxisValue(k, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2)
-          );
-        if (dist < bestDist) {
-          bestDist = dist;
-          i = k;
-        }
-      }
-    });
-  }
+  let i = getCatIdx(coor, axis, chart.catBoxValues);
 
   let snapped_coor =
     getLinAxisValue(i, axis.areaVal1, axis.areaVal2, axis.coor1, axis.coor2);
@@ -932,14 +943,14 @@ svg_snap.addEventListener("mouseleave", () => {
     });
 
     // Create mapping from category X-value to the category text.
-    chart.catMapToTxt = new Map();
+    chart.catMapToText = new Map();
     if (chart.catCnt) {
       let i = 0;
       chart.categories.forEach(cat => {
         if (typeof cat === "number") {
           i = cat;
         } else {
-          chart.catMapToTxt.set(i++, cat);
+          chart.catMapToText.set(i++, cat);
         }
       });
     }
@@ -961,11 +972,13 @@ svg_snap.addEventListener("mouseleave", () => {
       });
     }
 
-    // Make a sorted list of category X-values which have at least one
-    // associated snap point.
-    chart.catValues = [];
+    // Make a sorted list of category X-values, and a sorted list of category
+    // X-values which have at least one associated snap point.
+    chart.catTxtValues = [];
+    chart.catBoxValues = [];
     for (let i = 0; i < chart.catCnt; i++) {
-      if (chart.catMapToSnap.has(i)) chart.catValues.push(i);
+      if (chart.catMapToText.has(i)) chart.catTxtValues.push(i);
+      if (chart.catMapToSnap.has(i)) chart.catBoxValues.push(i);
     }
 
     // Add all snap points to spatial map.
