@@ -392,7 +392,9 @@ void Series::PrunePoly( std::vector< Point >& points )
     points.resize( idx );
   }
 
-  for ( const auto& p : points ) html_db->DontPruneSnapPoint( p );
+  if ( html_db ) {
+    for ( const auto& p : points ) html_db->DontPruneSnapPoint( p );
+  }
 
   return;
 }
@@ -423,7 +425,9 @@ void Series::PrunePoints( std::vector< Point >& points )
     points.resize( idx );
   }
 
-  for ( const auto& p : points ) html_db->DontPruneSnapPoint( p );
+  if ( html_db ) {
+    for ( const auto& p : points ) html_db->DontPruneSnapPoint( p );
+  }
 
   return;
 }
