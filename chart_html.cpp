@@ -14,8 +14,6 @@
 #include <chart_ensemble.h>
 #include <chart_html.h>
 
-#include <unordered_set>
-
 using namespace SVG;
 using namespace Chart;
 
@@ -111,6 +109,11 @@ void HTML::AddSnapPoint(
     { series->id, cat_idx, p, "", tag_y }
   );
   series->has_snap = true;
+}
+
+void HTML::DontPruneSnapPoint( SVG::Point p )
+{
+  dont_prune_set.insert( p );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -366,21 +369,15 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
       (static_cast< uint64_t >( p.x * snap_f ) <<  0);
     return snap_set.insert( key ).second;
   };
-  auto SnapHas = [&]( Point p ) {
-    uint64_t key =
-      (static_cast< uint64_t >( p.y * snap_f ) << 32) |
-      (static_cast< uint64_t >( p.x * snap_f ) <<  0);
-    return snap_set.count( key ) > 0;
-  };
-
-  for ( const auto& sp : main->html.snap_points ) {
-    bool added = SnapAdd( sp.p );
-    if ( added && sp.tag_x.empty() ) {
-      cat_set.insert( sp.cat_idx );
-    }
-  }
 
   if ( !main->category_list.empty() ) {
+    for ( const auto& sp : main->html.snap_points ) {
+      bool added = SnapAdd( sp.p );
+      bool dont_prune = dont_prune_set.count( sp.p ) > 0;
+      if ( (added || dont_prune) && sp.tag_x.empty() ) {
+        cat_set.insert( sp.cat_idx );
+      }
+    }
     std::unordered_set< uint32_t > snap_cat_set;
     for ( uint32_t i = 0; i < main->category_list.size(); ++i ) {
       U coor = main->axis_x->Coor( i );
@@ -392,12 +389,16 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   }
 
   oss << "snapPoints : [\n";
-  for ( const auto& sp : main->html.snap_points ) {
+  for (
+    auto it = main->html.snap_points.rbegin();
+    it != main->html.snap_points.rend(); ++it
+  ) {
+    const auto& sp = *it;
     bool add = false;
     if ( sp.tag_x.empty() ) {
       add = cat_set.count( sp.cat_idx ) > 0;
     } else {
-      add = SnapHas( sp.p );
+      add = SnapAdd( sp.p );
     }
     if ( add ) {
       U X = +(sp.p.x + main->g_dx);
