@@ -374,17 +374,34 @@ void HTML::GenChartData( Main* main, std::ostringstream& oss )
   };
 
   if ( !main->category_list.empty() ) {
-    for ( const auto& sp : main->html.snap_points ) {
-      bool added = SnapAdd( sp.p );
-      bool dont_prune = dont_prune_set.count( sp.p ) > 0;
-      if ( (added || dont_prune) && sp.tag_x.empty() ) {
-        cat_set.insert( sp.cat_idx );
+    auto base_it = main->html.snap_points.begin();
+    while ( base_it != main->html.snap_points.end() ) {
+      auto it = base_it;
+      auto id = base_it->series_id;
+      while ( it != main->html.snap_points.end() && it->series_id == id ) {
+        if ( cat_set.count( it->cat_idx ) > 0 ) {
+          SnapAdd( it->p );
+        }
+        ++it;
       }
+      it = base_it;
+      while ( it != main->html.snap_points.end() && it->series_id == id ) {
+        bool added = SnapAdd( it->p );
+        bool dont_prune = dont_prune_set.count( it->p ) > 0;
+        if ( added || dont_prune ) {
+          cat_set.insert( it->cat_idx );
+        }
+        ++it;
+      }
+      base_it = it;
     }
-    std::unordered_set< uint32_t > snap_cat_set;
+  }
+
+  if ( !main->category_list.empty() ) {
+    std::unordered_set< int32_t > snap_cat_set;
     for ( uint32_t i = 0; i < main->category_list.size(); ++i ) {
       U coor = main->axis_x->Coor( i );
-      uint32_t key = static_cast< uint32_t >( coor * snap_f );
+      int32_t key = static_cast< int32_t >( std::floor( coor * snap_f ) );
       if ( snap_cat_set.insert( key ).second ) {
         cat_set.insert( i );
       }
