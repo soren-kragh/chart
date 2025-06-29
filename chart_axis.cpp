@@ -1206,25 +1206,28 @@ void Axis::BuildCategories(
   std::vector< SVG::Object* > cat_objects;
   std::vector< uint32_t > mn_list;
 
+  uint32_t min_stride =
+    std::ceil( cat_char_h / std::abs( Coor( 0 ) - Coor( 1 ) ) );
+
   uint32_t trial = 0;
   for ( bool commit : { false, true } ) {
     while ( true ) {
       bool collision = false;
-      int32_t n = -1;
+      int32_t cat_idx = -1;
       for ( const auto& cat : category_list ) {
-        n++;
+        cat_idx++;
         if ( cat.empty() ) continue;
-        if ( n < cat_start ) continue;
-        if ( (n - cat_start) % cat_stride ) continue;
+        if ( cat_idx < cat_start ) continue;
+        if ( (cat_idx - cat_start) % cat_stride ) continue;
 
         Object* obj = cat_g->Add( new Text( cat ) );
-        U x = (angle == 0) ? Coor( n ) : cat_coor;
-        U y = (angle != 0) ? Coor( n ) : cat_coor;
+        U x = (angle == 0) ? Coor( cat_idx ) : cat_coor;
+        U y = (angle != 0) ? Coor( cat_idx ) : cat_coor;
         if ( trial == 0 ) {
           obj->MoveTo( ax, ay, x + dx, y + dy );
         }
         if ( trial == 1 ) {
-          U sy = (n % 2) ? (cat_char_h + num_space_y) : 0;
+          U sy = (cat_idx % 2) ? (cat_char_h + num_space_y) : 0;
           if ( dy < 0 ) sy = -sy;
           obj->MoveTo( ax, ay, x + dx, y + dy + sy );
         }
@@ -1249,7 +1252,7 @@ void Axis::BuildCategories(
             cat_g->DeleteFront();
           } else {
             cat_objects.push_back( obj );
-            if ( commit ) mn_list.push_back( n );
+            if ( commit ) mn_list.push_back( cat_idx );
           }
         }
       }
