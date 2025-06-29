@@ -1213,13 +1213,23 @@ void Axis::BuildCategories(
   for ( bool commit : { false, true } ) {
     while ( true ) {
       bool collision = false;
-      int32_t cat_idx = -1;
-      for ( const auto& cat : category_list ) {
-        cat_idx++;
-        if ( cat.empty() ) continue;
-        if ( cat_idx < cat_start ) continue;
-        if ( (cat_idx - cat_start) % cat_stride ) continue;
-
+      bool plc_vld = false;
+      uint32_t plc_idx;
+      uint32_t cat_idx = cat_start;
+      while ( cat_idx < category_list.size() ) {
+        const auto& cat = category_list[ cat_idx ];
+        if ( cat.empty() ) {
+          ++cat_idx;
+          continue;
+        }
+        if ( (cat_idx - cat_start) % cat_stride ) {
+          cat_idx += cat_stride - (cat_idx - cat_start) % cat_stride;
+          continue;
+        }
+        if ( plc_vld && cat_idx < plc_idx + min_stride ) {
+          cat_idx = plc_idx + min_stride;
+          continue;
+        }
         Object* obj = cat_g->Add( new Text( cat ) );
         U x = (angle == 0) ? Coor( cat_idx ) : cat_coor;
         U y = (angle != 0) ? Coor( cat_idx ) : cat_coor;
@@ -1238,23 +1248,26 @@ void Axis::BuildCategories(
           obj->Rotate( text_angle, ax, ay );
         }
         if (
-          (trial < 2 || (text_angle % 90 == 0)) &&
+          (trial < 2 || text_angle == 90) &&
           Chart::Collides(
             obj, cat_objects, ((trial < 2) ? (1.5 * cat_char_w) : 0), 0
           )
         ) {
           collision = true;
           cat_g->DeleteFront();
+          if ( !commit ) break;
         } else {
+          plc_vld = true;
+          plc_idx = cat_idx;
           U mx = (angle == 0) ? 4 : 0;
-          bool aoc = Chart::Collides( obj, avoid_objects, mx, 0 );
-          if ( commit && aoc ) {
+          if ( commit && Chart::Collides( obj, avoid_objects, mx, 0 ) ) {
             cat_g->DeleteFront();
           } else {
             cat_objects.push_back( obj );
             if ( commit ) mn_list.push_back( cat_idx );
           }
         }
+        ++cat_idx;
       }
       if ( commit ) break;
       while ( !cat_objects.empty() ) {
