@@ -827,14 +827,24 @@ svg_snap.addEventListener("mousemove", (event) => {
   const mouseY = svgPoint.y;
 
   chart = undefined;
+  let minDist = Infinity;
   for (let i = 0; i < chart_list.length; i++) {
     const c = chart_list[i];
-    if (
-      mouseX >= c.chart.x1 && mouseX <= c.chart.x2 &&
-      mouseY >= c.chart.y1 && mouseY <= c.chart.y2
-    ) {
+    const { x1, y1, x2, y2 } = c.chart;
+
+    let dx = 0;
+    if (mouseX < x1) dx = x1 - mouseX;
+    if (mouseX > x2) dx = mouseX - x2;
+
+    let dy = 0;
+    if (mouseY < y1) dy = y1 - mouseY;
+    if (mouseY > y2) dy = mouseY - y2;
+
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < minDist) {
+      minDist = dist;
       chart = c;
-      break;
     }
   }
 
@@ -843,27 +853,27 @@ svg_snap.addEventListener("mousemove", (event) => {
     const inAreaY = mouseY >= chart.area.y1 && mouseY <= chart.area.y2;
     const inArea = inAreaX && inAreaY;
 
-    const minCatWidth = -1;
+    const minCatWidth = 24;
     let inCat = false;
     let catAxis;
     if (chart.axisX[0].isCategory) {
       let y = Math.max( chart.area.y1, chart.chart.y1 + minCatWidth );
-      inCat = mouseY >= chart.chart.y1 && mouseY <= y;
+      inCat = mouseY <= y;
       catAxis = chart.axisX[0];
     }
     if (chart.axisX[1].isCategory) {
       let y = Math.min( chart.area.y2, chart.chart.y2 - minCatWidth );
-      inCat = mouseY >= y && mouseY <= chart.chart.y2;
+      inCat = mouseY >= y;
       catAxis = chart.axisX[1];
     }
     if (chart.axisY[0].isCategory) {
       let x = Math.max( chart.area.x1, chart.chart.x1 + minCatWidth );
-      inCat = mouseX >= chart.chart.x1 && mouseX <= x;
+      inCat = mouseX <= x;
       catAxis = chart.axisY[0];
     }
     if (chart.axisY[1].isCategory) {
       let x = Math.min( chart.area.x2, chart.chart.x2 - minCatWidth );
-      inCat = mouseX >= x && mouseX <= chart.chart.x2;
+      inCat = mouseX >= x;
       catAxis = chart.axisY[1];
     }
 
@@ -875,11 +885,12 @@ svg_snap.addEventListener("mousemove", (event) => {
       let snapPoint;
       let atPoint = false;
 
-      if (!inCat && snapIdx >= 0) {
+      if (snapIdx >= 0) {
         snapPoint = chart.snapPoints[ snapIdx ];
         x = snapPoint.X;
         y = snapPoint.Y;
         atPoint = true;
+        inCat = false;
       }
 
       if (inCat) {
