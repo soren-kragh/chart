@@ -80,6 +80,9 @@ public:
   // to 1.0) of all bars belonging to the same X-value.
   void SetBarWidth( float one_width, float all_width );
 
+  // Specify the relative width of the topmost layered bar.
+  void SetLayeredBarWidth( float width );
+
   // Set extra start/end margin in units of bar buckets.
   void SetBarMargin( float margin );
 
@@ -163,9 +166,10 @@ public:
   bool    legend_frame;
   bool    legend_frame_specified;
 
-  float bar_one_width = 1.00;
-  float bar_all_width = 0.85;
-  float bar_margin    = 0.00;
+  float bar_one_width     = 1.00;
+  float bar_all_width     = 0.85;
+  float bar_layered_width = 0.50;
+  float bar_margin        = 0.00;
 
   Label* label_db;
   Tag* tag_db;

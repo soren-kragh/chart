@@ -46,7 +46,8 @@ namespace Chart {
 
   enum class SeriesType {
     XY, Scatter, Line, Point, Lollipop,
-    Bar, StackedBar, Area, StackedArea
+    Bar, StackedBar, LayeredBar,
+    Area, StackedArea
   };
 
   enum class MarkerShape {

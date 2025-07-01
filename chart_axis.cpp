@@ -449,6 +449,7 @@ void Axis::LegalizeMinMax(
               !series->tag_enable ||
               ( series->type != SeriesType::Bar &&
                 series->type != SeriesType::StackedBar &&
+                series->type != SeriesType::LayeredBar &&
                 series->type != SeriesType::Lollipop
               )
             )
@@ -492,12 +493,14 @@ void Axis::LegalizeMinMax(
 
     }
 
-    if ( is_x_axis && orth_style[ 0 ] == AxisStyle::None ) {
-      orth_axis_cross = min;
-    } else {
-      orth_axis_cross = (max <= 0) ? max : min;
-      if ( min < 0 && max > 0 && !chart_box ) orth_axis_cross = 0;
-      if ( log_scale ) orth_axis_cross = min;
+    if ( !orth_axis_cross_is_base ) {
+      if ( is_x_axis && orth_style[ 0 ] == AxisStyle::None ) {
+        orth_axis_cross = min;
+      } else {
+        orth_axis_cross = (max <= 0) ? max : min;
+        if ( min < 0 && max > 0 && !chart_box ) orth_axis_cross = 0;
+        if ( log_scale ) orth_axis_cross = min;
+      }
     }
   }
 

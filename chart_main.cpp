@@ -138,6 +138,11 @@ void Main::SetBarWidth( float one_width, float all_width )
   bar_all_width = all_width;
 }
 
+void Main::SetLayeredBarWidth( float width )
+{
+  bar_layered_width = width;
+}
+
 void Main::SetBarMargin( float margin )
 {
   bar_margin = margin;
@@ -582,6 +587,7 @@ void Main::AxisPrepare( SVG::Group* tag_g )
       if (
         series->type == SeriesType::Bar ||
         series->type == SeriesType::StackedBar ||
+        series->type == SeriesType::LayeredBar ||
         series->type == SeriesType::Lollipop
       )
         no_bar = false;
@@ -611,25 +617,43 @@ void Main::AxisPrepare( SVG::Group* tag_g )
   {
     std::vector< double > ofs_pos[ 2 ][ 2 ];
     std::vector< double > ofs_neg[ 2 ][ 2 ];
-    bool first[ 2 ][ 2 ] = { { true, true }, { true, true } };
+    bool init_ofs[ 2 ][ 2 ] = { { true, true }, { true, true } };
     for ( auto series : series_list ) {
-      bool stackable =
-        series->type == SeriesType::Bar ||
-        series->type == SeriesType::StackedBar ||
-        series->type == SeriesType::StackedArea;
       int type_n = (series->type == SeriesType::StackedArea) ? 1 : 0;
       int axis_n = series->axis_y_n;
-      if ( stackable ) {
-        if ( first[ type_n ][ axis_n ] || series->type == SeriesType::Bar ) {
+      if (
+        series->type == SeriesType::Bar ||
+        series->type == SeriesType::LayeredBar
+      ) {
+        init_ofs[ type_n ][ 0 ] = true;
+        init_ofs[ type_n ][ 1 ] = true;
+      }
+      if (
+        series->type == SeriesType::Bar ||
+        series->type == SeriesType::StackedBar ||
+        series->type == SeriesType::LayeredBar ||
+        series->type == SeriesType::StackedArea
+      ) {
+        if ( init_ofs[ type_n ][ axis_n ] ) {
           ofs_pos[ type_n ][ axis_n ].assign( category_list.size(), series->base );
           ofs_neg[ type_n ][ axis_n ].assign( category_list.size(), series->base );
         }
-        first[ type_n ][ axis_n ] = false;
+        init_ofs[ type_n ][ axis_n ] = false;
       }
       series->DetermineMinMax(
         ofs_pos[ type_n ][ axis_n ],
         ofs_neg[ type_n ][ axis_n ]
       );
+      if ( series->type == SeriesType::LayeredBar ) {
+        init_ofs[ type_n ][ 0 ] = true;
+        init_ofs[ type_n ][ 1 ] = true;
+      }
+      if (
+        series->type == SeriesType::Bar ||
+        series->type == SeriesType::StackedBar
+      ) {
+        init_ofs[ type_n ][ 1 - axis_n ] = true;
+      }
       if ( series->def_x ) {
         Axis* ax = series->axis_x;
         if ( !ax->data_def || ax->data_min > series->min_x ) {
@@ -710,6 +734,7 @@ void Main::AxisPrepare( SVG::Group* tag_g )
           series->type == SeriesType::Lollipop ||
           series->type == SeriesType::Bar ||
           series->type == SeriesType::StackedBar ||
+          series->type == SeriesType::LayeredBar ||
           series->type == SeriesType::Area ||
           series->type == SeriesType::StackedArea
         ) {
@@ -728,6 +753,7 @@ void Main::AxisPrepare( SVG::Group* tag_g )
         int i = axis_x->pos_base_axis_y_n;
         if ( base_def[ i ] == 1 ) {
           axis_y[ i ]->orth_axis_cross = base[ i ];
+          axis_y[ i ]->orth_axis_cross_is_base = true;
         } else {
           axis_x->pos = Pos::Auto;
         }
@@ -735,6 +761,7 @@ void Main::AxisPrepare( SVG::Group* tag_g )
         for ( int i = 0; i < 2; i++ ) {
           if ( base_def[ i ] == 1 ) {
             axis_y[ i ]->orth_axis_cross = base[ i ];
+            axis_y[ i ]->orth_axis_cross_is_base = true;
             axis_x->pos = Pos::Base;
             axis_x->pos_base_axis_y_n = i;
             break;
@@ -994,10 +1021,16 @@ void Main::SeriesPrepare(
   }
   if ( tag_bg_color.IsClear() ) tag_bg_color.Set( ColorName::white );
 
+  bool bar_next_can_stack = false;
+  bool bar_next_can_layer = false;
+  int bar_prev_y_n = 0;
+  Series* bottom_layer_series = nullptr;
+
   bar_tot = 0;
   lol_tot = 0;
 
-  uint32_t bar_tmp[ 2 ] = { 0, 0 };
+  uint32_t bar_layer_cur = 0;
+
   uint32_t series_id = 0;
   for ( auto series : series_list ) {
     series->id = series_id++;
@@ -1006,8 +1039,6 @@ void Main::SeriesPrepare(
     series->chart_area.max.x = chart_w;
     series->chart_area.min.y = 0;
     series->chart_area.max.y = chart_h;
-    series->bar_one_width = bar_one_width;
-    series->bar_all_width = bar_all_width;
     series->axis_x = axis_x;
     series->axis_y = axis_y[ series->axis_y_n ];
     series->lb_list = lb_list;
@@ -1022,12 +1053,35 @@ void Main::SeriesPrepare(
       lol_tot++;
     }
 
+    series->bar_layer_num = 0;
+    series->bar_layer_tot = 1;
     if ( series->type == SeriesType::Bar ) {
-      bar_tmp[ series->axis_y_n ]++;
+      bar_tot++;
+      bar_next_can_stack = true;
+      bar_next_can_layer = true;
+      bar_prev_y_n = series->axis_y_n;
+      bar_layer_cur = 0;
+      bottom_layer_series = series;
     }
-
     if ( series->type == SeriesType::StackedBar ) {
-      if ( bar_tmp[ series->axis_y_n ] == 0 ) bar_tmp[ series->axis_y_n ]++;
+      if ( !bar_next_can_stack || series->axis_y_n != bar_prev_y_n ) bar_tot++;
+      bar_next_can_stack = true;
+      bar_next_can_layer = false;
+      bar_prev_y_n = series->axis_y_n;
+    }
+    if ( series->type == SeriesType::LayeredBar ) {
+      if ( !bar_next_can_layer || series->axis_y_n != bar_prev_y_n ) {
+        bar_tot++;
+        bar_layer_cur = 0;
+        bottom_layer_series = series;
+      } else {
+        bar_layer_cur++;
+        bottom_layer_series->bar_layer_tot = bar_layer_cur + 1;
+      }
+      bar_next_can_stack = false;
+      bar_next_can_layer = true;
+      bar_prev_y_n = series->axis_y_n;
+      series->bar_layer_num = bar_layer_cur;
     }
 
     if ( !series->tag_text_color.IsDefined() ) {
@@ -1070,7 +1124,20 @@ void Main::SeriesPrepare(
       }
     }
   }
-  bar_tot = bar_tmp[ 0 ] + bar_tmp[ 1 ];
+
+  for ( auto series : series_list ) {
+    if (
+      series->type == SeriesType::Bar ||
+      series->type == SeriesType::LayeredBar
+    ) {
+      if ( series->bar_layer_num == 0 ) {
+        bottom_layer_series = series;
+      } else
+      if ( series->type == SeriesType::LayeredBar ) {
+        series->bar_layer_tot = bottom_layer_series->bar_layer_tot;
+      }
+    }
+  }
 
   html.all_inline = bar_tot <= 1 && lol_tot <= 1;
 
@@ -1091,11 +1158,14 @@ void Main::BuildSeries(
   std::vector< Point > sa_pts_neg[ 2 ];
   bool sa_first[ 2 ] = { true, true };
 
-  std::vector< double > bar_ofs_pos[ 2 ];
-  std::vector< double > bar_ofs_neg[ 2 ];
-  uint32_t bar_num[ 2 ] = { 0, 0 };
+  bool bar_next_can_stack = false;
+  bool bar_next_can_layer = false;
+  int bar_prev_y_n = 0;
+  std::vector< double > bar_ofs_pos;
+  std::vector< double > bar_ofs_neg;
   uint32_t bar_cur = 0;
-  bool bar_first[ 2 ] = { true, true };
+  bool bar_first = true;
+  bool bar_init = true;
 
   uint32_t lol_num = 0;
 
@@ -1135,24 +1205,43 @@ void Main::BuildSeries(
     }
     if (
       series->type == SeriesType::Bar ||
-      series->type == SeriesType::StackedBar
+      series->type == SeriesType::StackedBar ||
+      series->type == SeriesType::LayeredBar
     ) {
-      if ( bar_first[ y_n ] || series->type == SeriesType::Bar ) {
-        bar_ofs_pos[ y_n ].assign( category_list.size(), series->base );
-        bar_ofs_neg[ y_n ].assign( category_list.size(), series->base );
+      if ( series->type == SeriesType::Bar ) {
+        if ( !bar_first ) bar_cur++;
+        bar_next_can_stack = true;
+        bar_next_can_layer = true;
+        bar_init = true;
       }
-      if ( series->type == SeriesType::Bar || bar_first[ y_n ] ) {
-        if ( !bar_first[ 0 ] || !bar_first[ 1 ] ) {
-          bar_cur++;
-          bar_num[ y_n ] = bar_cur;
+      if ( series->type == SeriesType::StackedBar ) {
+        if ( !bar_next_can_stack || series->axis_y_n != bar_prev_y_n ) {
+          if ( !bar_first ) bar_cur++;
+          bar_init = true;
         }
+        bar_next_can_stack = true;
+        bar_next_can_layer = false;
+      }
+      if ( series->type == SeriesType::LayeredBar ) {
+        if ( !bar_next_can_layer || series->axis_y_n != bar_prev_y_n ) {
+          if ( !bar_first ) bar_cur++;
+        }
+        bar_next_can_stack = false;
+        bar_next_can_layer = true;
+        bar_init = true;
+      }
+      if ( bar_init ) {
+        bar_ofs_pos.assign( category_list.size(), series->base );
+        bar_ofs_neg.assign( category_list.size(), series->base );
+        bar_init = false;
       }
       series->Build(
         bar_area_g, bar_line_g, nullptr, nullptr, tag_g,
-        bar_num[ y_n ], bar_tot,
-        &bar_ofs_pos[ y_n ], &bar_ofs_neg[ y_n ]
+        bar_cur, bar_tot,
+        &bar_ofs_pos, &bar_ofs_neg
       );
-      bar_first[ y_n ] = false;
+      bar_prev_y_n = series->axis_y_n;
+      bar_first = false;
     }
     if ( series->type == SeriesType::Lollipop ) {
       series->Build(
@@ -1353,7 +1442,8 @@ SVG::U Main::GetAreaPadding( void )
     if (
       series->has_line &&
       series->type != SeriesType::Bar &&
-      series->type != SeriesType::StackedBar
+      series->type != SeriesType::StackedBar &&
+      series->type != SeriesType::LayeredBar
     ) {
       delta = std::max( +delta, series->line_width / 2 );
     }

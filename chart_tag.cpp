@@ -105,6 +105,7 @@ SVG::U Tag::GetBeyond( Series* series, SVG::Group* tag_g )
   bool bar_type =
     series->type == SeriesType::Bar ||
     series->type == SeriesType::StackedBar ||
+    series->type == SeriesType::LayeredBar ||
     series->type == SeriesType::Lollipop;
 
   Pos tag_pos = series->tag_pos;

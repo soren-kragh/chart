@@ -215,6 +215,7 @@ public:
   double min;
   double max;
   double orth_axis_cross;
+  bool   orth_axis_cross_is_base = false;
   double major;
   int    sub_divs;
   Pos    number_pos;

@@ -152,8 +152,6 @@ public:
     SVG::Group* mark_g,
     SVG::Group* hole_g,
     SVG::Group* tag_g,
-    uint32_t bar_num,
-    uint32_t bar_tot,
     std::vector< double >* ofs_pos,
     std::vector< double >* ofs_neg,
     std::vector< SVG::Point >* pts_pos,
@@ -243,8 +241,8 @@ public:
   double e1 = 0;
   double e2 = 0;
 
-  float bar_one_width = 1.00;
-  float bar_all_width = 0.85;
+  uint32_t bar_layer_num = 0;
+  uint32_t bar_layer_tot = 1;
 
   std::vector< Datum > datum_list;
 

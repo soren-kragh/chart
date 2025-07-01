@@ -12,7 +12,7 @@
 //
 
 #include <chart_series.h>
-#include <chart_axis.h>
+#include <chart_main.h>
 
 #include <unordered_set>
 
@@ -101,13 +101,16 @@ void Series::SetStyle( int style )
   if (
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar ||
+    type == SeriesType::LayeredBar ||
     type == SeriesType::Area ||
     type == SeriesType::StackedArea
   ) {
     if ( type == SeriesType::Area || type == SeriesType::StackedArea ) {
+      fill_color.Lighten( 0.2 );
       fill_color.SetTransparency( 0.5 );
     } else {
       fill_color.Lighten( 0.5 );
+      fill_color.SetTransparency( 0.2 );
     }
     SetLineWidth( 1 );
     SetLineDash( 0 );
@@ -627,6 +630,7 @@ void Series::DetermineVisualProperties( void )
     type == SeriesType::Lollipop ||
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar ||
+    type == SeriesType::LayeredBar ||
     type == SeriesType::Area ||
     type == SeriesType::StackedArea
   ) {
@@ -637,6 +641,7 @@ void Series::DetermineVisualProperties( void )
   if (
     type == SeriesType::Bar ||
     type == SeriesType::StackedBar ||
+    type == SeriesType::LayeredBar ||
     type == SeriesType::Area ||
     type == SeriesType::StackedArea
   ) {
@@ -759,8 +764,44 @@ void Series::DetermineVisualProperties( void )
 
 bool Series::SameLegend( Series* s1, Series* s2 )
 {
+  auto is_point = []( Series* s )
+  {
+    return
+      s->type == SeriesType::Point ||
+      s->type == SeriesType::Scatter;
+  };
+
+  auto is_line = []( Series* s )
+  {
+    return
+      s->type == SeriesType::Line ||
+      s->type == SeriesType::XY;
+  };
+
+  auto is_bar = []( Series* s )
+  {
+    return
+      s->type == SeriesType::Bar ||
+      s->type == SeriesType::StackedBar ||
+      s->type == SeriesType::LayeredBar;
+  };
+
+  auto is_area = []( Series* s )
+  {
+    return
+      s->type == SeriesType::Area ||
+      s->type == SeriesType::StackedArea;
+  };
+
   bool same =
-    s1->type             == s2->type &&
+    (is_point( s1 ) && is_point( s2 )) ||
+    (is_line ( s1 ) && is_line ( s2 )) ||
+    (is_bar  ( s1 ) && is_bar  ( s2 )) ||
+    (is_area ( s1 ) && is_area ( s2 )) ||
+    (s1->type == s2->type);
+
+  same =
+    same &&
     s1->name             == s2->name &&
     s1->marker_show      == s2->marker_show &&
     s1->marker_show_out  == s2->marker_show_out &&
@@ -917,6 +958,7 @@ void Series::DetermineMinMax(
   int stack_dir = GetStackDir();
   if (
     stackable ||
+    type == SeriesType::LayeredBar ||
     type == SeriesType::Lollipop ||
     type == SeriesType::Area
   ) {
@@ -978,8 +1020,6 @@ void Series::BuildArea(
   Group* mark_g,
   Group* hole_g,
   Group* tag_g,
-  uint32_t bar_num,
-  uint32_t bar_tot,
   std::vector< double >* ofs_pos,
   std::vector< double >* ofs_neg,
   std::vector< SVG::Point >* pts_pos,
@@ -1278,15 +1318,20 @@ void Series::BuildBar(
   double wx;    // Width of bar.
   double cx;    // Center of bar.
   {
-    double sa = 1.0 - bar_all_width;
-    double so = 1.0 - bar_one_width;
-    so = bar_all_width * so / (bar_tot - so);
+    double sa = 1.0 - main->bar_all_width;
+    double so = 1.0 - main->bar_one_width;
+    so = main->bar_all_width * so / (bar_tot - so);
     if ( sa < so ) {
-      so = (1 - bar_one_width) / bar_tot;
+      so = (1 - main->bar_one_width) / bar_tot;
       sa = so;
     }
     wx = (1.0 - sa + so) / bar_tot - so;
     cx = sa/2 - 0.5 + wx/2 + bar_num * (wx + so);
+    if ( bar_layer_tot > 1 ) {
+      wx -=
+        bar_layer_num * wx * (1.0 - main->bar_layered_width)
+        / (bar_layer_tot - 1);
+    }
   }
 
   Point p1;
@@ -1370,7 +1415,10 @@ void Series::BuildBar(
 
     if (
       datum.y != base &&
-      (type == SeriesType::Bar || type == SeriesType::StackedBar)
+      ( type == SeriesType::Bar ||
+        type == SeriesType::LayeredBar ||
+        type == SeriesType::StackedBar
+      )
     ) {
       U w = std::abs( axis_x->Coor( wx / 2 ) - axis_x->Coor( 0 ) );
       bool cut_bot = false;
@@ -1684,11 +1732,15 @@ void Series::Build(
     ApplyFillStyle( tbar_g );
   }
 
-  line_g = line_g->AddNewGroup();
-  ApplyLineStyle( line_g );
-  if ( type == SeriesType::Bar || type == SeriesType::StackedBar ) {
-    line_g->ParrentGroup()->FrontToBack();
+  if ( bar_layer_tot > 1 ) {
+    line_g = main_g->AddNewGroup();
+  } else {
+    line_g = line_g->AddNewGroup();
+    if ( type == SeriesType::Bar || type == SeriesType::StackedBar ) {
+      line_g->ParrentGroup()->FrontToBack();
+    }
   }
+  ApplyLineStyle( line_g );
 
   if ( marker_g != nullptr ) {
     mark_g = marker_g->AddNewGroup();
@@ -1706,7 +1758,6 @@ void Series::Build(
   ) {
     BuildArea(
       fill_g, line_g, mark_g, hole_g, tag_g,
-      bar_num, bar_tot,
       ofs_pos, ofs_neg,
       pts_pos, pts_neg
     );
@@ -1715,7 +1766,8 @@ void Series::Build(
   if (
     type == SeriesType::Lollipop ||
     type == SeriesType::Bar ||
-    type == SeriesType::StackedBar
+    type == SeriesType::StackedBar ||
+    type == SeriesType::LayeredBar
   ) {
     BuildBar(
       fill_g, tbar_g, line_g, mark_g, hole_g, tag_g,

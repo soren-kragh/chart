@@ -111,6 +111,7 @@ void Legend::CalcLegendDims(
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
+      series->type != SeriesType::LayeredBar &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea;
     if ( has_outline ) {
@@ -142,6 +143,7 @@ void Legend::CalcLegendDims(
     if (
       series->type == SeriesType::Bar ||
       series->type == SeriesType::StackedBar ||
+      series->type == SeriesType::LayeredBar ||
       series->type == SeriesType::Area ||
       series->type == SeriesType::StackedArea
     ) {
@@ -219,6 +221,7 @@ void Legend::CalcLegendDims(
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
+      series->type != SeriesType::LayeredBar &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea;
 
@@ -422,6 +425,7 @@ void Legend::BuildLegends(
       series->has_line &&
       series->type != SeriesType::Bar &&
       series->type != SeriesType::StackedBar &&
+      series->type != SeriesType::LayeredBar &&
       series->type != SeriesType::Area &&
       series->type != SeriesType::StackedArea;
 
@@ -475,6 +479,7 @@ void Legend::BuildLegends(
     if (
       series->type == SeriesType::Bar ||
       series->type == SeriesType::StackedBar ||
+      series->type == SeriesType::LayeredBar ||
       series->type == SeriesType::Area ||
       series->type == SeriesType::StackedArea
     ) {
