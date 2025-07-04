@@ -1459,8 +1459,8 @@ void Series::BuildBar(
       UpdateLegendBoxes( Point( p2.x, p1.y ), Point( p2.x, p2.y ) );
       UpdateLegendBoxes( Point( p1.x, p2.y ), Point( p2.x, p2.y ) );
       bool has_interior =
-        p2.x - p1.x > line_width + 2 &&
-        p2.y - p1.y > line_width + 2;
+        p2.x - p1.x > line_width &&
+        p2.y - p1.y > line_width;
       if ( has_interior ) {
         if ( has_fill ) {
           Point c1{ p1 };
