@@ -306,7 +306,7 @@ void Axis::LegalizeMajor( void ) {
         );
       while ( true ) {
         U coor = Coor( max / major );
-        if ( std::abs( max_coor - coor ) >= (auto_major ? 40 : 20) ) break;
+        if ( std::abs( max_coor - coor ) >= 20 ) break;
         if ( number_format == NumberFormat::Magnitude ) {
           major = major * ((major > 10) ? 1000 : 100);
         } else {
